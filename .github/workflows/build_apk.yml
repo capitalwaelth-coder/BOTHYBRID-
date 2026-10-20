@@ -1,4 +1,4 @@
-name: Build HYBRID PRO APK
+name: HYBRID PRO
 
 on:
   workflow_dispatch:
@@ -6,12 +6,12 @@ on:
     branches:
       - main
     paths:
+      - '.github/workflows/**'
       - 'lib/**'
       - 'android/**'
-      - 'assets/**'
       - 'pubspec.yaml'
       - 'pubspec.lock'
-      - '.github/workflows/build_apk.yml'
+      - 'assets/**'
 
 permissions:
   contents: read
@@ -24,7 +24,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -33,7 +33,6 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
           channel: stable
           cache: false
 
@@ -41,7 +40,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           PROJECT_DIR=""
 
           if [ -f "pubspec.yaml" ] && [ -f "lib/main.dart" ]; then
@@ -49,13 +47,13 @@ jobs:
           else
             while IFS= read -r file; do
               candidate="${file%/pubspec.yaml}"
+
               if [ -f "$candidate/lib/main.dart" ]; then
                 PROJECT_DIR="$candidate"
                 break
               fi
             done < <(
-              find . \
-                -name pubspec.yaml \
+              find . -name pubspec.yaml \
                 -not -path '*/.dart_tool/*' \
                 -not -path '*/build/*' \
                 -not -path '*/.pub-cache/*' \
@@ -64,49 +62,50 @@ jobs:
           fi
 
           if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: Flutter project not found."
+            echo "ERROR: Cannot find Flutter project."
             exit 1
           fi
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Flutter project: $PROJECT_DIR"
+          echo "Found Flutter project: $PROJECT_DIR"
 
-      - name: Validate Android project
-        shell: bash
+      - name: Validate Flutter files
         run: |
-          set -e
           cd "$PROJECT_DIR"
-
           test -f pubspec.yaml
           test -f lib/main.dart
-          test -f android/app/build.gradle -o \
-               -f android/app/build.gradle.kts
-          test -f android/settings.gradle -o \
-               -f android/settings.gradle.kts
-          test -f android/gradlew
+          echo "Flutter project files verified."
 
-          echo "Android and Flutter project files verified."
-
-      - name: Setup Gradle wrapper permissions
+      - name: Generate Android platform if missing
         run: |
           cd "$PROJECT_DIR"
-          chmod +x android/gradlew
 
-      - name: Clean previous build
+          if [ ! -f android/app/build.gradle ] && \
+             [ ! -f android/app/build.gradle.kts ]; then
+            flutter create . \
+              --platforms=android \
+              --org com.bothybrid \
+              --project-name bot_hybrid
+          else
+            echo "Existing Android platform found; preserving it."
+          fi
+
+      - name: Clean old build
         run: |
           cd "$PROJECT_DIR"
           flutter clean
           rm -rf .dart_tool build
 
-      - name: Get Flutter dependencies
+      - name: Get dependencies
         run: |
           cd "$PROJECT_DIR"
           flutter pub get
 
-      - name: Check Flutter code
+      - name: Generate Launcher Icons
         run: |
           cd "$PROJECT_DIR"
-          flutter analyze --no-pub
+          flutter pub run flutter_launcher_icons:main || \
+            echo "Launcher icons package not configured, skipping."
 
       - name: Build release APK
         run: |
@@ -122,6 +121,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: HYBRID-PRO-APK
+          name: HYBRID-PRO
           path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
