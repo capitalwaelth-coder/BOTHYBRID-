@@ -87,10 +87,7 @@ jobs:
             flutter create . --platforms=android
           fi
 
-          if [ ! -d android ]; then
-            echo "ERROR: Android folder is missing."
-            exit 1
-          fi
+          test -d android
 
       - name: Clean old build
         run: |
@@ -108,18 +105,12 @@ jobs:
           WRAPPER="android/gradle/wrapper/gradle-wrapper.properties"
 
           if [ ! -f "$WRAPPER" ]; then
-            echo "Wrapper properties missing. Regenerating Android platform..."
             flutter create . --platforms=android
           fi
 
-          if [ ! -f "$WRAPPER" ]; then
-            echo "ERROR: Gradle wrapper properties could not be generated."
+          if [ ! -f "$WRAPPER" ] || [ ! -f android/gradlew ]; then
+            echo "ERROR: Gradle wrapper is missing."
             find android -maxdepth 5 -type f
-            exit 1
-          fi
-
-          if [ ! -f android/gradlew ]; then
-            echo "ERROR: android/gradlew is missing."
             exit 1
           fi
 
@@ -127,12 +118,76 @@ jobs:
             's#gradle-[0-9][^/]*-(all|bin)\.zip#gradle-8.14.3-\1.zip#' \
             "$WRAPPER"
 
-          echo "Gradle wrapper configuration:"
+          chmod +x android/gradlew
+
+          echo "Gradle wrapper:"
           cat "$WRAPPER"
 
-          chmod +x android/gradlew
           cd android
           ./gradlew --version
+
+      - name: Update Android Gradle Plugin
+        shell: bash
+        run: |
+          set -e
+          cd "$PROJECT_DIR"
+
+          python3 <<'PY'
+          import re
+          from pathlib import Path
+
+          settings = [
+              Path("android/settings.gradle"),
+              Path("android/settings.gradle.kts"),
+          ]
+
+          found = False
+
+          for path in settings:
+              if not path.is_file():
+                  continue
+
+              text = path.read_text()
+
+              pattern = re.compile(
+                  r'(id\s*\(?\s*["\']com\.android\.application["\']'
+                  r'\s*\)?\s+version\s+["\'])[^"\']+(["\'])'
+              )
+
+              updated, count = pattern.subn(
+                  lambda m: m.group(1) + "8.11.1" + m.group(2),
+                  text
+              )
+
+              if count:
+                  path.write_text(updated)
+                  print(f"Updated AGP in {path}")
+                  found = True
+
+          if not found:
+              path = Path("android/build.gradle")
+              if path.is_file():
+                  text = path.read_text()
+                  updated, count = re.subn(
+                      r'(com\.android\.tools\.build:gradle:)'
+                      r'[0-9.]+',
+                      r'\g<1>8.11.1',
+                      text
+                  )
+                  if count:
+                      path.write_text(updated)
+                      print("Updated AGP in android/build.gradle")
+                      found = True
+
+          if not found:
+              print("ERROR: Could not find Android Gradle Plugin declaration.")
+              raise SystemExit(1)
+          PY
+
+          echo "AGP configuration:"
+          grep -n -E 'com.android.application|com.android.tools.build:gradle' \
+            android/settings.gradle android/settings.gradle.kts \
+            android/build.gradle 2>/dev/null || true
 
       - name: Get dependencies
         run: |
