@@ -1214,7 +1214,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. เพิ่มภาพพื้นหลังรูปบอทให้แสดงผลในหน้าหลักแดชบอร์ดชัดเจนขึ้น
           Image.asset(
             'assets/images/1792250396366.jpg',
             fit: BoxFit.cover,
@@ -1223,7 +1222,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
               return Container(color: const Color(0xFF263238));
             },
           ),
-          // 2. ปรับความเข้มเลเยอร์ทับให้อ่านง่ายและเห็นบอทสวยงาม
           Container(
             color: const Color(0xFF263238).withOpacity(0.65),
           ),
@@ -1538,7 +1536,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
         border: Border.all(color: const Color(0xFFCFD8DC), width: 2.0),
         boxShadow: [
           BoxShadow(
-            color: (isServerActive ? const Color(0xFF00C853) : const Color(0xFF78909C)).withOpacity(0.6),
+            // ปรับสีเรืองแสงเป็นสีแดงเมื่อออฟไลน์หรือหยุดทำงาน
+            color: (isServerActive ? const Color(0xFF00C853) : Colors.redAccent).withOpacity(0.6),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -1566,7 +1565,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
               width: 14,
               height: 14,
               decoration: BoxDecoration(
-                color: isServerActive ? const Color(0xFF00C853) : const Color(0xFF78909C),
+                // เปลี่ยนจุดสถานะเป็นสีแดงเมื่อออฟไลน์/หยุดทำงาน
+                color: isServerActive ? const Color(0xFF00C853) : Colors.redAccent,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.black, width: 2),
               ),
@@ -1672,11 +1672,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                           width: 8,
                           height: 8,
                           decoration: BoxDecoration(
-                            color: isServerActive ? const Color(0xFF00C853) : const Color(0xFF78909C),
+                            // จุดสถานะในรายงานเป็นสีแดงเมื่อออฟไลน์
+                            color: isServerActive ? const Color(0xFF00C853) : Colors.redAccent,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: (isServerActive ? const Color(0xFF00C853) : const Color(0xFF78909C)).withOpacity(0.8),
+                                color: (isServerActive ? const Color(0xFF00C853) : Colors.redAccent).withOpacity(0.8),
                                 blurRadius: 4,
                               )
                             ],
@@ -1686,7 +1687,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                         Text(
                           isServerActive ? 'EA SERVER ONLINE & RUNNING' : 'EA SERVER OFFLINE / STOPPED',
                           style: TextStyle(
-                            color: isServerActive ? const Color(0xFF00C853) : Colors.white70,
+                            // ข้อความสถานะเป็นสีแดงเมื่อออฟไลน์
+                            color: isServerActive ? const Color(0xFF00C853) : Colors.redAccent,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.8,
@@ -1846,6 +1848,7 @@ class ScannerClipper extends CustomClipper<Rect> {
     return oldClipper.scanValue != scanValue;
   }
 }
+
 
 
 // ==========================================
@@ -3038,7 +3041,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. เพิ่มความสว่างของรูปบอทพื้นหลัง
           Image.asset(
             'assets/images/1792250396366.jpg',
             fit: BoxFit.cover,
@@ -3047,7 +3049,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
               return Container(color: const Color(0xFF263238));
             },
           ),
-          // 2. ปรับความเข้มเลเยอร์ทับให้อ่านง่ายและเห็นบอทชัดเจน
           Container(
             color: const Color(0xFF263238).withOpacity(0.65),
           ),
@@ -3118,7 +3119,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         child: Text(
                           '${totalProfit >= 0 ? "+" : ""}\$${totalProfit.toStringAsFixed(2)}',
                           style: TextStyle(
-                            color: totalProfit >= 0 ? const Color(0xFF00C853) : Colors.orangeAccent,
+                            // หากยอดรวมติดลบ (ขาดทุน) จะแสดงเป็นสีแดง
+                            color: totalProfit >= 0 ? const Color(0xFF00C853) : Colors.redAccent,
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'monospace',
@@ -3183,12 +3185,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: isBuy ? const Color(0xFF00C853).withOpacity(0.2) : Colors.orangeAccent.withOpacity(0.2),
+                                            // ถ้าเป็น BUY ใช้สีเขียว, ถ้าเป็น SELL ใช้สีแดง
+                                            color: isBuy 
+                                                ? const Color(0xFF00C853).withOpacity(0.2) 
+                                                : Colors.redAccent.withOpacity(0.2),
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
                                             type,
-                                            style: TextStyle(color: isBuy ? const Color(0xFF00C853) : Colors.orangeAccent, fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'monospace'),
+                                            style: TextStyle(
+                                              color: isBuy ? const Color(0xFF00C853) : Colors.redAccent,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 11,
+                                              fontFamily: 'monospace',
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(width: 12),
@@ -3210,7 +3220,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     Text(
                                       '${isProfit ? "+" : ""}\$${profit.toStringAsFixed(2)}',
                                       style: TextStyle(
-                                        color: isProfit ? const Color(0xFF00C853) : Colors.orangeAccent,
+                                        // ถ้ากำไร (>= 0) ใช้สีเขียว, ถ้าขาดทุน (< 0) ใช้สีแดง
+                                        color: isProfit ? const Color(0xFF00C853) : Colors.redAccent,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
                                         fontFamily: 'monospace',
@@ -3231,6 +3242,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 }
+
 
 
 
