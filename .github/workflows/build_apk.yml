@@ -39,14 +39,24 @@ jobs:
       - name: Find Flutter project
         shell: bash
         run: |
+          set -e
           PROJECT_DIR=""
+
           while IFS= read -r file; do
             candidate="${file%/pubspec.yaml}"
+
             if [ -f "$candidate/lib/main.dart" ]; then
               PROJECT_DIR="$candidate"
               break
             fi
-          done < <(find . -name pubspec.yaml -not -path '*/.dart_tool/*' -not -path '*/build/*' -not -path '*/.pub-cache/*' | sort)
+          done < <(
+            find . \
+              -name pubspec.yaml \
+              -not -path '*/.dart_tool/*' \
+              -not -path '*/build/*' \
+              -not -path '*/.pub-cache/*' \
+              | sort
+          )
 
           if [ -z "$PROJECT_DIR" ]; then
             echo "ERROR: Cannot find Flutter project."
@@ -55,20 +65,30 @@ jobs:
 
           PROJECT_DIR="${PROJECT_DIR#./}"
           [ -n "$PROJECT_DIR" ] || PROJECT_DIR="."
+
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Found Flutter project: $PROJECT_DIR"
 
       - name: Validate Flutter files
         run: |
+          set -e
           cd "$PROJECT_DIR"
           test -f pubspec.yaml
           test -f lib/main.dart
 
       - name: Generate Android platform if missing
         run: |
+          set -e
           cd "$PROJECT_DIR"
-          if [ ! -f android/app/build.gradle ] && [ ! -f android/app/build.gradle.kts ]; then
-            flutter create . --platforms=android --org com.bothybrid --project-name bot_hybrid
+
+          if [ ! -f android/app/build.gradle ] && \
+             [ ! -f android/app/build.gradle.kts ]; then
+            flutter create . \
+              --platforms=android \
+              --org com.algohost \
+              --project-name hybridpro
+          else
+            echo "Existing Android platform found; keeping it."
           fi
 
       - name: Repair Gradle Wrapper
@@ -76,14 +96,20 @@ jobs:
         run: |
           set -e
           cd "$PROJECT_DIR"
+
           SEED="$RUNNER_TEMP/gradle-wrapper-seed"
 
-          flutter create "$SEED" --platforms=android --org com.bothybrid --project-name wrapper_seed
+          flutter create "$SEED" \
+            --platforms=android \
+            --org com.algohost \
+            --project-name hybridpro
 
           mkdir -p android/gradle/wrapper
+
           cp "$SEED/android/gradlew" android/gradlew
           cp "$SEED/android/gradlew.bat" android/gradlew.bat
-          cp "$SEED/android/gradle/wrapper/gradle-wrapper.jar" android/gradle/wrapper/gradle-wrapper.jar
+          cp "$SEED/android/gradle/wrapper/gradle-wrapper.jar" \
+             android/gradle/wrapper/gradle-wrapper.jar
 
           cat > android/gradle/wrapper/gradle-wrapper.properties <<'EOF'
           distributionBase=GRADLE_USER_HOME
@@ -100,19 +126,22 @@ jobs:
 
       - name: Clean old build
         run: |
+          set -e
           cd "$PROJECT_DIR"
           flutter clean
           rm -rf .dart_tool build
 
       - name: Get dependencies
         run: |
+          set -e
           cd "$PROJECT_DIR"
           flutter pub get
 
       - name: Generate Launcher Icons
         run: |
           cd "$PROJECT_DIR"
-          flutter pub run flutter_launcher_icons:main || echo "Launcher icon generation skipped."
+          flutter pub run flutter_launcher_icons:main \
+            || echo "Launcher icon generation skipped."
 
       - name: Build release APK
         run: |
@@ -122,6 +151,7 @@ jobs:
 
       - name: Verify APK
         run: |
+          set -e
           APK="$PROJECT_DIR/build/app/outputs/flutter-apk/app-release.apk"
           test -s "$APK"
           ls -lh "$APK"
