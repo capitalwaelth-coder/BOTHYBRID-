@@ -1,7 +1,0 @@
-.dart_tool/
-.build/
-build/
-.pub/
-.pub-cache/
-*.apk
-*.keystore
