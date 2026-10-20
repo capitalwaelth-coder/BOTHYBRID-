@@ -1,37 +1,124 @@
-name: Build Android APK
+name: HybridPro
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/**'
+      - 'lib/**'
+      - 'android/**'
+      - 'pubspec.yaml'
+      - 'assets/**'
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v3
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: temurin
           java-version: '17'
 
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.x'
-          channel: 'stable'
+          channel: stable
+          cache: false
+
+      - name: Find Flutter project
+        shell: bash
+        run: |
+          PROJECT_DIR=""
+
+          while IFS= read -r file; do
+            candidate="${file%/pubspec.yaml}"
+
+            if [ -f "$candidate/lib/main.dart" ]; then
+              PROJECT_DIR="$candidate"
+              break
+            fi
+          done < <(
+            find . -name pubspec.yaml \
+              -not -path '*/.dart_tool/*' \
+              -not -path '*/build/*' \
+              -not -path '*/.pub-cache/*' \
+              | sort
+          )
+
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "ERROR: Cannot find Flutter project."
+            echo "Required: pubspec.yaml and lib/main.dart"
+            exit 1
+          fi
+
+          PROJECT_DIR="${PROJECT_DIR#./}"
+          [ -n "$PROJECT_DIR" ] || PROJECT_DIR="."
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Found Flutter project: $PROJECT_DIR"
+
+      - name: Validate Flutter files
+        run: |
+          cd "$PROJECT_DIR"
+          test -f pubspec.yaml
+          test -f lib/main.dart
+          echo "Flutter project files verified."
+
+      - name: Generate Android platform if missing
+        run: |
+          cd "$PROJECT_DIR"
+
+          if [ ! -f android/app/build.gradle ] && \
+             [ ! -f android/app/build.gradle.kts ]; then
+            flutter create . \
+              --platforms=android \
+              --org com.bothybrid \
+              --project-name bot_hybrid
+          else
+            echo "Existing Android platform found; preserving it."
+          fi
+
+      - name: Clean old build
+        run: |
+          cd "$PROJECT_DIR"
+          flutter clean
+          rm -rf .dart_tool build
 
       - name: Get dependencies
-        run: flutter pub get
+        run: |
+          cd "$PROJECT_DIR"
+          flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --release
+      - name: Generate Launcher Icons automatically
+        run: |
+          cd "$PROJECT_DIR"
+          # สเตปนี้ช่วยสร้างไอคอนแอปให้อัตโนมัติทุกครั้งที่บิลด์ ป้องกันปัญหาไอคอนหาย
+          flutter pub run flutter_launcher_icons:main || echo "Launcher icons package not configured, skipping..."
+
+      - name: Build release APK
+        run: |
+          cd "$PROJECT_DIR"
+          flutter build apk --release
+
+      - name: Verify APK
+        run: |
+          APK="$PROJECT_DIR/build/app/outputs/flutter-apk/app-release.apk"
+          test -s "$APK"
+          ls -lh "$APK"
 
       - name: Upload APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: sniper-hybrid-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: SniperHybridV2
+          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
