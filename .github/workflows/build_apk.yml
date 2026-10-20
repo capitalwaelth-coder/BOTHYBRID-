@@ -307,13 +307,15 @@ jobs:
           echo "Android build configuration:"
           grep -n -E 'compileSdk|ndkVersion' android/app/build.gradle
           cat android/gradle.properties
-
+      
       - name: Get dependencies
+        shell: bash
         run: |
           set -e
           cd "$PROJECT_DIR"
           flutter pub get
-
+          echo "=== SharedPreferences versions ==="
+          flutter pub deps --style=compact | grep -E 'shared_preferences(_android)? '
       
       - name: Generate Launcher Icons
         run: |
