@@ -314,22 +314,21 @@ jobs:
           cd "$PROJECT_DIR"
           flutter pub get
 
+      
       - name: Generate Launcher Icons
         run: |
           set -e
           cd "$PROJECT_DIR"
-          flutter pub run flutter_launcher_icons:main || \
-            echo "Launcher icons generation skipped."
+          flutter pub run flutter_launcher_icons
 
-          - name: Fix SharedPreferences Android version
-          flutter: |
+      - name: Build release APK
+        run: |
           set -e
-          run "$PROJECT_DIR"
-          flutterutter pub add "shared_preferences_android:>=2.4.28 <2.5.0"
-           flutterutter pub get
-           Verifylutter pub deps | grep -E 'shared_preferences(_android)? '
-          - name: Verify APK
-            run: |
+          cd "$PROJECT_DIR"
+          flutter build apk --release
+
+      - name: Verify APK
+        run: |
           set -e
           APK="$PROJECT_DIR/build/app/outputs/flutter-apk/app-release.apk"
           test -s "$APK"
@@ -341,4 +340,3 @@ jobs:
           name: HYBRID-PRO
           path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
-          
