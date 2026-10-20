@@ -134,8 +134,8 @@ jobs:
           import re
           from pathlib import Path
 
-          found_agp = False
-          found_kotlin = False
+          agp_found = False
+          kotlin_found = False
 
           settings_files = [
               Path("android/settings.gradle"),
@@ -168,67 +168,145 @@ jobs:
                   lambda m: m.group(1) + "8.11.1" + m.group(2),
                   text
               )
-              found_agp = found_agp or count > 0
+              agp_found = agp_found or count > 0
 
               for pattern in kotlin_patterns:
                   text, count = pattern.subn(
                       lambda m: m.group(1) + "2.2.20" + m.group(2),
                       text
                   )
-                  found_kotlin = found_kotlin or count > 0
+                  kotlin_found = kotlin_found or count > 0
 
               path.write_text(text)
 
-          # Support older Gradle buildscript configuration.
           path = Path("android/build.gradle")
+
           if path.is_file():
               text = path.read_text()
 
               text, count = re.subn(
-                  r'(com\.android\.tools\.build:gradle:)'
-                  r'[0-9.]+',
+                  r'(com\.android\.tools\.build:gradle:)[0-9.]+',
                   r'\g<1>8.11.1',
                   text
               )
-              found_agp = found_agp or count > 0
+              agp_found = agp_found or count > 0
 
               text, count = re.subn(
-                  r'(ext\.kotlin_version\s*=\s*["\'])'
-                  r'[^"\']+(["\'])',
+                  r'(ext\.kotlin_version\s*=\s*["\'])[^"\']+(["\'])',
                   lambda m: m.group(1) + "2.2.20" + m.group(2),
                   text
               )
-              found_kotlin = found_kotlin or count > 0
+              kotlin_found = kotlin_found or count > 0
 
               text, count = re.subn(
-                  r'(org\.jetbrains\.kotlin:kotlin-gradle-plugin:)'
-                  r'[^:\s"\']+',
+                  r'(org\.jetbrains\.kotlin:kotlin-gradle-plugin:)[^:\s"\']+',
                   r'\g<1>2.2.20',
                   text
               )
-              found_kotlin = found_kotlin or count > 0
+              kotlin_found = kotlin_found or count > 0
 
               path.write_text(text)
 
-          print(f"AGP updated: {found_agp}")
-          print(f"Kotlin updated: {found_kotlin}")
+          if not agp_found:
+              raise SystemExit("ERROR: AGP declaration not found.")
 
-          if not found_agp:
-              raise SystemExit(
-                  "ERROR: AGP version declaration not found."
-              )
+          if not kotlin_found:
+              raise SystemExit("ERROR: Kotlin declaration not found.")
 
-          if not found_kotlin:
-              raise SystemExit(
-                  "ERROR: Kotlin version declaration not found."
-              )
+          print("AGP set to 8.11.1")
+          print("Kotlin set to 2.2.20")
           PY
 
-          echo "Android Gradle configuration:"
-          grep -n -E \
-            'com.android.application|com.android.tools.build:gradle|org.jetbrains.kotlin|kotlin_version' \
-            android/settings.gradle android/settings.gradle.kts \
-            android/build.gradle 2>/dev/null || true
+      - name: Fix Android SDK and Gradle Memory
+        shell: bash
+        run: |
+          set -e
+          cd "$PROJECT_DIR"
+
+          python3 <<'PY'
+          import re
+          from pathlib import Path
+
+          path = Path("android/app/build.gradle")
+
+          if not path.is_file():
+              raise SystemExit("ERROR: android/app/build.gradle not found.")
+
+          text = path.read_text()
+
+          if not re.search(r'(?m)^\s*android\s*\{', text):
+              raise SystemExit("ERROR: android { block not found.")
+
+          # Set compileSdk to 36.
+          if re.search(r'(?m)^\s*compileSdk(?:Version)?\b.*$', text):
+              text = re.sub(
+                  r'(?m)^(\s*)compileSdk(?:Version)?\b.*$',
+                  r'\g<1>compileSdk 36',
+                  text,
+                  count=1
+              )
+          else:
+              text = re.sub(
+                  r'(?m)^(\s*)android\s*\{\s*$',
+                  r'\g<0>\n    compileSdk 36',
+                  text,
+                  count=1
+              )
+
+          # Set NDK version.
+          if re.search(r'(?m)^\s*ndkVersion\b.*$', text):
+              text = re.sub(
+                  r'(?m)^(\s*)ndkVersion\b.*$',
+                  r'\g<1>ndkVersion "28.2.13676358"',
+                  text,
+                  count=1
+              )
+          else:
+              text = re.sub(
+                  r'(?m)^(\s*)compileSdk 36\s*$',
+                  r'\g<0>\n    ndkVersion "28.2.13676358"',
+                  text,
+                  count=1
+              )
+
+          path.write_text(text)
+          print("compileSdk = 36")
+          print('ndkVersion = "28.2.13676358"')
+
+          # Give Gradle more heap and limit concurrent workers.
+          props = Path("android/gradle.properties")
+          content = props.read_text() if props.exists() else ""
+
+          memory = (
+              "org.gradle.jvmargs=-Xmx4G "
+              "-XX:MaxMetaspaceSize=1G -Dfile.encoding=UTF-8"
+          )
+
+          if re.search(r'(?m)^org\.gradle\.jvmargs=.*$', content):
+              content = re.sub(
+                  r'(?m)^org\.gradle\.jvmargs=.*$',
+                  lambda m: memory,
+                  content
+              )
+          else:
+              content = content.rstrip() + "\n" + memory + "\n"
+
+          if re.search(r'(?m)^org\.gradle\.workers\.max=.*$', content):
+              content = re.sub(
+                  r'(?m)^org\.gradle\.workers\.max=.*$',
+                  "org.gradle.workers.max=2",
+                  content
+              )
+          else:
+              content += "org.gradle.workers.max=2\n"
+
+          props.write_text(content)
+          print("Gradle heap set to 4 GB; workers limited to 2.")
+          PY
+
+          echo "Android build configuration:"
+          grep -n -E 'compileSdk|ndkVersion' android/app/build.gradle
+          cat android/gradle.properties
 
       - name: Get dependencies
         run: |
