@@ -1,162 +1,124 @@
 name: HybridPro
 
 on:
-workflow_dispatch:
-push:
-branches:
-- main
-paths:
-- '.github/workflows/'
-- 'lib/'
-- 'android/'
-- 'pubspec.yaml'
-- 'assets/'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/**'
+      - 'lib/**'
+      - 'android/**'
+      - 'pubspec.yaml'
+      - 'assets/**'
 
 permissions:
-contents: read
+  contents: read
 
 jobs:
-build:
-runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
 
-steps:
-  - name: Checkout repository
-    uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  - name: Setup Java
-    uses: actions/setup-java@v4
-    with:
-      distribution: temurin
-      java-version: '17'
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-  - name: Setup Flutter
-    uses: subosito/flutter-action@v2
-    with:
-      flutter-version: '3.24.0'
-      channel: stable
-      cache: false
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: false
 
-  - name: Find Flutter project
-    shell: bash
-    run: |
-      PROJECT_DIR=""
+      - name: Find Flutter project
+        shell: bash
+        run: |
+          PROJECT_DIR=""
 
-      while IFS= read -r file; do
-        candidate="${file%/pubspec.yaml}"
-        if [ -f "$candidate/lib/main.dart" ]; then
-          PROJECT_DIR="$candidate"
-          break
-        fi
-      done < <(
-        find . -name pubspec.yaml \
-          -not -path '*/.dart_tool/*' \
-          -not -path '*/build/*' \
-          -not -path '*/.pub-cache/*' \
-          | sort
-      )
+          while IFS= read -r file; do
+            candidate="${file%/pubspec.yaml}"
 
-      if [ -z "$PROJECT_DIR" ]; then
-        echo "ERROR: Flutter project not found."
-        exit 1
-      fi
+            if [ -f "$candidate/lib/main.dart" ]; then
+              PROJECT_DIR="$candidate"
+              break
+            fi
+          done < <(
+            find . -name pubspec.yaml \
+              -not -path '*/.dart_tool/*' \
+              -not -path '*/build/*' \
+              -not -path '*/.pub-cache/*' \
+              | sort
+          )
 
-      PROJECT_DIR="${PROJECT_DIR#./}"
-      [ -n "$PROJECT_DIR" ] || PROJECT_DIR="."
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "ERROR: Cannot find Flutter project."
+            echo "Required: pubspec.yaml and lib/main.dart"
+            exit 1
+          fi
 
-      echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-      echo "Found Flutter project: $PROJECT_DIR"
+          PROJECT_DIR="${PROJECT_DIR#./}"
+          [ -n "$PROJECT_DIR" ] || PROJECT_DIR="."
 
-  - name: Validate Flutter files
-    run: |
-      cd "$PROJECT_DIR"
-      test -f pubspec.yaml
-      test -f lib/main.dart
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Found Flutter project: $PROJECT_DIR"
 
-  - name: Generate Android platform if missing
-    run: |
-      cd "$PROJECT_DIR"
+      - name: Validate Flutter files
+        run: |
+          cd "$PROJECT_DIR"
+          test -f pubspec.yaml
+          test -f lib/main.dart
+          echo "Flutter project files verified."
 
-      if [ ! -f android/app/build.gradle ] && \
-         [ ! -f android/app/build.gradle.kts ]; then
-        flutter create . \
-          --platforms=android \
-          --org com.bothybrid \
-          --project-name bot_hybrid
-      fi
+      - name: Generate Android platform if missing
+        run: |
+          cd "$PROJECT_DIR"
 
-  - name: Repair Gradle Wrapper
-    shell: bash
-    run: |
-      set -e
+          if [ ! -f android/app/build.gradle ] && \
+             [ ! -f android/app/build.gradle.kts ]; then
+            flutter create . \
+              --platforms=android \
+              --org com.bothybrid \
+              --project-name bot_hybrid
+          else
+            echo "Existing Android platform found; preserving it."
+          fi
 
-      cd "$PROJECT_DIR"
+      - name: Clean old build
+        run: |
+          cd "$PROJECT_DIR"
+          flutter clean
+          rm -rf .dart_tool build
 
-      SEED="$RUNNER_TEMP/gradle-wrapper-seed"
+      - name: Get dependencies
+        run: |
+          cd "$PROJECT_DIR"
+          flutter pub get
 
-      flutter create "$SEED" \
-        --platforms=android \
-        --org com.bothybrid \
-        --project-name wrapper_seed
+      - name: Generate Launcher Icons automatically
+        run: |
+          cd "$PROJECT_DIR"
+          # สเตปนี้ช่วยสร้างไอคอนแอปให้อัตโนมัติทุกครั้งที่บิลด์ ป้องกันปัญหาไอคอนหาย
+          flutter pub run flutter_launcher_icons:main || echo "Launcher icons package not configured, skipping..."
 
-      mkdir -p android/gradle/wrapper
+      - name: Build release APK
+        run: |
+          cd "$PROJECT_DIR"
+          flutter build apk --release
 
-      cp "$SEED/android/gradlew" android/gradlew
-      cp "$SEED/android/gradlew.bat" android/gradlew.bat
-      cp "$SEED/android/gradle/wrapper/gradle-wrapper.jar" \
-        android/gradle/wrapper/gradle-wrapper.jar
+      - name: Verify APK
+        run: |
+          APK="$PROJECT_DIR/build/app/outputs/flutter-apk/app-release.apk"
+          test -s "$APK"
+          ls -lh "$APK"
 
-      cat > android/gradle/wrapper/gradle-wrapper.properties <<'EOF'
-      distributionBase=GRADLE_USER_HOME
-      distributionPath=wrapper/dists
-      distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-all.zip
-      networkTimeout=10000
-      validateDistributionUrl=true
-      zipStoreBase=GRADLE_USER_HOME
-      zipStorePath=wrapper/dists
-      EOF
-
-      chmod +x android/gradlew
-
-      echo "Gradle Wrapper configured for Gradle 8.4"
-      grep '^distributionUrl=' \
-        android/gradle/wrapper/gradle-wrapper.properties
-
-  - name: Clean old build
-    run: |
-      cd "$PROJECT_DIR"
-      flutter clean
-      rm -rf .dart_tool build
-
-  - name: Get dependencies
-    run: |
-      cd "$PROJECT_DIR"
-      flutter pub get
-
-  - name: Generate Launcher Icons
-    run: |
-      cd "$PROJECT_DIR"
-      flutter pub run flutter_launcher_icons:main \
-        || echo "Launcher icon generation skipped."
-
-  - name: Build release APK
-    run: |
-      set -e
-      cd "$PROJECT_DIR"
-
-      chmod +x android/gradlew
-      android/gradlew --version
-
-      flutter build apk --release
-
-  - name: Verify APK
-    run: |
-      APK="$PROJECT_DIR/build/app/outputs/flutter-apk/app-release.apk"
-      test -s "$APK"
-      ls -lh "$APK"
-
-  - name: Upload APK
-    uses: actions/upload-artifact@v4
-    with:
-      name: Hybrid-Pro-APK
-      path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-release.apk
-      if-no-files-found: error
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SniperHybridV2
+          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
