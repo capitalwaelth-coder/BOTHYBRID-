@@ -1,0 +1,5 @@
+package com.algohost.hybridpro
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()
