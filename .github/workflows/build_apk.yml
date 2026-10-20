@@ -119,14 +119,12 @@ jobs:
             "$WRAPPER"
 
           chmod +x android/gradlew
-
-          echo "Gradle wrapper:"
           cat "$WRAPPER"
 
           cd android
           ./gradlew --version
 
-      - name: Update Android Gradle Plugin
+      - name: Update Android Gradle Plugin and Kotlin
         shell: bash
         run: |
           set -e
@@ -136,56 +134,99 @@ jobs:
           import re
           from pathlib import Path
 
-          settings = [
+          found_agp = False
+          found_kotlin = False
+
+          settings_files = [
               Path("android/settings.gradle"),
               Path("android/settings.gradle.kts"),
           ]
 
-          found = False
+          agp_pattern = re.compile(
+              r'(id\s*\(?\s*["\']com\.android\.application["\']'
+              r'\s*\)?\s+version\s+["\'])[^"\']+(["\'])'
+          )
 
-          for path in settings:
+          kotlin_patterns = [
+              re.compile(
+                  r'(id\s*\(?\s*["\']org\.jetbrains\.kotlin\.android["\']'
+                  r'\s*\)?\s+version\s+["\'])[^"\']+(["\'])'
+              ),
+              re.compile(
+                  r'(id\s*\(?\s*["\']org\.jetbrains\.kotlin\.jvm["\']'
+                  r'\s*\)?\s+version\s+["\'])[^"\']+(["\'])'
+              ),
+          ]
+
+          for path in settings_files:
               if not path.is_file():
                   continue
 
               text = path.read_text()
 
-              pattern = re.compile(
-                  r'(id\s*\(?\s*["\']com\.android\.application["\']'
-                  r'\s*\)?\s+version\s+["\'])[^"\']+(["\'])'
-              )
-
-              updated, count = pattern.subn(
+              text, count = agp_pattern.subn(
                   lambda m: m.group(1) + "8.11.1" + m.group(2),
                   text
               )
+              found_agp = found_agp or count > 0
 
-              if count:
-                  path.write_text(updated)
-                  print(f"Updated AGP in {path}")
-                  found = True
-
-          if not found:
-              path = Path("android/build.gradle")
-              if path.is_file():
-                  text = path.read_text()
-                  updated, count = re.subn(
-                      r'(com\.android\.tools\.build:gradle:)'
-                      r'[0-9.]+',
-                      r'\g<1>8.11.1',
+              for pattern in kotlin_patterns:
+                  text, count = pattern.subn(
+                      lambda m: m.group(1) + "2.2.20" + m.group(2),
                       text
                   )
-                  if count:
-                      path.write_text(updated)
-                      print("Updated AGP in android/build.gradle")
-                      found = True
+                  found_kotlin = found_kotlin or count > 0
 
-          if not found:
-              print("ERROR: Could not find Android Gradle Plugin declaration.")
-              raise SystemExit(1)
+              path.write_text(text)
+
+          # Support older Gradle buildscript configuration.
+          path = Path("android/build.gradle")
+          if path.is_file():
+              text = path.read_text()
+
+              text, count = re.subn(
+                  r'(com\.android\.tools\.build:gradle:)'
+                  r'[0-9.]+',
+                  r'\g<1>8.11.1',
+                  text
+              )
+              found_agp = found_agp or count > 0
+
+              text, count = re.subn(
+                  r'(ext\.kotlin_version\s*=\s*["\'])'
+                  r'[^"\']+(["\'])',
+                  lambda m: m.group(1) + "2.2.20" + m.group(2),
+                  text
+              )
+              found_kotlin = found_kotlin or count > 0
+
+              text, count = re.subn(
+                  r'(org\.jetbrains\.kotlin:kotlin-gradle-plugin:)'
+                  r'[^:\s"\']+',
+                  r'\g<1>2.2.20',
+                  text
+              )
+              found_kotlin = found_kotlin or count > 0
+
+              path.write_text(text)
+
+          print(f"AGP updated: {found_agp}")
+          print(f"Kotlin updated: {found_kotlin}")
+
+          if not found_agp:
+              raise SystemExit(
+                  "ERROR: AGP version declaration not found."
+              )
+
+          if not found_kotlin:
+              raise SystemExit(
+                  "ERROR: Kotlin version declaration not found."
+              )
           PY
 
-          echo "AGP configuration:"
-          grep -n -E 'com.android.application|com.android.tools.build:gradle' \
+          echo "Android Gradle configuration:"
+          grep -n -E \
+            'com.android.application|com.android.tools.build:gradle|org.jetbrains.kotlin|kotlin_version' \
             android/settings.gradle android/settings.gradle.kts \
             android/build.gradle 2>/dev/null || true
 
