@@ -71,6 +71,7 @@ jobs:
 
       - name: Validate Flutter files
         run: |
+          set -e
           cd "$PROJECT_DIR"
           test -f pubspec.yaml
           test -f lib/main.dart
@@ -78,6 +79,7 @@ jobs:
 
       - name: Generate Android platform if missing
         run: |
+          set -e
           cd "$PROJECT_DIR"
 
           if [ ! -f android/app/build.gradle ] && \
@@ -92,12 +94,37 @@ jobs:
 
       - name: Clean old build
         run: |
+          set -e
           cd "$PROJECT_DIR"
           flutter clean
           rm -rf .dart_tool build
 
+      - name: Update Gradle Wrapper
+        shell: bash
+        run: |
+          set -e
+          cd "$PROJECT_DIR"
+
+          WRAPPER="android/gradle/wrapper/gradle-wrapper.properties"
+
+          if [ ! -f "$WRAPPER" ]; then
+            echo "ERROR: Gradle wrapper properties not found."
+            exit 1
+          fi
+
+          sed -i \
+            's#gradle-[0-9][^/]*-all.zip#gradle-8.14.3-all.zip#; s#gradle-[0-9][^/]*-bin.zip#gradle-8.14.3-bin.zip#' \
+            "$WRAPPER"
+
+          echo "Updated Gradle wrapper:"
+          cat "$WRAPPER"
+
+          chmod +x android/gradlew
+          android/gradlew --version
+
       - name: Get dependencies
         run: |
+          set -e
           cd "$PROJECT_DIR"
           flutter pub get
 
@@ -109,11 +136,13 @@ jobs:
 
       - name: Build release APK
         run: |
+          set -e
           cd "$PROJECT_DIR"
           flutter build apk --release
 
       - name: Verify APK
         run: |
+          set -e
           APK="$PROJECT_DIR/build/app/outputs/flutter-apk/app-release.apk"
           test -s "$APK"
           ls -lh "$APK"
