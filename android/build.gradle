@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace "com.algohost.sniper_hybrid"
+    namespace "com.algohost.hybridpro"
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.algohost.sniper_hybrid"
+        applicationId "com.algohost.hybridpro"
         minSdk 21
         targetSdk 34
         versionCode 1
