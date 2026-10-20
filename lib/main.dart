@@ -143,7 +143,7 @@ class LiquiditySweepApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SNIPER HYBRID',
+      title: 'HYBRID PRO',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF263238),
@@ -368,7 +368,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                       ),
                       const SizedBox(height: 24),
                       const Text(
-                        'SNIPER HYBRID',
+                        'HYBRID PRO',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 26,
@@ -733,7 +733,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'HYBRID ALGO',
+                      'HYBRID PRO',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 22,
@@ -2133,7 +2133,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           FlashingSniperText(),
                           SizedBox(height: 4),
                           Text(
-                            'HYBRID ROBOT',
+                            'HYBRID PRO',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 22,
@@ -2662,7 +2662,7 @@ class _FlashingSniperTextState extends State<FlashingSniperText>
         return Opacity(
           opacity: val,
           child: const Text(
-            'R O B O T  H Y B R I D',
+            'HYBRID PRO',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 26,
@@ -3771,7 +3771,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController basketSlController = TextEditingController(text: "5.00");
 
   DatabaseReference? _statusRef;
-  String currentLogin = "235305975";
+  String currentLogin = "";
 
   bool _isEditing = false;
   bool _isInitialized = false;
@@ -3970,7 +3970,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'PARAMETERS BOT',
+                        'PARAMETERS',
                         style: TextStyle(color: Color(0xFFCFD8DC), fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.8, fontFamily: 'monospace'),
                       ),
                       const SizedBox(height: 12),
