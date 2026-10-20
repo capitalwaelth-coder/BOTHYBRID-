@@ -1,7 +1,7 @@
 // ==========================================
 // #1 โหมดการเชื่อมต่อเซิร์ฟเวอร์
 // ==========================================
-     
+    
 import 'dart:async';  
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -32,7 +32,7 @@ void main() async {
       );
     }
   } catch (e) {
-    print("Firebase init error: $e");
+    debugPrint("Firebase init error: $e");
   }
 
   runApp(const LiquiditySweepApp());
@@ -116,9 +116,54 @@ class _TypewriterTextState extends State<TypewriterText> {
   }
 }
 
+// Widget ข้อความกะพริบ SNIPER
+class FlashingSniperText extends StatefulWidget {
+  const FlashingSniperText({super.key});
+
+  @override
+  State<FlashingSniperText> createState() => _FlashingSniperTextState();
+}
+
+class _FlashingSniperTextState extends State<FlashingSniperText> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.2, end: 1.0).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _animation,
+      child: const Text(
+        'SNIPER',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF00E676),
+          letterSpacing: 2.0,
+        ),
+      ),
+    );
+  }
+}
+
 
 // ==========================================
-// #3 โหมดLiquiditySweepApp
+// #3 โหมด LiquiditySweepApp
 // ==========================================
 
 class LiquiditySweepApp extends StatelessWidget {
@@ -128,7 +173,6 @@ class LiquiditySweepApp extends StatelessWidget {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // ตรวจสอบคีย์บัญชี MT5 ที่เคยบันทึกไว้
       final login = prefs.getString('mt5_login') ??
           prefs.getString('saved_mt5_login') ??
           '';
@@ -213,7 +257,6 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
     String password = _passwordController.text.trim();
     String server = _serverController.text.trim().isEmpty ? 'ICMarketsSC-Demo' : _serverController.text.trim();
 
-    // ตรวจสอบว่ากรอกทั้ง Account Login และ Investor Password ครบถ้วนหรือไม่
     if (login.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -255,9 +298,6 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
       final snapshot = await accountRef.get();
 
       if (snapshot.exists) {
-        // (ตัวเลือกเพิ่มเติม) หากต้องการตรวจสอบรหัสผ่านพาสเวิร์ดจาก Firebase เพิ่มเติม สามารถตรวจสอบได้ที่นี่
-        // แต่ในเบื้องต้นระบบจะบล็อกไม่ให้ผ่านหากยังไม่ได้กรอกข้อมูลทั้งสองช่องครับ
-
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('mt5_login', login);
         await prefs.setString('saved_mt5_login', login);
@@ -282,45 +322,18 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
           ),
         );
       }
-    } on FirebaseException catch (e, stackTrace) {
-      debugPrint('Firebase error code: ${e.code}');
-      debugPrint('Firebase error details: ${e.message}');
-      debugPrintStack(stackTrace: stackTrace);
-
+    } catch (e) {
       if (!mounted) return;
-
       setState(() {
         _isLoading = false;
       });
-
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            content: Text('Firebase Error: ${e.message}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-    } catch (e, stackTrace) {
-      debugPrint('Login error details: $e');
-      debugPrintStack(stackTrace: stackTrace);
-
-      if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            content: Text('เกิดข้อผิดพลาด: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('เกิดข้อผิดพลาด: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -330,14 +343,12 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ปรับความสว่างภาพพื้นหลังรูปบอทให้ชัดเจนขึ้น
           Image.asset(
             'assets/images/1792250396366.jpg',
             fit: BoxFit.cover,
             opacity: const AlwaysStoppedAnimation(0.45),
             errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFF263238)),
           ),
-          // ปรับความเข้มเลเยอร์ทับให้อ่านง่ายและเห็นบอทสวยงาม
           Container(color: const Color(0xFF263238).withOpacity(0.65)),
           SafeArea(
             child: Padding(
@@ -471,10 +482,6 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
 }
 
 
-
-
-
-
 // ==========================================
 // #5 PIN AUTH WRAPPER
 // ==========================================
@@ -534,8 +541,6 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = await prefs.setString('saved_user_pin', pin);
-
-      // ตรวจสอบว่าค่าถูกบันทึกและอ่านกลับได้จริง
       return saved && prefs.getString('saved_user_pin') == pin;
     } catch (e) {
       debugPrint('Save PIN error: $e');
@@ -672,17 +677,16 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
     if (isLoading || _isProcessing || currentPinInput.isEmpty) return;
 
     setState(() {
-      currentPinInput =
-          currentPinInput.substring(0, currentPinInput.length - 1);
+      currentPinInput = currentPinInput.substring(0, currentPinInput.length - 1);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF263238),
-        body: const Center(
+      return const Scaffold(
+        backgroundColor: Color(0xFF263238),
+        body: Center(
           child: CircularProgressIndicator(
             color: Color(0xFFCFD8DC),
           ),
@@ -706,15 +710,12 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. ปรับความสว่างของภาพพื้นหลังรูปบอทให้ชัดเจนขึ้น
           Image.asset(
             'assets/images/1792250396366.jpg',
             fit: BoxFit.cover,
             opacity: const AlwaysStoppedAnimation(0.45),
-            errorBuilder: (ctx, err, stack) =>
-                Container(color: const Color(0xFF263238)),
+            errorBuilder: (ctx, err, stack) => Container(color: const Color(0xFF263238)),
           ),
-          // 2. ปรับความเข้มเลเยอร์สีทับให้อ่านง่ายและเห็นบอทสวยงาม
           Container(
             color: const Color(0xFF263238).withOpacity(0.65),
           ),
@@ -884,8 +885,6 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 
-
-
 // ==========================================
 // #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
 // ==========================================
@@ -1002,7 +1001,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
         }
       });
     } catch (e) {
-      print("Account listen error: $e");
+      debugPrint("Account listen error: $e");
     }
   }
 
@@ -1035,7 +1034,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
         }
       });
     } catch (e) {
-      print("Alerts count error: $e");
+      debugPrint("Alerts count error: $e");
     }
   }
 
@@ -1059,7 +1058,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
         }
       });
     } catch (e) {
-      print("Database listen error: $e");
+      debugPrint("Database listen error: $e");
     }
   }
 
@@ -1078,7 +1077,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
         }
       });
     } catch (e) {
-      print("Connection listen error: $e");
+      debugPrint("Connection listen error: $e");
     }
   }
 
@@ -1124,7 +1123,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
         }
       });
     } catch (e) {
-      print("Logs listen error: $e");
+      debugPrint("Logs listen error: $e");
     }
   }
 
@@ -1158,7 +1157,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
         }
       });
     } catch (e) {
-      print("Orders listen error: $e");
+      debugPrint("Orders listen error: $e");
     }
   }
 
@@ -1168,7 +1167,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
         await _logsRef!.child(key).remove();
       }
     } catch (e) {
-      print("Clear log item error: $e");
+      debugPrint("Clear log item error: $e");
     }
   }
 
@@ -1183,7 +1182,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
         }
       }
     } catch (e) {
-      print("Clear all logs error: $e");
+      debugPrint("Clear all logs error: $e");
     }
   }
 
@@ -1536,7 +1535,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
         border: Border.all(color: const Color(0xFFCFD8DC), width: 2.0),
         boxShadow: [
           BoxShadow(
-            // ปรับสีเรืองแสงเป็นสีแดงเมื่อออฟไลน์หรือหยุดทำงาน
             color: (isServerActive ? const Color(0xFF00C853) : Colors.redAccent).withOpacity(0.6),
             blurRadius: 10,
             spreadRadius: 2,
@@ -1565,7 +1563,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
               width: 14,
               height: 14,
               decoration: BoxDecoration(
-                // เปลี่ยนจุดสถานะเป็นสีแดงเมื่อออฟไลน์/หยุดทำงาน
                 color: isServerActive ? const Color(0xFF00C853) : Colors.redAccent,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.black, width: 2),
@@ -1672,7 +1669,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                           width: 8,
                           height: 8,
                           decoration: BoxDecoration(
-                            // จุดสถานะในรายงานเป็นสีแดงเมื่อออฟไลน์
                             color: isServerActive ? const Color(0xFF00C853) : Colors.redAccent,
                             shape: BoxShape.circle,
                             boxShadow: [
@@ -1687,7 +1683,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                         Text(
                           isServerActive ? 'EA SERVER ONLINE & RUNNING' : 'EA SERVER OFFLINE / STOPPED',
                           style: TextStyle(
-                            // ข้อความสถานะเป็นสีแดงเมื่อออฟไลน์
                             color: isServerActive ? const Color(0xFF00C853) : Colors.redAccent,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -1850,7 +1845,6 @@ class ScannerClipper extends CustomClipper<Rect> {
 }
 
 
-
 // ==========================================
 // #7 โหมด HomeScreen
 // ==========================================
@@ -1935,7 +1929,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       });
     } catch (e) {
-      print("Connection listen error: $e");
+      debugPrint("Connection listen error: $e");
     }
   }
 
@@ -1972,7 +1966,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       });
     } catch (e) {
-      print("Database listen error: $e");
+      debugPrint("Database listen error: $e");
     }
   }
 
@@ -2012,7 +2006,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       });
     } catch (e) {
-      print("History stats listen error: $e");
+      debugPrint("History stats listen error: $e");
     }
   }
 
@@ -2046,7 +2040,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       });
     } catch (e) {
-      print("Orders listen error: $e");
+      debugPrint("Orders listen error: $e");
     }
   }
 
@@ -2057,7 +2051,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         'command_timestamp': DateTime.now().millisecondsSinceEpoch,
       });
     } catch (e) {
-      print("Toggle bot error: $e");
+      debugPrint("Toggle bot error: $e");
     }
   }
 
@@ -2071,8 +2065,259 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         const SnackBar(content: Text('Sent Close All Command to EA!'), backgroundColor: Color(0xFF37474F)),
       );
     } catch (e) {
-      print("Close all error: $e");
+      debugPrint("Close all error: $e");
     }
+  }
+
+  Widget _buildCircularButton({
+    required String label,
+    required IconData icon,
+    required List<Color> colors,
+    required Color borderColor,
+    Color glowColor = Colors.transparent,
+    required VoidCallback onPressed,
+    bool isLarge = false,
+  }) {
+    double size = isLarge ? 80.0 : 64.0;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(colors: colors, begin: Alignment.topCenter, end: Alignment.bottomCenter),
+            border: Border.all(color: borderColor, width: isLarge ? 2.5 : 1.5),
+            boxShadow: [
+              BoxShadow(color: glowColor.withOpacity(0.5), blurRadius: 10, spreadRadius: 2),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onPressed,
+              customBorder: const CircleBorder(),
+              child: Icon(icon, color: Colors.white, size: isLarge ? 38 : 28),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildBidAskBoxContent(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF37474F).withOpacity(0.85),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFB0BEC5), width: 1.5),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Column(
+            children: [
+              const Text('BID', style: TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(realTimeBid.toStringAsFixed(2), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          Container(width: 1, height: 35, color: Colors.white24),
+          Column(
+            children: [
+              const Text('ASK', style: TextStyle(color: Color(0xFF00E676), fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(realTimeAsk.toStringAsFixed(2), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    required String subText,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF263238).withOpacity(0.8),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.5), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+              Icon(icon, color: color, size: 16),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(subText, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDashboardStatsContent() {
+    double totalProfitLoss = 0.0;
+    double maxProfit = 0.0;
+    double maxLoss = 0.0;
+
+    for (var trade in _historyTrades) {
+      double p = double.tryParse(trade['profit']?.toString() ?? '0.0') ?? 0.0;
+      totalProfitLoss += p;
+      if (p > 0) {
+        if (p > maxProfit) maxProfit = p;
+      } else if (p < 0) {
+        if (p < maxLoss) maxLoss = p;
+      }
+    }
+
+    int displayWins = cycleWins;
+    int displayLosses = cycleLosses;
+    int totalCycles = displayWins + displayLosses;
+    double displayWinRate = totalCycles > 0 ? (displayWins / totalCycles) * 100 : cycleWinRate;
+    double lossRate = 100.0 - displayWinRate;
+
+    double peak = balance > 0 ? balance : 1000.0;
+    double maxDDAmount = 0.0;
+    for (var trade in _historyTrades) {
+      double p = double.tryParse(trade['profit']?.toString() ?? '0.0') ?? 0.0;
+      peak += p;
+      double currentDD = peak > 0 ? (maxLoss.abs() / peak) * 100 : 0.0;
+      if (currentDD > maxDDAmount) {
+        maxDDAmount = currentDD;
+      }
+    }
+    if (maxDDAmount == 0 && displayLosses > 0) {
+      maxDDAmount = (maxLoss.abs() / (balance > 0 ? balance : 1000.0)) * 100;
+    }
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  title: 'WIN RATE',
+                  value: '${displayWinRate.toStringAsFixed(1)}%',
+                  subText: '$displayWins Win / $displayLosses Loss',
+                  color: const Color(0xFF00C853),
+                  icon: Icons.pie_chart,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildStatCard(
+                  title: 'MAX DRAWDOWN',
+                  value: '${maxDDAmount.toStringAsFixed(2)}%',
+                  subText: 'Max Loss: \$${maxLoss.toStringAsFixed(2)}',
+                  color: Colors.orangeAccent,
+                  icon: Icons.trending_down,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  title: 'TOTAL CYCLES',
+                  value: '$totalCycles',
+                  subText: '',
+                  color: const Color(0xFFCFD8DC),
+                  icon: Icons.receipt_long,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildStatCard(
+                  title: 'NET PROFIT',
+                  value: '${totalProfitLoss >= 0 ? "+" : ""}\$${totalProfitLoss.toStringAsFixed(2)}',
+                  subText: 'Balance: \$${balance.toStringAsFixed(2)}',
+                  color: totalProfitLoss >= 0 ? const Color(0xFF00C853) : Colors.orangeAccent,
+                  icon: Icons.account_balance_wallet,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF263238).withOpacity(0.8),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF78909C), width: 1.5),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'WIN RATE & CYCLES',
+                  style: TextStyle(
+                    color: Color(0xFFCFD8DC),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF37474F).withOpacity(0.85),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white24, width: 1.0),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('WIN RATE', style: TextStyle(color: Color(0xFF00C853), fontSize: 10, fontWeight: FontWeight.bold)),
+                              Text('${displayWinRate.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              const Text('LOSS RATE', style: TextStyle(color: Colors.orangeAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                              Text('${lossRate.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -2082,7 +2327,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. เพิ่มความสว่างของรูปบอทพื้นหลัง
           Image.asset(
             'assets/images/1792250396366.jpg',
             fit: BoxFit.cover,
@@ -2091,7 +2335,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               return Container(color: const Color(0xFF263238));
             },
           ),
-          // 2. ปรับความเข้มเลเยอร์ทับให้เห็นบอทจางๆ ชัดเจนสวยงาม
           Container(
             color: const Color(0xFF263238).withOpacity(0.65),
           ),
@@ -2303,141 +2546,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     );
   }
-
-  Widget _buildDashboardStatsContent() {
-    double totalProfitLoss = 0.0;
-    double maxProfit = 0.0;
-    double maxLoss = 0.0;
-
-    for (var trade in _historyTrades) {
-      double p = double.tryParse(trade['profit']?.toString() ?? '0.0') ?? 0.0;
-      totalProfitLoss += p;
-      if (p > 0) {
-        if (p > maxProfit) maxProfit = p;
-      } else if (p < 0) {
-        if (p < maxLoss) maxLoss = p;
-      }
-    }
-
-    int displayWins = cycleWins;
-    int displayLosses = cycleLosses;
-    int totalCycles = displayWins + displayLosses;
-    double displayWinRate = totalCycles > 0 ? (displayWins / totalCycles) * 100 : cycleWinRate;
-    double lossRate = 100.0 - displayWinRate;
-
-    double peak = balance > 0 ? balance : 1000.0;
-    double maxDDAmount = 0.0;
-    for (var trade in _historyTrades) {
-      double p = double.tryParse(trade['profit']?.toString() ?? '0.0') ?? 0.0;
-      peak += p;
-      double currentDD = peak > 0 ? (maxLoss.abs() / peak) * 100 : 0.0;
-      if (currentDD > maxDDAmount) {
-        maxDDAmount = currentDD;
-      }
-    }
-    if (maxDDAmount == 0 && displayLosses > 0) {
-      maxDDAmount = (maxLoss.abs() / (balance > 0 ? balance : 1000.0)) * 100;
-    }
-
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  title: 'WIN RATE',
-                  value: '${displayWinRate.toStringAsFixed(1)}%',
-                  subText: '$displayWins Win / $displayLosses Loss',
-                  color: const Color(0xFF00C853),
-                  icon: Icons.pie_chart,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildStatCard(
-                  title: 'MAX DRAWDOWN',
-                  value: '${maxDDAmount.toStringAsFixed(2)}%',
-                  subText: 'Max Loss: \$${maxLoss.toStringAsFixed(2)}',
-                  color: Colors.orangeAccent,
-                  icon: Icons.trending_down,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  title: 'TOTAL CYCLES',
-                  value: '$totalCycles',
-                  subText: '',
-                  color: const Color(0xFFCFD8DC),
-                  icon: Icons.receipt_long,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildStatCard(
-                  title: 'NET PROFIT',
-                  value: '${totalProfitLoss >= 0 ? "+" : ""}\$${totalProfitLoss.toStringAsFixed(2)}',
-                  subText: 'Balance: \$${balance.toStringAsFixed(2)}',
-                  color: totalProfitLoss >= 0 ? const Color(0xFF00C853) : Colors.orangeAccent,
-                  icon: Icons.account_balance_wallet,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF263238).withOpacity(0.8),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF78909C), width: 1.5),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'WIN RATE & CYCLES',
-                  style: TextStyle(
-                    color: Color(0xFFCFD8DC),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF37474F).withOpacity(0.85),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white24, width: 1.0),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('WIN RATE', style: TextStyle(color: Color(0xFF00C853), fontSize: 10, fontWeight: FontWeight.bold)),
-                              Text('${displayWinRate.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const Text('LOSS RATE', style: TextStyle(color: Colors.orangeAccent, fontSize: 10, fontWeight: FontWeight.bold)),
-                              Text('${lossRate.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.
-
+}
 
 
 // ==========================================
@@ -2506,7 +2615,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         }
       });
     } catch (e) {
-      print("Status symbol listen error: $e");
+      debugPrint("Status symbol listen error: $e");
     }
   }
 
@@ -2525,7 +2634,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         }
       });
     } catch (e) {
-      print("Orders listen error: $e");
+      debugPrint("Orders listen error: $e");
     }
   }
 
@@ -2549,6 +2658,41 @@ class _OrdersScreenState extends State<OrdersScreen> {
     });
   }
 
+  Widget _buildMetricCard(String title, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF263238).withOpacity(0.8),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white12, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.grey, size: 14),
+              const SizedBox(width: 4),
+              Text(title, style: const TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              fontFamily: 'monospace',
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     double totalOrdersProfit = activeOrders.fold(0.0, (sum, item) {
@@ -2565,7 +2709,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. เพิ่มความสว่างของรูปบอทพื้นหลัง
           Image.asset(
             'assets/images/1792250396366.jpg',
             fit: BoxFit.cover,
@@ -2574,7 +2717,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
               return Container(color: const Color(0xFF263238));
             },
           ),
-          // 2. ปรับความเข้มเลเยอร์ทับให้อ่านง่ายและเห็นบอทชัดเจน
           Container(
             color: const Color(0xFF263238).withOpacity(0.65),
           ),
@@ -2733,78 +2875,78 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           ),
                         ),
                         activeOrders.isEmpty
-                              ? const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 40.0),
-                                  child: Center(
-                                    child: Text('No active orders currently', style: TextStyle(color: Colors.grey, fontSize: 13, fontFamily: 'monospace')),
-                                  ),
-                                )
-                              : ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: activeOrders.length,
-                                  itemBuilder: (context, index) {
-                                    final order = activeOrders[index];
-                                    final String type = order['type']?.toString() ?? 'BUY';
-                                    final double lot = double.tryParse(order['lot']?.toString() ?? '0.01') ?? 0.01;
-                                    final double profit = double.tryParse(order['profit']?.toString() ?? '0.0') ?? 0.0;
-                                    final double priceOpen = double.tryParse(order['price']?.toString() ?? '0.0') ?? 0.0;
-                                    final String symbol = order['symbol']?.toString() ?? activeSymbol;
-                                    bool isBuy = type.toUpperCase().contains('BUY');
-                                    bool orderProfit = profit >= 0;
-
-                                    return Container(
-                                      margin: const EdgeInsets.only(bottom: 10),
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF263238).withOpacity(0.8),
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(
-                                          color: isBuy ? const Color(0xFF00C853).withOpacity(0.5) : Colors.orangeAccent.withOpacity(0.5),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: isBuy ? const Color(0xFF00C853).withOpacity(0.2) : Colors.orangeAccent.withOpacity(0.2),
-                                                  borderRadius: BorderRadius.circular(6),
-                                                ),
-                                                child: Text(
-                                                  type,
-                                                  style: TextStyle(color: isBuy ? const Color(0xFF00C853) : Colors.orangeAccent, fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'monospace'),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(symbol, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'monospace')),
-                                                  const SizedBox(height: 2),
-                                                  Text('Lot: $lot | Open: ${priceOpen.toStringAsFixed(2)}', style: const TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'monospace')),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                          Text(
-                                            '${orderProfit ? "+" : ""}\$${profit.toStringAsFixed(2)}',
-                                            style: TextStyle(
-                                              color: orderProfit ? const Color(0xFF00C853) : Colors.orangeAccent,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                              fontFamily: 'monospace',
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
+                            ? const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 40.0),
+                                child: Center(
+                                  child: Text('No active orders currently', style: TextStyle(color: Colors.grey, fontSize: 13, fontFamily: 'monospace')),
                                 ),
+                              )
+                            : ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: activeOrders.length,
+                                itemBuilder: (context, index) {
+                                  final order = activeOrders[index];
+                                  final String type = order['type']?.toString() ?? 'BUY';
+                                  final double lot = double.tryParse(order['lot']?.toString() ?? '0.01') ?? 0.01;
+                                  final double profit = double.tryParse(order['profit']?.toString() ?? '0.0') ?? 0.0;
+                                  final double priceOpen = double.tryParse(order['price']?.toString() ?? '0.0') ?? 0.0;
+                                  final String symbol = order['symbol']?.toString() ?? activeSymbol;
+                                  bool isBuy = type.toUpperCase().contains('BUY');
+                                  bool orderProfit = profit >= 0;
+
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 10),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF263238).withOpacity(0.8),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: isBuy ? const Color(0xFF00C853).withOpacity(0.5) : Colors.orangeAccent.withOpacity(0.5),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: isBuy ? const Color(0xFF00C853).withOpacity(0.2) : Colors.orangeAccent.withOpacity(0.2),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                type,
+                                                style: TextStyle(color: isBuy ? const Color(0xFF00C853) : Colors.orangeAccent, fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'monospace'),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(symbol, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'monospace')),
+                                                const SizedBox(height: 2),
+                                                Text('Lot: $lot | Open: ${priceOpen.toStringAsFixed(2)}', style: const TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'monospace')),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                        Text(
+                                          '${orderProfit ? "+" : ""}\$${profit.toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                            color: orderProfit ? const Color(0xFF00C853) : Colors.orangeAccent,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            fontFamily: 'monospace',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
                       ],
                     ),
                   ),
@@ -2816,44 +2958,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ),
     );
   }
-
-  Widget _buildMetricCard(String title, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF263238).withOpacity(0.8),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white12, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: Colors.grey, size: 14),
-              const SizedBox(width: 4),
-              Text(title, style: const TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              fontFamily: 'monospace',
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
 }
-
-
 
 
 // ==========================================
@@ -2932,7 +3037,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         }
       });
     } catch (e) {
-      print("History listen error: $e");
+      debugPrint("History listen error: $e");
     }
   }
 
@@ -3119,7 +3224,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         child: Text(
                           '${totalProfit >= 0 ? "+" : ""}\$${totalProfit.toStringAsFixed(2)}',
                           style: TextStyle(
-                            // หากยอดรวมติดลบ (ขาดทุน) จะแสดงเป็นสีแดง
                             color: totalProfit >= 0 ? const Color(0xFF00C853) : Colors.redAccent,
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -3185,7 +3289,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                            // ถ้าเป็น BUY ใช้สีเขียว, ถ้าเป็น SELL ใช้สีแดง
                                             color: isBuy 
                                                 ? const Color(0xFF00C853).withOpacity(0.2) 
                                                 : Colors.redAccent.withOpacity(0.2),
@@ -3220,7 +3323,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     Text(
                                       '${isProfit ? "+" : ""}\$${profit.toStringAsFixed(2)}',
                                       style: TextStyle(
-                                        // ถ้ากำไร (>= 0) ใช้สีเขียว, ถ้าขาดทุน (< 0) ใช้สีแดง
                                         color: isProfit ? const Color(0xFF00C853) : Colors.redAccent,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
@@ -3242,8 +3344,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 }
-
-
 
 
 // ==========================================
@@ -3369,7 +3469,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         }
       });
     } catch (e) {
-      print("Alerts listen error: $e");
+      debugPrint("Alerts listen error: $e");
     }
   }
 
@@ -3379,7 +3479,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         await _alertsRef!.child(key).remove();
       }
     } catch (e) {
-      print("Clear alert error: $e");
+      debugPrint("Clear alert error: $e");
     }
   }
 
@@ -3394,7 +3494,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         }
       }
     } catch (e) {
-      print("Clear all alerts error: $e");
+      debugPrint("Clear all alerts error: $e");
     }
   }
 
@@ -3417,7 +3517,6 @@ class _AlertsScreenState extends State<AlertsScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. เพิ่มความสว่างของรูปบอทพื้นหลัง
           Image.asset(
             'assets/images/1792250396366.jpg',
             fit: BoxFit.cover,
@@ -3426,7 +3525,6 @@ class _AlertsScreenState extends State<AlertsScreen> {
               return Container(color: const Color(0xFF263238));
             },
           ),
-          // 2. ปรับความเข้มของเลเยอร์ทับให้มองเห็นบอทจางๆ สวยงาม
           Container(
             color: const Color(0xFF263238).withOpacity(0.65),
           ),
@@ -3500,7 +3598,6 @@ class _AlertsScreenState extends State<AlertsScreen> {
     );
   }
 }
-
 
 
 // ==========================================
@@ -3615,7 +3712,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       });
     } catch (e) {
-      print("Load settings error: $e");
+      debugPrint("Load settings error: $e");
     }
   }
 
@@ -3642,7 +3739,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
     } catch (e) {
-      print("Save bot parameters error: $e");
+      debugPrint("Save bot parameters error: $e");
     }
   }
 
@@ -4001,7 +4098,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(color: Colors.white24),
                       const SizedBox(height: 12),
 
-                      // ส่วนที่เพิ่มเข้ามาใหม่: Basket Control & Daily Target/Loss ตามรูปภาพที่ 2
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
