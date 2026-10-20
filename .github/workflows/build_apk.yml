@@ -1,332 +1,344 @@
 name: HYBRID PRO
 
-on: workflow_dispatch: push: branches: - main paths: - '.github/workflows/' - 'lib/' - 'android/' - 'pubspec.yaml' - 'pubspec.lock' - 'assets/'
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/**'
+      - 'lib/**'
+      - 'android/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'assets/**'
 
-permissions: contents: read
+permissions:
+  contents: read
 
-jobs: build: runs-on: ubuntu-latest
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-steps:  
-  - name: Checkout repository  
-    uses: actions/checkout@v4  
-  
-  - name: Setup Java  
-    uses: actions/setup-java@v4  
-    with:  
-      distribution: temurin  
-      java-version: '17'  
-  
-  - name: Setup Flutter  
-    uses: subosito/flutter-action@v2  
-    with:  
-      channel: stable  
-      cache: false  
-  
-  - name: Find Flutter project  
-    shell: bash  
-    run: |  
-      set -e  
-      PROJECT_DIR=""  
-  
-      if [ -f "pubspec.yaml" ] && [ -f "lib/main.dart" ]; then  
-        PROJECT_DIR="."  
-      else  
-        while IFS= read -r file; do  
-          candidate="${file%/pubspec.yaml}"  
-          if [ -f "$candidate/lib/main.dart" ]; then  
-            PROJECT_DIR="$candidate"  
-            break  
-          fi  
-        done < <(  
-          find . -name pubspec.yaml \  
-            -not -path '*/.dart_tool/*' \  
-            -not -path '*/build/*' \  
-            -not -path '*/.pub-cache/*' \  
-            | sort  
-        )  
-      fi  
-  
-      if [ -z "$PROJECT_DIR" ]; then  
-        echo "ERROR: Cannot find Flutter project."  
-        exit 1  
-      fi  
-  
-      echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"  
-      echo "Found Flutter project: $PROJECT_DIR"  
-  
-  - name: Validate Flutter files  
-    run: |  
-      set -e  
-      cd "$PROJECT_DIR"  
-      test -f pubspec.yaml  
-      test -f lib/main.dart  
-      echo "Flutter project files verified."  
-  
-  - name: Generate Android platform if missing  
-    shell: bash  
-    run: |  
-      set -e  
-      cd "$PROJECT_DIR"  
-  
-      if [ ! -f android/app/build.gradle ] && \  
-         [ ! -f android/app/build.gradle.kts ]; then  
-        flutter create . --platforms=android  
-      fi  
-  
-      test -d android  
-  
-  - name: Clean old build  
-    run: |  
-      set -e  
-      cd "$PROJECT_DIR"  
-      flutter clean  
-      rm -rf .dart_tool build  
-      rm -rf android/.gradle  
-      echo "Old build files removed."  
-  
-  - name: Ensure Gradle Wrapper  
-    shell: bash  
-    run: |  
-      set -e  
-      cd "$PROJECT_DIR"  
-  
-      WRAPPER="android/gradle/wrapper/gradle-wrapper.properties"  
-  
-      if [ ! -f "$WRAPPER" ]; then  
-        flutter create . --platforms=android  
-      fi  
-  
-      if [ ! -f "$WRAPPER" ] || [ ! -f android/gradlew ]; then  
-        echo "ERROR: Gradle wrapper is missing."  
-        find android -maxdepth 5 -type f  
-        exit 1  
-      fi  
-  
-      sed -i -E \  
-        's#gradle-[0-9][^/]*-(all|bin)\.zip#gradle-8.14.3-\1.zip#' \  
-        "$WRAPPER"  
-  
-      chmod +x android/gradlew  
-      cat "$WRAPPER"  
-  
-      cd android  
-      ./gradlew --version  
-  
-  - name: Update Android Gradle Plugin and Kotlin  
-    shell: bash  
-    run: |  
-      set -e  
-      cd "$PROJECT_DIR"  
-  
-      python3 <<'PY'  
-      import re  
-      from pathlib import Path  
-  
-      agp_found = False  
-      kotlin_found = False  
-  
-      settings_files = [  
-          Path("android/settings.gradle"),  
-          Path("android/settings.gradle.kts"),  
-      ]  
-  
-      agp_pattern = re.compile(  
-          r'(id\s*\(?\s*["\']com\.android\.application["\']'  
-          r'\s*\)?\s+version\s+["\'])[^"\']+(["\'])'  
-      )  
-  
-      kotlin_patterns = [  
-          re.compile(  
-              r'(id\s*\(?\s*["\']org\.jetbrains\.kotlin\.android["\']'  
-              r'\s*\)?\s+version\s+["\'])[^"\']+(["\'])'  
-          ),  
-          re.compile(  
-              r'(id\s*\(?\s*["\']org\.jetbrains\.kotlin\.jvm["\']'  
-              r'\s*\)?\s+version\s+["\'])[^"\']+(["\'])'  
-          ),  
-      ]  
-  
-      for path in settings_files:  
-          if not path.is_file():  
-              continue  
-  
-          text = path.read_text()  
-  
-          text, count = agp_pattern.subn(  
-              lambda m: m.group(1) + "8.11.1" + m.group(2),  
-              text  
-          )  
-          agp_found = agp_found or count > 0  
-  
-          for pattern in kotlin_patterns:  
-              text, count = pattern.subn(  
-                  lambda m: m.group(1) + "2.2.20" + m.group(2),  
-                  text  
-              )  
-              kotlin_found = kotlin_found or count > 0  
-  
-          path.write_text(text)  
-  
-      path = Path("android/build.gradle")  
-  
-      if path.is_file():  
-          text = path.read_text()  
-  
-          text, count = re.subn(  
-              r'(com\.android\.tools\.build:gradle:)[0-9.]+',  
-              r'\g<1>8.11.1',  
-              text  
-          )  
-          agp_found = agp_found or count > 0  
-  
-          text, count = re.subn(  
-              r'(ext\.kotlin_version\s*=\s*["\'])[^"\']+(["\'])',  
-              lambda m: m.group(1) + "2.2.20" + m.group(2),  
-              text  
-          )  
-          kotlin_found = kotlin_found or count > 0  
-  
-          text, count = re.subn(  
-              r'(org\.jetbrains\.kotlin:kotlin-gradle-plugin:)[^:\s"\']+',  
-              r'\g<1>2.2.20',  
-              text  
-          )  
-          kotlin_found = kotlin_found or count > 0  
-  
-          path.write_text(text)  
-  
-      if not agp_found:  
-          raise SystemExit("ERROR: AGP declaration not found.")  
-  
-      if not kotlin_found:  
-          raise SystemExit("ERROR: Kotlin declaration not found.")  
-  
-      print("AGP set to 8.11.1")  
-      print("Kotlin set to 2.2.20")  
-      PY  
-  
-  - name: Fix Android SDK and Gradle Memory  
-    shell: bash  
-    run: |  
-      set -e  
-      cd "$PROJECT_DIR"  
-  
-      python3 <<'PY'  
-      import re  
-      from pathlib import Path  
-  
-      path = Path("android/app/build.gradle")  
-  
-      if not path.is_file():  
-          raise SystemExit("ERROR: android/app/build.gradle not found.")  
-  
-      text = path.read_text()  
-  
-      if not re.search(r'(?m)^\s*android\s*\{', text):  
-          raise SystemExit("ERROR: android { block not found.")  
-  
-      if re.search(r'(?m)^\s*compileSdk(?:Version)?\b.*$', text):  
-          text = re.sub(  
-              r'(?m)^(\s*)compileSdk(?:Version)?\b.*$',  
-              r'\g<1>compileSdk 36',  
-              text,  
-              count=1  
-          )  
-      else:  
-          text = re.sub(  
-              r'(?m)^(\s*)android\s*\{\s*$',  
-              r'\g<0>\n    compileSdk 36',  
-              text,  
-              count=1  
-          )  
-  
-      if re.search(r'(?m)^\s*ndkVersion\b.*$', text):  
-          text = re.sub(  
-              r'(?m)^(\s*)ndkVersion\b.*$',  
-              r'\g<1>ndkVersion "28.2.13676358"',  
-              text,  
-              count=1  
-          )  
-      else:  
-          text = re.sub(  
-              r'(?m)^(\s*)compileSdk 36\s*$',  
-              r'\g<0>\n    ndkVersion "28.2.13676358"',  
-              text,  
-              count=1  
-          )  
-  
-      path.write_text(text)  
-      print("compileSdk = 36")  
-      print('ndkVersion = "28.2.13676358"')  
-  
-      props = Path("android/gradle.properties")  
-      content = props.read_text() if props.exists() else ""  
-  
-      memory = (  
-          "org.gradle.jvmargs=-Xmx4G "  
-          "-XX:MaxMetaspaceSize=1G -Dfile.encoding=UTF-8"  
-      )  
-  
-      if re.search(r'(?m)^org\.gradle\.jvmargs=.*$', content):  
-          content = re.sub(  
-              r'(?m)^org\.gradle\.jvmargs=.*$',  
-              lambda m: memory,  
-              content  
-          )  
-      else:  
-          content = content.rstrip() + "\n" + memory + "\n"  
-  
-      if re.search(r'(?m)^org\.gradle\.workers\.max=.*$', content):  
-          content = re.sub(  
-              r'(?m)^org\.gradle\.workers\.max=.*$',  
-              "org.gradle.workers.max=2",  
-              content  
-          )  
-      else:  
-          content += "org.gradle.workers.max=2\n"  
-  
-      props.write_text(content)  
-      print("Gradle heap set to 4 GB; workers limited to 2.")  
-      PY  
-  
-      echo "Android build configuration:"  
-      grep -n -E 'compileSdk|ndkVersion' android/app/build.gradle  
-      cat android/gradle.properties  
-  
-  - name: Fix SharedPreferences Android version  
-    run: |  
-      set -e  
-      cd "$PROJECT_DIR"  
-  
-      flutter pub add 'shared_preferences_android:>=2.4.28 <2.5.0'  
-      flutter pub get  
-  
-      echo "Resolved SharedPreferences versions:"  
-      flutter pub deps | grep -E 'shared_preferences(_android)? '  
-  
-  - name: Generate Launcher Icons  
-    run: |  
-      set -e  
-      cd "$PROJECT_DIR"  
-      flutter pub run flutter_launcher_icons:main || \  
-        echo "Launcher icons generation skipped."  
-  
-  - name: Build release APK  
-    run: |  
-      set -e  
-      cd "$PROJECT_DIR"  
-      flutter build apk --release  
-  
-  - name: Verify APK  
-    run: |  
-      set -e  
-      APK="$PROJECT_DIR/build/app/outputs/flutter-apk/app-release.apk"  
-      test -s "$APK"  
-      ls -lh "$APK"  
-  
-  - name: Upload APK  
-    uses: actions/upload-artifact@v4  
-    with:  
-      name: HYBRID-PRO  
-      path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-release.apk  
-      if-no-files-found: error
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: false
+
+      - name: Find Flutter project
+        shell: bash
+        run: |
+          set -e
+          PROJECT_DIR=""
+
+          if [ -f "pubspec.yaml" ] && [ -f "lib/main.dart" ]; then
+            PROJECT_DIR="."
+          else
+            while IFS= read -r file; do
+              candidate="${file%/pubspec.yaml}"
+              if [ -f "$candidate/lib/main.dart" ]; then
+                PROJECT_DIR="$candidate"
+                break
+              fi
+            done < <(
+              find . -name pubspec.yaml \
+                -not -path '*/.dart_tool/*' \
+                -not -path '*/build/*' \
+                -not -path '*/.pub-cache/*' \
+                | sort
+            )
+          fi
+
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "ERROR: Cannot find Flutter project."
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Found Flutter project: $PROJECT_DIR"
+
+      - name: Validate Flutter files
+        run: |
+          set -e
+          cd "$PROJECT_DIR"
+          test -f pubspec.yaml
+          test -f lib/main.dart
+          echo "Flutter project files verified."
+
+      - name: Generate Android platform if missing
+        shell: bash
+        run: |
+          set -e
+          cd "$PROJECT_DIR"
+
+          if [ ! -f android/app/build.gradle ] && \
+             [ ! -f android/app/build.gradle.kts ]; then
+            flutter create . --platforms=android
+          fi
+
+          test -d android
+
+      - name: Clean old build
+        run: |
+          set -e
+          cd "$PROJECT_DIR"
+          flutter clean
+          rm -rf .dart_tool build
+
+      - name: Ensure Gradle Wrapper
+        shell: bash
+        run: |
+          set -e
+          cd "$PROJECT_DIR"
+
+          WRAPPER="android/gradle/wrapper/gradle-wrapper.properties"
+
+          if [ ! -f "$WRAPPER" ]; then
+            flutter create . --platforms=android
+          fi
+
+          if [ ! -f "$WRAPPER" ] || [ ! -f android/gradlew ]; then
+            echo "ERROR: Gradle wrapper is missing."
+            find android -maxdepth 5 -type f
+            exit 1
+          fi
+
+          sed -i -E \
+            's#gradle-[0-9][^/]*-(all|bin)\.zip#gradle-8.14.3-\1.zip#' \
+            "$WRAPPER"
+
+          chmod +x android/gradlew
+          cat "$WRAPPER"
+
+          cd android
+          ./gradlew --version
+
+      - name: Update Android Gradle Plugin and Kotlin
+        shell: bash
+        run: |
+          set -e
+          cd "$PROJECT_DIR"
+
+          python3 <<'PY'
+          import re
+          from pathlib import Path
+
+          agp_found = False
+          kotlin_found = False
+
+          settings_files = [
+              Path("android/settings.gradle"),
+              Path("android/settings.gradle.kts"),
+          ]
+
+          agp_pattern = re.compile(
+              r'(id\s*\(?\s*["\']com\.android\.application["\']'
+              r'\s*\)?\s+version\s+["\'])[^"\']+(["\'])'
+          )
+
+          kotlin_patterns = [
+              re.compile(
+                  r'(id\s*\(?\s*["\']org\.jetbrains\.kotlin\.android["\']'
+                  r'\s*\)?\s+version\s+["\'])[^"\']+(["\'])'
+              ),
+              re.compile(
+                  r'(id\s*\(?\s*["\']org\.jetbrains\.kotlin\.jvm["\']'
+                  r'\s*\)?\s+version\s+["\'])[^"\']+(["\'])'
+              ),
+          ]
+
+          for path in settings_files:
+              if not path.is_file():
+                  continue
+
+              text = path.read_text()
+
+              text, count = agp_pattern.subn(
+                  lambda m: m.group(1) + "8.11.1" + m.group(2),
+                  text
+              )
+              agp_found = agp_found or count > 0
+
+              for pattern in kotlin_patterns:
+                  text, count = pattern.subn(
+                      lambda m: m.group(1) + "2.2.20" + m.group(2),
+                      text
+                  )
+                  kotlin_found = kotlin_found or count > 0
+
+              path.write_text(text)
+
+          path = Path("android/build.gradle")
+
+          if path.is_file():
+              text = path.read_text()
+
+              text, count = re.subn(
+                  r'(com\.android\.tools\.build:gradle:)[0-9.]+',
+                  r'\g<1>8.11.1',
+                  text
+              )
+              agp_found = agp_found or count > 0
+
+              text, count = re.subn(
+                  r'(ext\.kotlin_version\s*=\s*["\'])[^"\']+(["\'])',
+                  lambda m: m.group(1) + "2.2.20" + m.group(2),
+                  text
+              )
+              kotlin_found = kotlin_found or count > 0
+
+              text, count = re.subn(
+                  r'(org\.jetbrains\.kotlin:kotlin-gradle-plugin:)[^:\s"\']+',
+                  r'\g<1>2.2.20',
+                  text
+              )
+              kotlin_found = kotlin_found or count > 0
+
+              path.write_text(text)
+
+          if not agp_found:
+              raise SystemExit("ERROR: AGP declaration not found.")
+
+          if not kotlin_found:
+              raise SystemExit("ERROR: Kotlin declaration not found.")
+
+          print("AGP set to 8.11.1")
+          print("Kotlin set to 2.2.20")
+          PY
+
+      - name: Fix Android SDK and Gradle Memory
+        shell: bash
+        run: |
+          set -e
+          cd "$PROJECT_DIR"
+
+          python3 <<'PY'
+          import re
+          from pathlib import Path
+
+          path = Path("android/app/build.gradle")
+
+          if not path.is_file():
+              raise SystemExit("ERROR: android/app/build.gradle not found.")
+
+          text = path.read_text()
+
+          if not re.search(r'(?m)^\s*android\s*\{', text):
+              raise SystemExit("ERROR: android { block not found.")
+
+          # Set compileSdk to 36.
+          if re.search(r'(?m)^\s*compileSdk(?:Version)?\b.*$', text):
+              text = re.sub(
+                  r'(?m)^(\s*)compileSdk(?:Version)?\b.*$',
+                  r'\g<1>compileSdk 36',
+                  text,
+                  count=1
+              )
+          else:
+              text = re.sub(
+                  r'(?m)^(\s*)android\s*\{\s*$',
+                  r'\g<0>\n    compileSdk 36',
+                  text,
+                  count=1
+              )
+
+          # Set NDK version.
+          if re.search(r'(?m)^\s*ndkVersion\b.*$', text):
+              text = re.sub(
+                  r'(?m)^(\s*)ndkVersion\b.*$',
+                  r'\g<1>ndkVersion "28.2.13676358"',
+                  text,
+                  count=1
+              )
+          else:
+              text = re.sub(
+                  r'(?m)^(\s*)compileSdk 36\s*$',
+                  r'\g<0>\n    ndkVersion "28.2.13676358"',
+                  text,
+                  count=1
+              )
+
+          path.write_text(text)
+          print("compileSdk = 36")
+          print('ndkVersion = "28.2.13676358"')
+
+          # Give Gradle more heap and limit concurrent workers.
+          props = Path("android/gradle.properties")
+          content = props.read_text() if props.exists() else ""
+
+          memory = (
+              "org.gradle.jvmargs=-Xmx4G "
+              "-XX:MaxMetaspaceSize=1G -Dfile.encoding=UTF-8"
+          )
+
+          if re.search(r'(?m)^org\.gradle\.jvmargs=.*$', content):
+              content = re.sub(
+                  r'(?m)^org\.gradle\.jvmargs=.*$',
+                  lambda m: memory,
+                  content
+              )
+          else:
+              content = content.rstrip() + "\n" + memory + "\n"
+
+          if re.search(r'(?m)^org\.gradle\.workers\.max=.*$', content):
+              content = re.sub(
+                  r'(?m)^org\.gradle\.workers\.max=.*$',
+                  "org.gradle.workers.max=2",
+                  content
+              )
+          else:
+              content += "org.gradle.workers.max=2\n"
+
+          props.write_text(content)
+          print("Gradle heap set to 4 GB; workers limited to 2.")
+          PY
+
+          echo "Android build configuration:"
+          grep -n -E 'compileSdk|ndkVersion' android/app/build.gradle
+          cat android/gradle.properties
+
+      - name: Get dependencies
+        run: |
+          set -e
+          cd "$PROJECT_DIR"
+          flutter pub get
+
+      - name: Generate Launcher Icons
+        run: |
+          set -e
+          cd "$PROJECT_DIR"
+          flutter pub run flutter_launcher_icons:main || \
+            echo "Launcher icons generation skipped."
+
+          - name: Fix SharedPreferences Android version
+          flutter: |
+          set -e
+          run "$PROJECT_DIR"
+          flutterutter pub add "shared_preferences_android:>=2.4.28 <2.5.0"
+           flutterutter pub get
+           Verifylutter pub deps | grep -E 'shared_preferences(_android)? '
+          - name: Verify APK
+            run: |
+          set -e
+          APK="$PROJECT_DIR/build/app/outputs/flutter-apk/app-release.apk"
+          test -s "$APK"
+          ls -lh "$APK"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: HYBRID-PRO
+          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          
