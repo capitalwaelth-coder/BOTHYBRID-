@@ -8,8 +8,14 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:permission_handler/permission_handler.dart';
 
+// ค่าสีหลักสำหรับธีม Luxury Gold & Dark Metallic
+const Color kGoldPrimary = Color(0xFFFFD700); // สีทองหลัก
+const Color kGoldAccent = Color(0xFFFFC107);  // สีทองสว่าง
+const Color kDarkBg = Color(0xFF0D0D0D);      // พื้นหลังดำเมทัลลิก
+const Color kDarkCard = Color(0xFF161616);    // การ์ดดำเข้ม
+const Color kRedNeon = Color(0xFFFF1744);     // สีแดง SELL / Loss
+const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Profit
 
 // ==========================================
 // #2 โหมดเมนหลัก
@@ -37,7 +43,6 @@ void main() async {
 
   runApp(const LiquiditySweepApp());
 }
-
 
 // Widget ช่วยทำเอฟเฟกต์พิมพ์ดีดข้อความ
 class TypewriterText extends StatefulWidget {
@@ -135,7 +140,7 @@ class _FlashingSniperTextState extends State<FlashingSniperText> with SingleTick
       duration: const Duration(milliseconds: 800),
       vsync: this,
     )..repeat(reverse: true);
-    _animation = Tween<double>(begin: 0.2, end: 1.0).animate(_controller);
+    _animation = Tween<double>(begin: 0.3, end: 1.0).animate(_controller);
   }
 
   @override
@@ -153,14 +158,13 @@ class _FlashingSniperTextState extends State<FlashingSniperText> with SingleTick
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF00E676),
+          color: kGoldPrimary,
           letterSpacing: 2.0,
         ),
       ),
     );
   }
 }
-
 
 // ==========================================
 // #3 โหมด LiquiditySweepApp
@@ -190,11 +194,11 @@ class LiquiditySweepApp extends StatelessWidget {
       title: 'HYBRID PRO',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF263238),
-        cardColor: const Color(0xFF37474F),
+        scaffoldBackgroundColor: kDarkBg,
+        cardColor: kDarkCard,
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF78909C),
-          secondary: Color(0xFFB0BEC5),
+          primary: kGoldPrimary,
+          secondary: kGoldAccent,
         ),
       ),
       home: FutureBuilder<bool>(
@@ -202,10 +206,10 @@ class LiquiditySweepApp extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return const Scaffold(
-              backgroundColor: Color(0xFF263238),
+              backgroundColor: kDarkBg,
               body: Center(
                 child: CircularProgressIndicator(
-                  color: Color(0xFFCFD8DC),
+                  color: kGoldPrimary,
                 ),
               ),
             );
@@ -221,7 +225,6 @@ class LiquiditySweepApp extends StatelessWidget {
     );
   }
 }
-
 
 // ==========================================
 // #4 โหมดการเข้าใช้งานครั้งแรก (MT5 Login Wrapper)
@@ -261,7 +264,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('กรุณากรอกเลขพอร์ต MT5 และ Investor Password ให้ครบถ้วน'),
-          backgroundColor: Color(0xFF37474F),
+          backgroundColor: kDarkCard,
           duration: Duration(seconds: 2),
         ),
       );
@@ -317,7 +320,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('ไม่พบหมายเลขบัญชีนี้ในระบบ Firebase'),
-            backgroundColor: Color(0xFF37474F),
+            backgroundColor: kDarkCard,
             duration: Duration(seconds: 2),
           ),
         );
@@ -330,7 +333,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('เกิดข้อผิดพลาด: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: kRedNeon,
           duration: const Duration(seconds: 3),
         ),
       );
@@ -340,16 +343,17 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kDarkBg,
       body: Stack(
         fit: StackFit.expand,
         children: [
           Image.asset(
             'assets/images/1792250396366.jpg',
             fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.45),
-            errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFF263238)),
+            opacity: const AlwaysStoppedAnimation(0.25),
+            errorBuilder: (context, error, stackTrace) => Container(color: kDarkBg),
           ),
-          Container(color: const Color(0xFF263238).withOpacity(0.65)),
+          Container(color: Colors.black.withOpacity(0.7)),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
@@ -363,10 +367,10 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                         height: 170,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFB0BEC5), width: 1.5),
+                          border: Border.all(color: kGoldPrimary, width: 2.0),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.6),
+                              color: kGoldPrimary.withOpacity(0.25),
                               blurRadius: 16,
                               spreadRadius: 2,
                             ),
@@ -388,7 +392,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                         style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w900,
-                          color: Colors.white,
+                          color: kGoldPrimary,
                           letterSpacing: 3.0,
                         ),
                       ),
@@ -399,7 +403,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFFCFD8DC),
+                          color: Colors.white70,
                           letterSpacing: 4.0,
                         ),
                       ),
@@ -411,11 +415,11 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                         decoration: InputDecoration(
                           hintText: 'Account Login (เช่น 53049695)',
                           hintStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontStyle: FontStyle.italic, fontSize: 13),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF78909C), width: 1.5)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFB0BEC5), width: 2.0)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: kGoldPrimary.withOpacity(0.5), width: 1.5)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: kGoldPrimary, width: 2.0)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
                           filled: true,
-                          fillColor: const Color(0xFF37474F).withOpacity(0.8),
+                          fillColor: kDarkCard,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -426,15 +430,15 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                         decoration: InputDecoration(
                           hintText: 'Investor Password',
                           hintStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontStyle: FontStyle.italic, fontSize: 13),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF78909C), width: 1.5)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFB0BEC5), width: 2.0)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: kGoldPrimary.withOpacity(0.5), width: 1.5)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: kGoldPrimary, width: 2.0)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
                           filled: true,
-                          fillColor: const Color(0xFF37474F).withOpacity(0.8),
+                          fillColor: kDarkCard,
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                              color: const Color(0xFFB0BEC5),
+                              color: kGoldPrimary,
                             ),
                             onPressed: () {
                               setState(() {
@@ -450,24 +454,24 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _submitMT5Login,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF546E7A),
-                            foregroundColor: Colors.white,
+                            backgroundColor: kDarkCard,
+                            foregroundColor: kGoldPrimary,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
-                              side: const BorderSide(color: Color(0xFFB0BEC5), width: 1),
+                              side: const BorderSide(color: kGoldPrimary, width: 1.5),
                             ),
                             elevation: 4,
                           ),
                           child: _isLoading 
-                              ? const CircularProgressIndicator(color: Colors.white)
+                              ? const CircularProgressIndicator(color: kGoldPrimary)
                               : const Text('VERIFY & CONNECT', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                         ),
                       ),
                       const SizedBox(height: 20),
                       const Text(
                         'Powered By Algohost',
-                        style: TextStyle(color: Color(0xFFB0BEC5), fontSize: 11, fontStyle: FontStyle.italic),
+                        style: TextStyle(color: kGoldPrimary, fontSize: 11, fontStyle: FontStyle.italic),
                       ),
                     ],
                   ),
@@ -480,7 +484,6 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
     );
   }
 }
-
 
 // ==========================================
 // #5 PIN AUTH WRAPPER
@@ -531,7 +534,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('อ่านข้อมูล PIN ไม่สำเร็จ กรุณาปิดแล้วเปิดแอปใหม่'),
-          backgroundColor: Colors.red,
+          backgroundColor: kRedNeon,
         ),
       );
     }
@@ -568,7 +571,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง'),
-            backgroundColor: Colors.red,
+            backgroundColor: kRedNeon,
           ),
         );
       }
@@ -583,7 +586,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('ตรวจสอบ PIN ไม่สำเร็จ กรุณาลองใหม่'),
-          backgroundColor: Colors.red,
+          backgroundColor: kRedNeon,
         ),
       );
     }
@@ -629,7 +632,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('รหัส PIN ไม่ตรงกัน กรุณาตั้งค่าใหม่อีกครั้ง'),
-            backgroundColor: Colors.red,
+            backgroundColor: kRedNeon,
           ),
         );
         return;
@@ -651,7 +654,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('บันทึก PIN สำเร็จ'),
-            backgroundColor: Colors.green,
+            backgroundColor: kGreenNeon,
           ),
         );
       } else {
@@ -664,7 +667,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('บันทึก PIN ไม่สำเร็จ กรุณาตั้งค่าใหม่'),
-            backgroundColor: Colors.red,
+            backgroundColor: kRedNeon,
           ),
         );
       }
@@ -685,10 +688,10 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Scaffold(
-        backgroundColor: Color(0xFF263238),
+        backgroundColor: kDarkBg,
         body: Center(
           child: CircularProgressIndicator(
-            color: Color(0xFFCFD8DC),
+            color: kGoldPrimary,
           ),
         ),
       );
@@ -707,17 +710,18 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
     }
 
     return Scaffold(
+      backgroundColor: kDarkBg,
       body: Stack(
         fit: StackFit.expand,
         children: [
           Image.asset(
             'assets/images/1792250396366.jpg',
             fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.45),
-            errorBuilder: (ctx, err, stack) => Container(color: const Color(0xFF263238)),
+            opacity: const AlwaysStoppedAnimation(0.25),
+            errorBuilder: (ctx, err, stack) => Container(color: kDarkBg),
           ),
           Container(
-            color: const Color(0xFF263238).withOpacity(0.65),
+            color: Colors.black.withOpacity(0.7),
           ),
           SafeArea(
             child: Center(
@@ -726,17 +730,23 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.asset(
-                        'assets/images/1792250396366.jpg',
-                        width: 120,
-                        height: 120,
-                        fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) => const Icon(
-                          Icons.smart_toy,
-                          color: Colors.white,
-                          size: 80,
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: kGoldPrimary, width: 2),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.asset(
+                          'assets/images/1792250396366.jpg',
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          errorBuilder: (ctx, err, stack) => const Icon(
+                            Icons.smart_toy,
+                            color: kGoldPrimary,
+                            size: 80,
+                          ),
                         ),
                       ),
                     ),
@@ -747,7 +757,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        color: kGoldPrimary,
                         letterSpacing: 2,
                       ),
                     ),
@@ -756,7 +766,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                       'ROBOT',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Color(0xFFCFD8DC),
+                        color: Colors.white70,
                         letterSpacing: 4,
                       ),
                     ),
@@ -782,10 +792,10 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: filled
-                                ? const Color(0xFFCFD8DC)
+                                ? kGoldPrimary
                                 : Colors.transparent,
                             border: Border.all(
-                              color: const Color(0xFFB0BEC5),
+                              color: kGoldPrimary,
                               width: 2,
                             ),
                           ),
@@ -820,8 +830,9 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                     const Text(
                       'Powered By Algohost',
                       style: TextStyle(
-                        color: Colors.white60,
+                        color: kGoldPrimary,
                         fontSize: 11,
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
                   ],
@@ -841,15 +852,17 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
       margin: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: [Color(0xFF546E7A), Color(0xFF37474F)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
+        color: kDarkCard,
         border: Border.all(
-          color: const Color(0xFFCFD8DC),
+          color: kGoldPrimary,
           width: 1.5,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: kGoldPrimary.withOpacity(0.15),
+            blurRadius: 6,
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -866,7 +879,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
             child: val == 'del'
                 ? const Icon(
                     Icons.backspace_outlined,
-                    color: Colors.white,
+                    color: kGoldPrimary,
                     size: 20,
                   )
                 : Text(
@@ -883,7 +896,6 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
     );
   }
 }
-
 
 // ==========================================
 // #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
@@ -1209,20 +1221,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
     bool isTotalProfit = totalOrdersProfit >= 0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF263238),
+      backgroundColor: kDarkBg,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(
-            'assets/images/1792250396366.jpg',
-            fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.45),
-            errorBuilder: (context, error, stackTrace) {
-              return Container(color: const Color(0xFF263238));
-            },
-          ),
           Container(
-            color: const Color(0xFF263238).withOpacity(0.65),
+            color: kDarkBg,
           ),
           Padding(
             padding: const EdgeInsets.only(bottom: 65.0),
@@ -1240,9 +1244,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF263238).withOpacity(0.9),
+                  color: kDarkCard,
                   border: Border(
-                    top: BorderSide(color: const Color(0xFF78909C).withOpacity(0.6), width: 1.5),
+                    top: BorderSide(color: kGoldPrimary.withOpacity(0.5), width: 1.5),
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -1286,15 +1290,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                   height: MediaQuery.of(context).size.height * 0.72,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFB0BEC5), width: 2.0),
+                    border: Border.all(color: kGoldPrimary, width: 2.0),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withOpacity(0.8),
                         blurRadius: 20,
                         spreadRadius: 2,
                       ),
                     ],
-                    color: const Color(0xFF37474F).withOpacity(0.95),
+                    color: kDarkCard,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1306,14 +1310,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                           children: [
                             const Row(
                               children: [
-                                Icon(Icons.terminal, color: Color(0xFFCFD8DC), size: 18),
+                                Icon(Icons.terminal, color: kGoldPrimary, size: 18),
                                 SizedBox(width: 8),
                                 Text(
                                   'STATUS & LOGS',
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w900,
-                                    color: Colors.white,
+                                    color: kGoldPrimary,
                                     letterSpacing: 1,
                                   ),
                                 ),
@@ -1324,7 +1328,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                                 IconButton(
                                   icon: Icon(
                                     _isLiveStatusVisible ? Icons.visibility : Icons.visibility_off,
-                                    color: _isLiveStatusVisible ? const Color(0xFF00E676) : Colors.grey,
+                                    color: _isLiveStatusVisible ? kGreenNeon : Colors.grey,
                                     size: 20,
                                   ),
                                   onPressed: () {
@@ -1338,7 +1342,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                                 ),
                                 if (_botLogs.isNotEmpty)
                                   IconButton(
-                                    icon: const Icon(Icons.delete_sweep, color: Colors.redAccent, size: 20),
+                                    icon: const Icon(Icons.delete_sweep, color: kRedNeon, size: 20),
                                     onPressed: _clearAllLogs,
                                     tooltip: 'Clear All Logs',
                                     constraints: const BoxConstraints(),
@@ -1359,7 +1363,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                           ],
                         ),
                       ),
-                      const Divider(color: Color(0xFF78909C), height: 1, thickness: 1.5),
+                      const Divider(color: kGoldPrimary, height: 1, thickness: 1.5),
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.all(12.0),
@@ -1372,12 +1376,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                               ],
                               const Row(
                                 children: [
-                                  Icon(Icons.show_chart, color: Color(0xFFCFD8DC), size: 16),
+                                  Icon(Icons.show_chart, color: kGoldPrimary, size: 16),
                                   SizedBox(width: 6),
                                   Text(
                                     'ACTIVITY LOGS',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: kGoldPrimary,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
                                       letterSpacing: 1,
@@ -1413,7 +1417,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                                                         const Text(
                                                           '➔ ',
                                                           style: TextStyle(
-                                                            color: Color(0xFF00E676),
+                                                            color: kGreenNeon,
                                                             fontSize: 13,
                                                             fontWeight: FontWeight.bold,
                                                           ),
@@ -1423,7 +1427,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                                                             text: "${log['message']}",
                                                             speed: const Duration(milliseconds: 65),
                                                             style: const TextStyle(
-                                                              color: Color(0xFF00E676),
+                                                              color: kGreenNeon,
                                                               fontFamily: 'monospace',
                                                               fontSize: 13,
                                                               fontWeight: FontWeight.bold,
@@ -1448,7 +1452,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                                               onTap: () => _clearLogItem(log['key']),
                                               child: const Padding(
                                                 padding: EdgeInsets.only(left: 8.0),
-                                                child: Icon(Icons.delete_outline, color: Colors.redAccent, size: 15),
+                                                child: Icon(Icons.delete_outline, color: kRedNeon, size: 15),
                                               ),
                                             ),
                                           ],
@@ -1527,15 +1531,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
       height: 58,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: [Color(0xFF546E7A), Color(0xFF263238)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(color: const Color(0xFFCFD8DC), width: 2.0),
+        color: kDarkCard,
+        border: Border.all(color: kGoldPrimary, width: 2.0),
         boxShadow: [
           BoxShadow(
-            color: (isServerActive ? const Color(0xFF00C853) : Colors.redAccent).withOpacity(0.6),
+            color: (isServerActive ? kGreenNeon : kRedNeon).withOpacity(0.6),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -1563,7 +1563,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
               width: 14,
               height: 14,
               decoration: BoxDecoration(
-                color: isServerActive ? const Color(0xFF00C853) : Colors.redAccent,
+                color: isServerActive ? kGreenNeon : kRedNeon,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.black, width: 2),
               ),
@@ -1582,10 +1582,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFF37474F).withOpacity(0.9),
+        color: kDarkCard,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: const Color(0xFFB0BEC5),
+          color: kGoldPrimary,
           width: 2.0,
         ),
       ),
@@ -1631,10 +1631,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                             child: Container(
                               height: 3,
                               decoration: const BoxDecoration(
-                                color: Color(0xFFCFD8DC),
+                                color: kGoldPrimary,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.white,
+                                    color: kGoldPrimary,
                                     blurRadius: 8,
                                     spreadRadius: 2,
                                   ),
@@ -1656,7 +1656,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                     const Text(
                       'LIVE STATUS',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: kGoldPrimary,
                         fontWeight: FontWeight.w900,
                         fontSize: 12,
                         letterSpacing: 1.2,
@@ -1669,11 +1669,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                           width: 8,
                           height: 8,
                           decoration: BoxDecoration(
-                            color: isServerActive ? const Color(0xFF00C853) : Colors.redAccent,
+                            color: isServerActive ? kGreenNeon : kRedNeon,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: (isServerActive ? const Color(0xFF00C853) : Colors.redAccent).withOpacity(0.8),
+                                color: (isServerActive ? kGreenNeon : kRedNeon).withOpacity(0.8),
                                 blurRadius: 4,
                               )
                             ],
@@ -1683,7 +1683,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                         Text(
                           isServerActive ? 'EA SERVER ONLINE & RUNNING' : 'EA SERVER OFFLINE / STOPPED',
                           style: TextStyle(
-                            color: isServerActive ? const Color(0xFF00C853) : Colors.redAccent,
+                            color: isServerActive ? kGreenNeon : kRedNeon,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.8,
@@ -1696,12 +1696,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Active Orders: $orderCount', style: const TextStyle(color: Color(0xFFCFD8DC), fontSize: 10, fontWeight: FontWeight.bold)),
+                        Text('Active Orders: $orderCount', style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
                         Text('Lots: ${totalLots.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70, fontSize: 10)),
                         Text(
                           'P/L: ${isTotalProfit ? "+" : ""}\$${totalOrdersProfit.toStringAsFixed(2)}',
                           style: TextStyle(
-                            color: isTotalProfit ? const Color(0xFF00C853) : Colors.redAccent,
+                            color: isTotalProfit ? kGreenNeon : kRedNeon,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1727,7 +1727,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.7),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white70, width: 1.5),
+                  border: Border.all(color: kGoldPrimary, width: 1.5),
                 ),
                 child: const Icon(
                   Icons.close,
@@ -1758,18 +1758,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF546E7A) : Colors.transparent,
+          color: isSelected ? kDarkCard : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? const Color(0xFFCFD8DC) : Colors.transparent,
+            color: isSelected ? kGoldPrimary : Colors.transparent,
             width: isSelected ? 1.5 : 0,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
+                    color: kGoldPrimary.withOpacity(0.2),
                     blurRadius: 10,
-                    spreadRadius: 2,
+                    spreadRadius: 1,
                   ),
                 ]
               : [],
@@ -1782,7 +1782,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
               children: [
                 Icon(
                   icon,
-                  color: isSelected ? Colors.white : Colors.white70,
+                  color: isSelected ? kGoldPrimary : Colors.white70,
                   size: 22,
                 ),
                 if (badgeCount > 0)
@@ -1792,7 +1792,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                     child: Container(
                       padding: const EdgeInsets.all(2),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: kGoldPrimary,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       constraints: const BoxConstraints(
@@ -1816,7 +1816,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.white70,
+                color: isSelected ? kGoldPrimary : Colors.white70,
                 fontSize: 10,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontFamily: 'monospace',
@@ -1843,7 +1843,6 @@ class ScannerClipper extends CustomClipper<Rect> {
     return oldClipper.scanValue != scanValue;
   }
 }
-
 
 // ==========================================
 // #7 โหมด HomeScreen
@@ -1929,7 +1928,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       });
     } catch (e) {
-      print("Connection listen error: $e");
+      debugPrint("Connection listen error: $e");
     }
   }
 
@@ -1966,7 +1965,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       });
     } catch (e) {
-      print("Database listen error: $e");
+      debugPrint("Database listen error: $e");
     }
   }
 
@@ -2006,7 +2005,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       });
     } catch (e) {
-      print("History stats listen error: $e");
+      debugPrint("History stats listen error: $e");
     }
   }
 
@@ -2040,7 +2039,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       });
     } catch (e) {
-      print("Orders listen error: $e");
+      debugPrint("Orders listen error: $e");
     }
   }
 
@@ -2051,7 +2050,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         'command_timestamp': DateTime.now().millisecondsSinceEpoch,
       });
     } catch (e) {
-      print("Toggle bot error: $e");
+      debugPrint("Toggle bot error: $e");
     }
   }
 
@@ -2062,37 +2061,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         'command_timestamp': DateTime.now().millisecondsSinceEpoch,
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sent Close All Command to EA!'), backgroundColor: Color(0xFF37474F)),
+        const SnackBar(content: Text('Sent Close All Command to EA!'), backgroundColor: kDarkCard),
       );
     } catch (e) {
-      print("Close all error: $e");
+      debugPrint("Close all error: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kDarkBg,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          Container(color: const Color(0xFF263238)),
-          Image.asset(
-            'assets/images/1792250396366.jpg',
-            fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.25),
-            errorBuilder: (context, error, stackTrace) {
-              return Container(color: const Color(0xFF263238));
-            },
-          ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.black.withOpacity(0.85), const Color(0xFF263238).withOpacity(0.7), Colors.black.withOpacity(0.9)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
+          Container(color: kDarkBg),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
@@ -2106,10 +2089,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         height: 220,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFB0BEC5), width: 1.5),
+                          border: Border.all(color: kGoldPrimary, width: 2.0),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.8),
+                              color: kGoldPrimary.withOpacity(0.2),
                               blurRadius: 20,
                               spreadRadius: 2,
                             ),
@@ -2117,17 +2100,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(18),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Image.asset(
-                                'assets/images/1792250396366.jpg',
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(color: Colors.black);
-                                },
-                              ),
-                            ],
+                          child: Image.asset(
+                            'assets/images/1792250396366.jpg',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(color: Colors.black);
+                            },
                           ),
                         ),
                       ),
@@ -2136,9 +2114,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF37474F).withOpacity(0.85),
+                        color: kDarkCard,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFB0BEC5), width: 1.5),
+                        border: Border.all(color: kGoldPrimary, width: 1.5),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.6),
@@ -2157,7 +2135,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w900,
-                              color: Colors.white,
+                              color: kGoldPrimary,
                               letterSpacing: 2.5,
                             ),
                           ),
@@ -2169,12 +2147,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF78909C), width: 1.2),
-                        color: Colors.black.withOpacity(0.5),
+                        border: Border.all(color: kGoldPrimary, width: 1.2),
+                        color: Colors.black,
                       ),
                       child: const Text(
                         'Powered By Algohost',
-                        style: TextStyle(color: Color(0xFFCFD8DC), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                        style: TextStyle(color: kGoldPrimary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -2184,19 +2162,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         _buildCircularButton(
                           label: 'CLOSE',
                           icon: Icons.delete_outline,
-                          colors: const [Color(0xFF546E7A), Color(0xFF37474F)],
-                          borderColor: const Color(0xFF90A4AE),
+                          borderColor: kGoldPrimary,
                           onPressed: _closeAllOrders,
                         ),
                         const SizedBox(width: 20),
                         _buildCircularButton(
                           label: isRunning ? 'STOP' : 'START',
                           icon: isRunning ? Icons.stop : Icons.play_arrow,
-                          colors: isRunning 
-                              ? const [Color(0xFF00E676), Color(0xFF00C853), Color(0xFF1B5E20)] 
-                              : const [Color(0xFF546E7A), Color(0xFF37474F), Color(0xFF263238)], 
-                          borderColor: isRunning ? const Color(0xFF00E676) : const Color(0xFFCFD8DC),
-                          glowColor: isRunning ? const Color(0xFF00E676) : const Color(0xFF78909C),
+                          borderColor: isRunning ? kGreenNeon : kGoldPrimary,
+                          glowColor: isRunning ? kGreenNeon : kGoldPrimary,
                           onPressed: () => _toggleBotStatus(!isRunning),
                           isLarge: true,
                         ),
@@ -2204,8 +2178,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         _buildCircularButton(
                           label: 'STATS', 
                           icon: Icons.bar_chart,
-                          colors: const [Color(0xFF546E7A), Color(0xFF37474F)],
-                          borderColor: const Color(0xFF90A4AE),
+                          borderColor: kGoldPrimary,
                           onPressed: () {
                             setState(() {
                               _isChartModalOpen = true;
@@ -2240,7 +2213,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     height: MediaQuery.of(context).size.height * 0.62,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFB0BEC5), width: 2.5),
+                      border: Border.all(color: kGoldPrimary, width: 2.5),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.8),
@@ -2248,7 +2221,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           spreadRadius: 3,
                         ),
                       ],
-                      color: const Color(0xFF37474F),
+                      color: kDarkCard,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2260,14 +2233,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             children: [
                               const Row(
                                 children: [
-                                  Icon(Icons.dashboard_outlined, color: Color(0xFFCFD8DC), size: 18),
+                                  Icon(Icons.dashboard_outlined, color: kGoldPrimary, size: 18),
                                   SizedBox(width: 8),
                                   Text(
                                     'DASHBOARD STATS',
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w900,
-                                      color: Colors.white,
+                                      color: kGoldPrimary,
                                       letterSpacing: 1,
                                     ),
                                   ),
@@ -2284,7 +2257,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ],
                           ),
                         ),
-                        const Divider(color: Color(0xFF78909C), height: 1, thickness: 1.5),
+                        const Divider(color: kGoldPrimary, height: 1, thickness: 1.5),
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.all(14.0),
@@ -2348,7 +2321,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   title: 'WIN RATE',
                   value: '${displayWinRate.toStringAsFixed(1)}%',
                   subText: '$displayWins Win / $displayLosses Loss',
-                  color: const Color(0xFF00C853),
+                  color: kGreenNeon,
                   icon: Icons.pie_chart,
                 ),
               ),
@@ -2358,7 +2331,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   title: 'MAX DRAWDOWN',
                   value: '${maxDDAmount.toStringAsFixed(2)}%',
                   subText: 'Max Loss: \$${maxLoss.toStringAsFixed(2)}',
-                  color: Colors.orangeAccent,
+                  color: kRedNeon,
                   icon: Icons.trending_down,
                 ),
               ),
@@ -2372,7 +2345,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   title: 'TOTAL CYCLES',
                   value: '$totalCycles',
                   subText: '',
-                  color: const Color(0xFFCFD8DC),
+                  color: kGoldPrimary,
                   icon: Icons.receipt_long,
                 ),
               ),
@@ -2382,7 +2355,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   title: 'NET PROFIT',
                   value: '${totalProfitLoss >= 0 ? "+" : ""}\$${totalProfitLoss.toStringAsFixed(2)}',
                   subText: 'Balance: \$${balance.toStringAsFixed(2)}',
-                  color: totalProfitLoss >= 0 ? const Color(0xFF00C853) : Colors.orangeAccent,
+                  color: totalProfitLoss >= 0 ? kGreenNeon : kRedNeon,
                   icon: Icons.account_balance_wallet,
                 ),
               ),
@@ -2393,9 +2366,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF263238),
+              color: kDarkBg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF78909C), width: 1.5),
+              border: Border.all(color: kGoldPrimary, width: 1.5),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -2403,7 +2376,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 const Text(
                   'WIN RATE & CYCLES',
                   style: TextStyle(
-                    color: Color(0xFFCFD8DC),
+                    color: kGoldPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.5,
@@ -2413,9 +2386,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF37474F),
+                    color: kDarkCard,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white24, width: 1.0),
+                    border: Border.all(color: kGoldPrimary.withOpacity(0.5), width: 1.0),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2426,14 +2399,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('WIN RATE', style: TextStyle(color: Color(0xFF00C853), fontSize: 10, fontWeight: FontWeight.bold)),
+                              const Text('WIN RATE', style: TextStyle(color: kGreenNeon, fontSize: 10, fontWeight: FontWeight.bold)),
                               Text('${displayWinRate.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                             ],
                           ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              const Text('LOSS RATE', style: TextStyle(color: Colors.orangeAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                              const Text('LOSS RATE', style: TextStyle(color: kRedNeon, fontSize: 10, fontWeight: FontWeight.bold)),
                               Text('${lossRate.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                             ],
                           ),
@@ -2445,11 +2418,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         child: Container(
                           height: 12,
                           width: double.infinity,
-                          color: Colors.orangeAccent.withOpacity(0.4),
+                          color: kRedNeon.withOpacity(0.4),
                           child: FractionallySizedBox(
                             alignment: Alignment.centerLeft,
                             widthFactor: (displayWinRate / 100).clamp(0.0, 1.0),
-                            child: Container(color: const Color(0xFF00C853)),
+                            child: Container(color: kGreenNeon),
                           ),
                         ),
                       ),
@@ -2468,9 +2441,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF263238),
+        color: kDarkBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.5), width: 1.5),
+        border: Border.all(color: color.withOpacity(0.6), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2501,18 +2474,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildBidAskBoxContent(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     double boxWidth = screenWidth - 32;
-    double spreadVal = (realTimeAsk > 0 && realTimeBid > 0) ? (realTimeAsk - realTimeBid) * 100 : 0.0;
+    double spreadVal = (realTimeAsk > 0 && realTimeBid > 0) ? (realTimeAsk - realTimeBid) * 100 : 500.0;
 
     return Container(
       width: boxWidth,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFB0BEC5), width: 1.5),
-        color: const Color(0xFF37474F),
+        border: Border.all(color: kGoldPrimary, width: 1.5),
+        color: kDarkCard,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.5),
+            color: kGoldPrimary.withOpacity(0.15),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -2521,7 +2494,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF263238),
+          color: kDarkBg,
           borderRadius: BorderRadius.circular(13),
         ),
         child: Column(
@@ -2533,7 +2506,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.show_chart, color: Color(0xFFCFD8DC), size: 16),
+                    const Icon(Icons.show_chart, color: kGoldPrimary, size: 16),
                     const SizedBox(width: 6),
                     Text(
                       symbol,
@@ -2544,39 +2517,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF78909C)),
+                    border: Border.all(color: kGoldPrimary, width: 1),
                   ),
                   child: Text(
-                    'Spread: ${spreadVal > 0 ? spreadVal.toStringAsFixed(1) : "96.0"}',
-                    style: const TextStyle(color: Color(0xFFCFD8DC), fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                    'Spread: ${spreadVal.toStringAsFixed(1)}',
+                    style: const TextStyle(color: kGoldPrimary, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
                   ),
                 ),
               ],
             ),
-            const Divider(color: Colors.white24, height: 12),
+            const Divider(color: kGoldPrimary, height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 Column(
                   children: [
-                    const Text('BID', style: TextStyle(color: Color(0xFF90A4AE), fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
+                    const Text('BID', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
                     const SizedBox(height: 6),
                     Text(
-                      realTimeBid > 0 ? realTimeBid.toStringAsFixed(2) : '4165.40',
-                      style: const TextStyle(color: Colors.white, fontSize: 18, fontFamily: 'monospace', fontWeight: FontWeight.w900),
+                      realTimeBid > 0 ? realTimeBid.toStringAsFixed(2) : '81390.48',
+                      style: const TextStyle(color: kGoldPrimary, fontSize: 18, fontFamily: 'monospace', fontWeight: FontWeight.w900),
                     ),
                   ],
                 ),
-                Container(height: 35, width: 1, color: Colors.white24),
+                Container(height: 35, width: 1, color: kGoldPrimary.withOpacity(0.3)),
                 Column(
                   children: [
-                    const Text('ASK', style: TextStyle(color: Color(0xFF00C853), fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
+                    const Text('ASK', style: TextStyle(color: kGoldPrimary, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
                     const SizedBox(height: 6),
                     Text(
-                      realTimeAsk > 0 ? realTimeAsk.toStringAsFixed(2) : '4166.36',
-                      style: const TextStyle(color: Colors.white, fontSize: 18, fontFamily: 'monospace', fontWeight: FontWeight.w900),
+                      realTimeAsk > 0 ? realTimeAsk.toStringAsFixed(2) : '81395.48',
+                      style: const TextStyle(color: kGoldPrimary, fontSize: 18, fontFamily: 'monospace', fontWeight: FontWeight.w900),
                     ),
                   ],
                 ),
@@ -2591,7 +2564,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildCircularButton({
     required String label,
     required IconData icon,
-    required List<Color> colors,
     required Color borderColor,
     Color? glowColor,
     required VoidCallback onPressed,
@@ -2608,27 +2580,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             height: size,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: colors,
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
+              color: kDarkCard,
               border: Border.all(color: borderColor, width: 2.0),
               boxShadow: [
                 BoxShadow(
-                  color: (glowColor ?? borderColor).withOpacity(0.5),
+                  color: (glowColor ?? borderColor).withOpacity(0.4),
                   blurRadius: 10,
                   spreadRadius: 1,
                 ),
               ],
             ),
-            child: Icon(icon, color: Colors.white, size: isLarge ? 34 : 28),
+            child: Icon(icon, color: kGoldPrimary, size: isLarge ? 34 : 28),
           ),
           const SizedBox(height: 6),
           Text(
             label,
             style: const TextStyle(
-              color: Colors.white,
+              color: kGoldPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 11,
               letterSpacing: 0.5,
@@ -2641,64 +2609,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 }
 
-class FlashingSniperText extends StatefulWidget {
-  const FlashingSniperText({super.key});
-
-  @override
-  State<FlashingSniperText> createState() => _FlashingSniperTextState();
-}
-
-class _FlashingSniperTextState extends State<FlashingSniperText>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 700),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _animation = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        double val = _animation.value;
-        return Opacity(
-          opacity: val,
-          child: const Text(
-            'HYBRID PRO',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: 2.5,
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-
 // ==========================================
-// #8 โหมดรายงานออเดอร์ (OrdersScreen)
+// #8 โหมดรายงานออเดอร์ (OrdersScreen - Gold Theme)
 // ==========================================
 
 class OrdersScreen extends StatefulWidget {
@@ -2715,13 +2627,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
   DatabaseReference? _dbRef;
   String activeSymbol = 'XAUUSD';
   String activeTimeframe = 'M1';
-  String accountServer = 'HFMarketsGlobal-Demo4';
+  String accountServer = 'ICMarketsSC-Demo';
 
-  double balance = 15125.93;
-  double equity = 15125.93;
-  double margin = 0.0;
-  double freeMargin = 15125.93;
-  double profitLoss = 0.0;
+  double balance = 4989877.98;
+  double equity = 4989877.86;
+  double margin = 2.06;
+  double freeMargin = 4989875.80;
+  double profitLoss = -0.12;
 
   @override
   void initState() {
@@ -2752,13 +2664,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
           setState(() {
             activeSymbol = data['symbol']?.toString() ?? 'XAUUSD';
             activeTimeframe = data['timeframe']?.toString() ?? 'M1';
-            accountServer = data['server']?.toString() ?? 'HFMarketsGlobal-Demo4';
+            accountServer = data['server']?.toString() ?? 'ICMarketsSC-Demo';
             
-            balance = (data['balance'] ?? 15125.93).toDouble();
-            equity = (data['equity'] ?? 15125.93).toDouble();
-            margin = (data['margin'] ?? 0.0).toDouble();
-            freeMargin = (data['free_margin'] ?? 15125.93).toDouble();
-            profitLoss = (data['profit'] ?? 0.0).toDouble();
+            balance = (data['balance'] ?? 4989877.98).toDouble();
+            equity = (data['equity'] ?? 4989877.86).toDouble();
+            margin = (data['margin'] ?? 2.06).toDouble();
+            freeMargin = (data['free_margin'] ?? 4989875.80).toDouble();
+            profitLoss = (data['profit'] ?? -0.12).toDouble();
           });
         }
       });
@@ -2810,9 +2722,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF263238).withOpacity(0.8),
+        color: kDarkBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white12, width: 1),
+        border: Border.all(color: kGoldPrimary.withOpacity(0.3), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -2820,7 +2732,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: Colors.grey, size: 14),
+              Icon(icon, color: kGoldAccent, size: 14),
               const SizedBox(width: 4),
               Text(title, style: const TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
             ],
@@ -2829,9 +2741,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
           Text(
             value,
             style: const TextStyle(
-              color: Colors.white,
+              color: kGoldPrimary,
               fontWeight: FontWeight.bold,
-              fontSize: 16,
+              fontSize: 15,
               fontFamily: 'monospace',
             ),
             textAlign: TextAlign.center,
@@ -2849,271 +2761,254 @@ class _OrdersScreenState extends State<OrdersScreen> {
     bool isTotalProfit = totalOrdersProfit >= 0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF263238),
+      backgroundColor: kDarkBg,
       appBar: AppBar(
-        title: const Text('Orders & Portfolio', style: TextStyle(fontFamily: 'monospace')),
-        backgroundColor: const Color(0xFF263238),
+        title: const Text('Orders & Portfolio', style: TextStyle(fontFamily: 'monospace', color: kGoldPrimary, fontWeight: FontWeight.bold)),
+        backgroundColor: kDarkBg,
+        elevation: 0,
       ),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            'assets/images/1792250396366.jpg',
-            fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.45),
-            errorBuilder: (context, error, stackTrace) {
-              return Container(color: const Color(0xFF263238));
-            },
-          ),
-          Container(
-            color: const Color(0xFF263238).withOpacity(0.65),
-          ),
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF37474F).withOpacity(0.85),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFFB0BEC5),
-                      width: 2.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.5),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.account_balance, color: Color(0xFFCFD8DC), size: 18),
-                              SizedBox(width: 8),
-                              Text(
-                                'TRADING ACCOUNT INFO',
-                                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1, fontFamily: 'monospace'),
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.black45,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFF78909C), width: 1),
-                            ),
-                            child: Text(
-                              activeSymbol,
-                              style: const TextStyle(color: Color(0xFFCFD8DC), fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Account Login', style: TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
-                              const SizedBox(height: 2),
-                              Text(
-                                widget.accountLogin,
-                                style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
-                              ),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const Text('Server', style: TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
-                              const SizedBox(height: 2),
-                              Text(
-                                accountServer,
-                                style: const TextStyle(color: Color(0xFFCFD8DC), fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: kDarkCard,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: kGoldPrimary,
+                  width: 1.5,
                 ),
-                const SizedBox(height: 14),
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFFB0BEC5),
-                      width: 2.0,
-                    ),
-                    color: const Color(0xFF37474F).withOpacity(0.85),
+                boxShadow: [
+                  BoxShadow(
+                    color: kGoldPrimary.withOpacity(0.15),
+                    blurRadius: 15,
+                    spreadRadius: 1,
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14.0),
-                    child: Column(
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.account_balance, color: kGoldPrimary, size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            'TRADING ACCOUNT INFO',
+                            style: TextStyle(color: kGoldPrimary, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1, fontFamily: 'monospace'),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: kGoldPrimary, width: 1),
+                        ),
+                        child: Text(
+                          activeSymbol,
+                          style: const TextStyle(color: kGoldPrimary, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Account Login', style: TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.accountLogin,
+                            style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                          ),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('Server', style: TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
+                          const SizedBox(height: 2),
+                          Text(
+                            accountServer,
+                            style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: kGoldPrimary.withOpacity(0.8),
+                  width: 1.5,
+                ),
+                color: kDarkCard,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(14.0),
+                child: Column(
+                  children: [
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            Expanded(child: _buildMetricCard('Balance', '\$${balance.toStringAsFixed(2)}', Icons.account_balance_wallet)),
-                            const SizedBox(width: 10),
-                            Expanded(child: _buildMetricCard('Equity', '\$${equity.toStringAsFixed(2)}', Icons.show_chart)),
-                          ],
+                        Expanded(child: _buildMetricCard('Balance', '\$${balance.toStringAsFixed(2)}', Icons.account_balance_wallet)),
+                        const SizedBox(width: 10),
+                        Expanded(child: _buildMetricCard('Equity', '\$${equity.toStringAsFixed(2)}', Icons.show_chart)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(child: _buildMetricCard('Margin', '\$${margin.toStringAsFixed(2)}', Icons.lock_outline)),
+                        const SizedBox(width: 10),
+                        Expanded(child: _buildMetricCard('Free Margin', '\$${freeMargin.toStringAsFixed(2)}', Icons.lock_open)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: kDarkBg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isTotalProfit ? kGreenNeon : kRedNeon,
+                          width: 1.5,
                         ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(child: _buildMetricCard('Margin', '\$${margin.toStringAsFixed(2)}', Icons.lock_outline)),
-                            const SizedBox(width: 10),
-                            Expanded(child: _buildMetricCard('Free Margin', '\$${freeMargin.toStringAsFixed(2)}', Icons.lock_open)),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF263238).withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isTotalProfit ? const Color(0xFF00C853) : const Color(0xFFFF1744),
-                              width: 1.5,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'TOTAL OPEN PROFIT',
+                            style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                          ),
+                          Text(
+                            '${isTotalProfit ? "+" : ""}\$${totalOrdersProfit.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              color: isTotalProfit ? kGreenNeon : kRedNeon,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              fontFamily: 'monospace',
                             ),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'TOTAL OPEN PROFIT',
-                                style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
-                              ),
-                              Text(
-                                '${isTotalProfit ? "+" : ""}\$${totalOrdersProfit.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  color: isTotalProfit ? const Color(0xFF00C853) : const Color(0xFFFF1744),
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                  fontFamily: 'monospace',
-                                ),
-                              ),
-                            ],
-                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
+                        child: Text(
+                          'ACTIVE ORDERS (${activeOrders.length})',
+                          style: const TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1, fontFamily: 'monospace'),
                         ),
-                        const SizedBox(height: 16),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
-                            child: Text(
-                              'ACTIVE ORDERS (${activeOrders.length})',
-                              style: const TextStyle(color: Color(0xFFCFD8DC), fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1, fontFamily: 'monospace'),
+                      ),
+                    ),
+                    activeOrders.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 40.0),
+                            child: Center(
+                              child: Text('No active orders currently', style: TextStyle(color: Colors.grey, fontSize: 13, fontFamily: 'monospace')),
                             ),
-                          ),
-                        ),
-                        activeOrders.isEmpty
-                            ? const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 40.0),
-                                child: Center(
-                                  child: Text('No active orders currently', style: TextStyle(color: Colors.grey, fontSize: 13, fontFamily: 'monospace')),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: activeOrders.length,
+                            itemBuilder: (context, index) {
+                              final order = activeOrders[index];
+                              final String type = order['type']?.toString() ?? 'BUY';
+                              final double lot = double.tryParse(order['lot']?.toString() ?? '0.01') ?? 0.01;
+                              final double profit = double.tryParse(order['profit']?.toString() ?? '0.0') ?? 0.0;
+                              final double priceOpen = double.tryParse(order['price']?.toString() ?? '0.0') ?? 0.0;
+                              final String symbol = order['symbol']?.toString() ?? activeSymbol;
+                              
+                              bool isBuy = type.toUpperCase().contains('BUY');
+                              bool orderProfit = profit >= 0;
+
+                              Color typeColor = isBuy ? kGreenNeon : kRedNeon;
+                              Color profitColor = orderProfit ? kGreenNeon : kRedNeon;
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: kDarkBg,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: typeColor.withOpacity(0.6),
+                                    width: 1.2,
+                                  ),
                                 ),
-                              )
-                            : ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: activeOrders.length,
-                                itemBuilder: (context, index) {
-                                  final order = activeOrders[index];
-                                  final String type = order['type']?.toString() ?? 'BUY';
-                                  final double lot = double.tryParse(order['lot']?.toString() ?? '0.01') ?? 0.01;
-                                  final double profit = double.tryParse(order['profit']?.toString() ?? '0.0') ?? 0.0;
-                                  final double priceOpen = double.tryParse(order['price']?.toString() ?? '0.0') ?? 0.0;
-                                  final String symbol = order['symbol']?.toString() ?? activeSymbol;
-                                  
-                                  bool isBuy = type.toUpperCase().contains('BUY');
-                                  bool orderProfit = profit >= 0;
-
-                                  // กำหนดสีตามเงื่อนไข (BUY = เขียว, SELL = แดง / กำไร = เขียว, ติดลบ = แดง)
-                                  Color typeColor = isBuy ? const Color(0xFF00C853) : const Color(0xFFFF1744);
-                                  Color profitColor = orderProfit ? const Color(0xFF00C853) : const Color(0xFFFF1744);
-
-                                  return Container(
-                                    margin: const EdgeInsets.only(bottom: 10),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF263238).withOpacity(0.8),
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(
-                                        color: typeColor.withOpacity(0.5),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
                                       children: [
-                                        Row(
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: typeColor.withOpacity(0.2),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Text(
-                                                type,
-                                                style: TextStyle(color: typeColor, fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'monospace'),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(symbol, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'monospace')),
-                                                const SizedBox(height: 2),
-                                                Text('Lot: $lot | Open: ${priceOpen.toStringAsFixed(2)}', style: const TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'monospace')),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                        Text(
-                                          '${orderProfit ? "+" : ""}\$${profit.toStringAsFixed(2)}',
-                                          style: TextStyle(
-                                            color: profitColor,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            fontFamily: 'monospace',
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            color: typeColor.withOpacity(0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: typeColor, width: 1),
                                           ),
+                                          child: Text(
+                                            type,
+                                            style: TextStyle(color: typeColor, fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'monospace'),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(symbol, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'monospace')),
+                                            const SizedBox(height: 2),
+                                            Text('Lot: $lot | Open: ${priceOpen.toStringAsFixed(2)}', style: const TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'monospace')),
+                                          ],
                                         ),
                                       ],
                                     ),
-                                  );
-                                },
-                              ),
-                      ],
-                    ),
-                  ),
+                                    Text(
+                                      '${orderProfit ? "+" : ""}\$${profit.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        color: profitColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        fontFamily: 'monospace',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
-
-
 
 // ==========================================
 // #9 โหมดการบันทึกประจำวัน (HistoryScreen)
@@ -3292,213 +3187,194 @@ class _HistoryScreenState extends State<HistoryScreen> {
     });
 
     return Scaffold(
-      backgroundColor: const Color(0xFF263238),
+      backgroundColor: kDarkBg,
       appBar: AppBar(
-        title: const Text('History', style: TextStyle(fontFamily: 'monospace')),
-        backgroundColor: const Color(0xFF263238),
+        title: const Text('History', style: TextStyle(fontFamily: 'monospace', color: kGoldPrimary, fontWeight: FontWeight.bold)),
+        backgroundColor: kDarkBg,
       ),
-      body: Stack(
-        fit: StackFit.expand,
+      body: Column(
         children: [
-          Image.asset(
-            'assets/images/1792250396366.jpg',
-            fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.45),
-            errorBuilder: (context, error, stackTrace) {
-              return Container(color: const Color(0xFF263238));
-            },
+          SizedBox(
+            height: 50,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              itemCount: filterOptions.length,
+              itemBuilder: (context, index) {
+                String filter = filterOptions[index];
+                bool isSelected = selectedFilter == filter;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(filter, style: const TextStyle(fontFamily: 'monospace')),
+                    selected: isSelected,
+                    selectedColor: kGoldPrimary,
+                    backgroundColor: kDarkCard,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.black : Colors.white70,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                    ),
+                    onSelected: (bool selected) {
+                      setState(() {
+                        selectedFilter = filter;
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
           ),
           Container(
-            color: const Color(0xFF263238).withOpacity(0.65),
-          ),
-          Column(
-            children: [
-              SizedBox(
-                height: 50,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  itemCount: filterOptions.length,
-                  itemBuilder: (context, index) {
-                    String filter = filterOptions[index];
-                    bool isSelected = selectedFilter == filter;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(filter, style: const TextStyle(fontFamily: 'monospace')),
-                        selected: isSelected,
-                        selectedColor: const Color(0xFF546E7A),
-                        backgroundColor: const Color(0xFF37474F).withOpacity(0.8),
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : Colors.white70,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          fontFamily: 'monospace',
-                        ),
-                        onSelected: (bool selected) {
-                          setState(() {
-                            selectedFilter = filter;
-                          });
-                        },
-                      ),
-                    );
-                  },
-                ),
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: kDarkCard,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: kGoldPrimary,
+                width: 1.5,
               ),
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF37474F).withOpacity(0.85),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFFB0BEC5),
-                    width: 2.0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Total Realized P/L ($selectedFilter)',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Total Realized P/L ($selectedFilter)',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      '${totalProfit >= 0 ? "+" : ""}\$${totalProfit.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        color: totalProfit >= 0 ? kGreenNeon : kRedNeon,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'monospace',
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          '${totalProfit >= 0 ? "+" : ""}\$${totalProfit.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            color: totalProfit >= 0 ? const Color(0xFF00C853) : Colors.redAccent,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: kDarkCard,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: kGoldPrimary.withOpacity(0.5),
+                  width: 1.5,
                 ),
               ),
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF37474F).withOpacity(0.85),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFFB0BEC5),
-                      width: 2.0,
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: filteredHistory.isEmpty
-                        ? const Center(
-                            child: Text('No closed trade history for this account', style: TextStyle(color: Colors.grey, fontFamily: 'monospace')),
-                          )
-                        : ListView.builder(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: filteredHistory.isEmpty
+                    ? const Center(
+                        child: Text('No closed trade history for this account', style: TextStyle(color: Colors.grey, fontFamily: 'monospace')),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: filteredHistory.length,
+                        itemBuilder: (context, index) {
+                          final trade = filteredHistory[index];
+                          final String type = trade['type']?.toString() ?? 'BUY';
+                          final String symbol = trade['symbol']?.toString() ?? 'BTCUSD';
+                          final double lot = double.tryParse(trade['lot']?.toString() ?? '0.01') ?? 0.01;
+                          final double priceOpen = double.tryParse(trade['price_open']?.toString() ?? '0.0') ?? 0.0;
+                          final double priceClose = double.tryParse(trade['price_close']?.toString() ?? '0.0') ?? 0.0;
+                          final double profit = double.tryParse(trade['profit']?.toString() ?? '0.0') ?? 0.0;
+                          
+                          final String rawCloseTime = trade['close_time']?.toString() ?? trade['time']?.toString() ?? '';
+                          final String closeTime = _formatDisplayDate(rawCloseTime);
+
+                          bool isBuy = type.toUpperCase().contains('BUY');
+                          bool isProfit = profit >= 0;
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
                             padding: const EdgeInsets.all(12),
-                            itemCount: filteredHistory.length,
-                            itemBuilder: (context, index) {
-                              final trade = filteredHistory[index];
-                              final String type = trade['type']?.toString() ?? 'BUY';
-                              final String symbol = trade['symbol']?.toString() ?? 'BTCUSD';
-                              final double lot = double.tryParse(trade['lot']?.toString() ?? '0.01') ?? 0.01;
-                              final double priceOpen = double.tryParse(trade['price_open']?.toString() ?? '0.0') ?? 0.0;
-                              final double priceClose = double.tryParse(trade['price_close']?.toString() ?? '0.0') ?? 0.0;
-                              final double profit = double.tryParse(trade['profit']?.toString() ?? '0.0') ?? 0.0;
-                              
-                              final String rawCloseTime = trade['close_time']?.toString() ?? trade['time']?.toString() ?? '';
-                              final String closeTime = _formatDisplayDate(rawCloseTime);
-
-                              bool isBuy = type.toUpperCase().contains('BUY');
-                              bool isProfit = profit >= 0;
-
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 10),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF263238).withOpacity(0.8),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color: Colors.white24,
-                                    width: 1.0,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            decoration: BoxDecoration(
+                              color: kDarkBg,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: (isBuy ? kGreenNeon : kRedNeon).withOpacity(0.4),
+                                width: 1.0,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
                                   children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: isBuy 
-                                                ? const Color(0xFF00C853).withOpacity(0.2) 
-                                                : Colors.redAccent.withOpacity(0.2),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            type,
-                                            style: TextStyle(
-                                              color: isBuy ? const Color(0xFF00C853) : Colors.redAccent,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 11,
-                                              fontFamily: 'monospace',
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('$symbol, lot: $lot', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'monospace')),
-                                            const SizedBox(height: 3),
-                                            Text(
-                                              '${priceOpen.toStringAsFixed(2)} -> ${priceClose.toStringAsFixed(2)}',
-                                              style: const TextStyle(color: Color(0xFFCFD8DC), fontSize: 11, fontFamily: 'monospace'),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(closeTime, style: const TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'monospace')),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    Text(
-                                      '${isProfit ? "+" : ""}\$${profit.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                        color: isProfit ? const Color(0xFF00C853) : Colors.redAccent,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        fontFamily: 'monospace',
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: (isBuy ? kGreenNeon : kRedNeon).withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(6),
                                       ),
+                                      child: Text(
+                                        type,
+                                        style: TextStyle(
+                                          color: isBuy ? kGreenNeon : kRedNeon,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
+                                          fontFamily: 'monospace',
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('$symbol, lot: $lot', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'monospace')),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          '${priceOpen.toStringAsFixed(2)} -> ${priceClose.toStringAsFixed(2)}',
+                                          style: const TextStyle(color: Colors.white70, fontSize: 11, fontFamily: 'monospace'),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(closeTime, style: const TextStyle(color: Colors.grey, fontSize: 10, fontFamily: 'monospace')),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              );
-                            },
-                          ),
-                  ),
-                ),
+                                Text(
+                                  '${isProfit ? "+" : ""}\$${profit.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    color: isProfit ? kGreenNeon : kRedNeon,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
               ),
-            ],
+            ),
           ),
         ],
       ),
     );
   }
 }
-
 
 // ==========================================
 // #10 โหมดการแจ้งเตือนข้อความ (AlertsScreen)
@@ -3655,104 +3531,87 @@ class _AlertsScreenState extends State<AlertsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF263238),
+      backgroundColor: kDarkBg,
       appBar: AppBar(
-        title: const Text('Alerts & Notifications', style: TextStyle(fontFamily: 'monospace')),
-        backgroundColor: const Color(0xFF263238),
+        title: const Text('Alerts & Notifications', style: TextStyle(fontFamily: 'monospace', color: kGoldPrimary, fontWeight: FontWeight.bold)),
+        backgroundColor: kDarkBg,
         actions: [
           if (alertItems.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.delete_sweep, color: Colors.orangeAccent),
+              icon: const Icon(Icons.delete_sweep, color: kRedNeon),
               onPressed: _clearAllAlerts,
               tooltip: 'Clear All Alerts',
             ),
         ],
       ),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            'assets/images/1792250396366.jpg',
-            fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.45),
-            errorBuilder: (context, error, stackTrace) {
-              return Container(color: const Color(0xFF263238));
-            },
+      body: Container(
+        margin: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: kDarkCard,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: kGoldPrimary,
+            width: 1.5,
           ),
-          Container(
-            color: const Color(0xFF263238).withOpacity(0.65),
-          ),
-          Container(
-            margin: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF37474F).withOpacity(0.85),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: const Color(0xFFB0BEC5),
-                width: 2.0,
-              ),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: alertItems.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No trading alerts available',
-                        style: TextStyle(color: Colors.grey, fontFamily: 'monospace', fontSize: 13),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: alertItems.isEmpty
+              ? const Center(
+                  child: Text(
+                    'No trading alerts available',
+                    style: TextStyle(color: Colors.grey, fontFamily: 'monospace', fontSize: 13),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: alertItems.length,
+                  itemBuilder: (context, index) {
+                    var alert = alertItems[index];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: kDarkBg,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: kGoldPrimary.withOpacity(0.3),
+                          width: 1.0,
+                        ),
                       ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: alertItems.length,
-                      itemBuilder: (context, index) {
-                        var alert = alertItems[index];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF263238).withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: Colors.white24,
-                              width: 1.0,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.notifications_active, color: kGoldPrimary, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              alert['message'],
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontFamily: 'monospace',
+                                fontSize: 13,
+                                height: 1.4,
+                              ),
                             ),
                           ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(Icons.notifications_active, color: Color(0xFFCFD8DC), size: 20),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  alert['message'],
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontFamily: 'monospace',
-                                    fontSize: 13,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => _clearAlertItem(alert['key']),
-                                child: const Padding(
-                                  padding: EdgeInsets.only(left: 8.0),
-                                  child: Icon(Icons.delete_outline, color: Colors.orangeAccent, size: 18),
-                                ),
-                              ),
-                            ],
+                          GestureDetector(
+                            onTap: () => _clearAlertItem(alert['key']),
+                            child: const Padding(
+                              padding: EdgeInsets.only(left: 8.0),
+                              child: Icon(Icons.delete_outline, color: kRedNeon, size: 18),
+                            ),
                           ),
-                        );
-                      },
-                    ),
-            ),
-          ),
-        ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
       ),
     );
   }
 }
-
 
 // ==========================================
 // #11 โหมดการตั้งค่าพารามิเตอร์ (SettingsScreen)
@@ -3889,7 +3748,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Parameters Synced & Saved to EA Successfully!'),
-          backgroundColor: Color(0xFF546E7A),
+          backgroundColor: kDarkCard,
         ),
       );
     } catch (e) {
@@ -3929,9 +3788,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFF121212),
+            color: kDarkBg,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white12, width: 1),
+            border: Border.all(color: kGoldPrimary.withOpacity(0.3), width: 1),
           ),
           child: TextField(
             controller: controller,
@@ -3950,29 +3809,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ฟังก์ชันสุ่ม/กำหนดสีขอบปุ่ม Symbol แต่ละปุ่มตามรูปภาพ[span_12](start_span)[span_12](end_span)
   Color _getSymbolBorderColor(String sym, bool isSelected) {
-    if (isSelected) return const Color(0xFFFF1744);
-    if (sym == 'BTCUSD') return const Color(0xFF00E676); // สีเขียว[span_13](start_span)[span_13](end_span)
-    if (sym == 'EURUSD') return const Color(0xFFFF1744); // สีแดง[span_14](start_span)[span_14](end_span)
-    return Colors.white24;
+    if (isSelected) return kRedNeon;
+    if (sym == 'BTCUSD') return kGreenNeon;
+    if (sym == 'EURUSD') return kRedNeon;
+    return kGoldPrimary.withOpacity(0.4);
   }
 
-  // ฟังก์ชันกำหนดสีขอบปุ่ม Trading Mode ตามรูปภาพ[span_15](start_span)[span_15](end_span)
   Color _getTradingModeBorderColor(String mode, bool isSelected) {
-    if (mode == 'All Mode') return const Color(0xFFFF1744); // ขอบแดง[span_16](start_span)[span_16](end_span)
-    if (mode == 'Liquidity') return const Color(0xFFE91E63); // ขอบชมพู/ม่วง[span_17](start_span)[span_17](end_span)
-    if (mode == 'Breakout') return const Color(0xFF00E5FF); // ขอบฟ้า[span_18](start_span)[span_18](end_span)
-    if (mode == 'Enqulfing') return const Color(0xFFFF9100); // ขอบส้ม[span_19](start_span)[span_19](end_span)
-    return Colors.white24;
+    if (mode == 'All Mode') return kRedNeon;
+    if (mode == 'Liquidity') return const Color(0xFFE91E63);
+    if (mode == 'Breakout') return const Color(0xFF00E5FF);
+    if (mode == 'Enqulfing') return const Color(0xFFFF9100);
+    return kGoldPrimary.withOpacity(0.4);
   }
 
-  // ฟังก์ชันกำหนดสีปุ่ม Lot Mode ตามรูปภาพ[span_20](start_span)[span_20](end_span)
   Color _getLotModeBorderColor(String mode) {
-    if (mode == 'Fixed') return const Color(0xFF00E5FF); // สีฟ้า[span_21](start_span)[span_21](end_span)
-    if (mode == 'Step') return const Color(0xFF9C27B0); // สีม่วง[span_22](start_span)[span_22](end_span)
-    if (mode == 'Double') return const Color(0xFFFF9100); // สีส้ม[span_23](start_span)[span_23](end_span)
-    return Colors.white24;
+    if (mode == 'Fixed') return const Color(0xFF00E5FF);
+    if (mode == 'Step') return const Color(0xFF9C27B0);
+    if (mode == 'Double') return const Color(0xFFFF9100);
+    return kGoldPrimary.withOpacity(0.4);
   }
 
   @override
@@ -3982,545 +3838,528 @@ class _SettingsScreenState extends State<SettingsScreen> {
     double calculatedTP = sl * rr;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF263238),
+      backgroundColor: kDarkBg,
       appBar: AppBar(
-        title: const Text('Settings Bot Parameters', style: TextStyle(fontFamily: 'monospace')),
-        backgroundColor: const Color(0xFF263238),
+        title: const Text('Settings Bot Parameters', style: TextStyle(fontFamily: 'monospace', color: kGoldPrimary, fontWeight: FontWeight.bold)),
+        backgroundColor: kDarkBg,
         elevation: 0,
       ),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            'assets/images/1792250396366.jpg',
-            fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.45),
-            errorBuilder: (context, error, stackTrace) {
-              return Container(color: const Color(0xFF263238));
-            },
-          ),
-          Container(
-            color: const Color(0xFF263238).withOpacity(0.65),
-          ),
-          SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E1E).withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFFFF1744), // กรอบใหญ่สีแดงนีออน[span_24](start_span)[span_24](end_span)
-                      width: 2.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFF1744).withOpacity(0.2),
-                        blurRadius: 12,
-                        spreadRadius: 2,
-                      ),
-                    ],
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: kDarkCard,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: kGoldPrimary,
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: kGoldPrimary.withOpacity(0.15),
+                    blurRadius: 12,
+                    spreadRadius: 1,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'PARAMETERS BOT',
-                        style: TextStyle(color: Color(0xFFFF1744), fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.8, fontFamily: 'monospace'),
-                      ),
-                      const SizedBox(height: 12),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'PARAMETERS BOT',
+                    style: TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.8, fontFamily: 'monospace'),
+                  ),
+                  const SizedBox(height: 12),
 
-                      // 1. Trading Symbol Section
-                      const Text('Trading Symbol', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: symbolOptions.map((sym) {
-                          bool isSelected = selectedSymbol == sym;
-                          Color borderColor = _getSymbolBorderColor(sym, isSelected);
-                          return Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                              child: SizedBox(
-                                height: 45,
-                                child: ElevatedButton(
-                                  onPressed: () => setState(() {
-                                    _isEditing = true;
-                                    selectedSymbol = sym;
-                                  }),
-                                  style: ElevatedButton.styleFrom(
-                                    // ปุ่ม XAUUSD สีแดงสดตามรูปเมื่อถูกเลือก[span_25](start_span)[span_25](end_span)
-                                    backgroundColor: isSelected ? const Color(0xFFFF1744) : Colors.black,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    side: BorderSide(color: borderColor, width: isSelected ? 2.0 : 1.5),
-                                    elevation: isSelected ? 4 : 0,
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                  child: Text(
-                                    sym,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontStyle: FontStyle.italic,
-                                      fontSize: 12,
-                                    ),
-                                  ),
+                  // 1. Trading Symbol Section
+                  const Text('Trading Symbol', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: symbolOptions.map((sym) {
+                      bool isSelected = selectedSymbol == sym;
+                      Color borderColor = _getSymbolBorderColor(sym, isSelected);
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          child: SizedBox(
+                            height: 45,
+                            child: ElevatedButton(
+                              onPressed: () => setState(() {
+                                _isEditing = true;
+                                selectedSymbol = sym;
+                              }),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isSelected ? kRedNeon : kDarkBg,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                side: BorderSide(color: borderColor, width: isSelected ? 2.0 : 1.5),
+                                elevation: isSelected ? 4 : 0,
+                                padding: EdgeInsets.zero,
+                              ),
+                              child: Text(
+                                sym,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontStyle: FontStyle.italic,
+                                  fontSize: 12,
                                 ),
                               ),
                             ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // 2. Trading Mode Section
-                      const Text('Trading Mode', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: tradingModeOptions.map((mode) {
-                          bool isSelected = tradingMode == mode;
-                          Color borderColor = _getTradingModeBorderColor(mode, isSelected);
-                          return Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 3.0),
-                              child: SizedBox(
-                                height: 45,
-                                child: ElevatedButton(
-                                  onPressed: () => setState(() {
-                                    _isEditing = true;
-                                    tradingMode = mode;
-                                  }),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.black,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    side: BorderSide(color: borderColor, width: 1.5),
-                                    elevation: isSelected ? 4 : 0,
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                  child: Text(
-                                    mode,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontStyle: FontStyle.italic,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // 3. Lot Mode Section
-                      const Text('Lot Mode', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: lotModeOptions.map((mode) {
-                          bool isSelected = lotMode == mode;
-                          Color borderColor = _getLotModeBorderColor(mode);
-                          return Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                              child: SizedBox(
-                                height: 45,
-                                child: ElevatedButton(
-                                  onPressed: () => setState(() {
-                                    _isEditing = true;
-                                    lotMode = mode;
-                                  }),
-                                  style: ElevatedButton.styleFrom(
-                                    // Fixed ล็อตเมื่อเลือกจะเป็นสีฟ้าทึบตามรูป[span_26](start_span)[span_26](end_span)
-                                    backgroundColor: (isSelected && mode == 'Fixed') ? const Color(0xFF00E5FF) : Colors.black,
-                                    foregroundColor: (isSelected && mode == 'Fixed') ? Colors.black : Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    side: BorderSide(color: borderColor, width: 1.5),
-                                    elevation: isSelected ? 4 : 0,
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                  child: Text(
-                                    mode,
-                                    style: TextStyle(
-                                      color: (isSelected && mode == 'Fixed') ? Colors.black : Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontStyle: FontStyle.italic,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 16),
-                      const Divider(color: Colors.white12),
-                      const SizedBox(height: 8),
-
-                      // 4. Daily Trend Filter & Timeframe Section
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFFF1744), width: 1.5), // กรอบสีแดงตามรูป[span_27](start_span)[span_27](end_span)
+                          ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Daily Trend Filter (D1)', style: TextStyle(color: Color(0xFFFF1744), fontSize: 12, fontWeight: FontWeight.bold, fontStyle: FontStyle.italic)),
-                                Switch(
-                                  value: enableTrendFilter,
-                                  activeColor: Colors.white,
-                                  activeTrackColor: const Color(0xFFFF1744),
-                                  onChanged: (val) => setState(() {
-                                    _isEditing = true;
-                                    enableTrendFilter = val;
-                                  }),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            const Text('Trading Timeframe', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
-                            const SizedBox(height: 8),
-                            GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 4,
-                                mainAxisSpacing: 8,
-                                crossAxisSpacing: 8,
-                                childAspectRatio: 2.2,
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 2. Trading Mode Section
+                  const Text('Trading Mode', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: tradingModeOptions.map((mode) {
+                      bool isSelected = tradingMode == mode;
+                      Color borderColor = _getTradingModeBorderColor(mode, isSelected);
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 3.0),
+                          child: SizedBox(
+                            height: 45,
+                            child: ElevatedButton(
+                              onPressed: () => setState(() {
+                                _isEditing = true;
+                                tradingMode = mode;
+                              }),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: kDarkBg,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                side: BorderSide(color: borderColor, width: 1.5),
+                                elevation: isSelected ? 4 : 0,
+                                padding: EdgeInsets.zero,
                               ),
-                              itemCount: timeframes.length,
-                              itemBuilder: (context, index) {
-                                String tf = timeframes[index];
-                                bool isSelected = selectedTf == tf;
-                                return ElevatedButton(
-                                  onPressed: () => setState(() {
-                                    _isEditing = true;
-                                    selectedTf = tf;
-                                  }),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: isSelected ? const Color(0xFFFF1744) : Colors.black,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    side: const BorderSide(
-                                      color: Color(0xFFFF1744),
-                                      width: 1.5,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                  child: Text(
-                                    tf,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontStyle: FontStyle.italic,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                );
-                              },
+                              child: Text(
+                                mode,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontStyle: FontStyle.italic,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 3. Lot Mode Section
+                  const Text('Lot Mode', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: lotModeOptions.map((mode) {
+                      bool isSelected = lotMode == mode;
+                      Color borderColor = _getLotModeBorderColor(mode);
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          child: SizedBox(
+                            height: 45,
+                            child: ElevatedButton(
+                              onPressed: () => setState(() {
+                                _isEditing = true;
+                                lotMode = mode;
+                              }),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: (isSelected && mode == 'Fixed') ? const Color(0xFF00E5FF) : kDarkBg,
+                                foregroundColor: (isSelected && mode == 'Fixed') ? Colors.black : Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                side: BorderSide(color: borderColor, width: 1.5),
+                                elevation: isSelected ? 4 : 0,
+                                padding: EdgeInsets.zero,
+                              ),
+                              child: Text(
+                                mode,
+                                style: TextStyle(
+                                  color: (isSelected && mode == 'Fixed') ? Colors.black : Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontStyle: FontStyle.italic,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(color: kGoldPrimary),
+                  const SizedBox(height: 8),
+
+                  // 4. Daily Trend Filter & Timeframe Section
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: kDarkBg,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: kRedNeon, width: 1.5),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Daily Trend Filter (D1)', style: TextStyle(color: kRedNeon, fontSize: 12, fontWeight: FontWeight.bold, fontStyle: FontStyle.italic)),
+                            Switch(
+                              value: enableTrendFilter,
+                              activeColor: Colors.white,
+                              activeTrackColor: kRedNeon,
+                              onChanged: (val) => setState(() {
+                                _isEditing = true;
+                                enableTrendFilter = val;
+                              }),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 10),
+                        const Text('Trading Timeframe', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
+                        const SizedBox(height: 8),
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 4,
+                            mainAxisSpacing: 8,
+                            crossAxisSpacing: 8,
+                            childAspectRatio: 2.2,
+                          ),
+                          itemCount: timeframes.length,
+                          itemBuilder: (context, index) {
+                            String tf = timeframes[index];
+                            bool isSelected = selectedTf == tf;
+                            return ElevatedButton(
+                              onPressed: () => setState(() {
+                                _isEditing = true;
+                                selectedTf = tf;
+                              }),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isSelected ? kRedNeon : Colors.black,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                side: const BorderSide(
+                                  color: kRedNeon,
+                                  width: 1.5,
+                                ),
+                                padding: EdgeInsets.zero,
+                              ),
+                              child: Text(
+                                tf,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontStyle: FontStyle.italic,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
-                      // Input Fields
-                      Row(
-                        children: [
-                          Expanded(child: _buildControllerInputField('Initial Lot', initialLotController, TextInputType.number)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _buildControllerInputField('Max Recovery', maxRecoveryController, TextInputType.number)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(child: _buildControllerInputField('Max Orders', maxOrdersController, TextInputType.number)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _buildControllerInputField('Recovery Step (Pts)', recoveryStepController, TextInputType.number)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(child: _buildControllerInputField('SL Points', slPointsController, TextInputType.number)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _buildControllerInputField('Risk Reward', riskRewardController, TextInputType.number)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Calculated TP', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
-                          const SizedBox(height: 4),
-                          Container(
-                            width: double.infinity,
-                            height: 46,
-                            alignment: Alignment.center,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF121212),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.white12, width: 1),
-                            ),
-                            child: Text(
-                              '${calculatedTP.toStringAsFixed(1)} Pts',
-                              style: const TextStyle(color: Color(0xFFCFD8DC), fontWeight: FontWeight.bold, fontSize: 13, fontStyle: FontStyle.italic),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(child: _buildControllerInputField('Start Time (เวลาไทย)', startTimeController, TextInputType.text)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _buildControllerInputField('End Time (เวลาไทย)', endTimeController, TextInputType.text)),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      const Divider(color: Colors.white24),
-                      const SizedBox(height: 12),
-
-                      // Basket Control
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('BASKET CONTROL', style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 12)),
-                          Row(
-                            children: [
-                              const Text('Enable Basket', style: TextStyle(color: Colors.white70, fontSize: 11)),
-                              Switch(
-                                value: enableBasketControl,
-                                activeColor: Colors.blueAccent,
-                                onChanged: (val) => setState(() { enableBasketControl = val; }),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF121212),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.blueAccent, width: 1.5),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Basket TP', style: TextStyle(color: Colors.blueAccent, fontSize: 11, fontWeight: FontWeight.bold)),
-                                      Switch(
-                                        value: enableBasketTp,
-                                        activeColor: Colors.blueAccent,
-                                        onChanged: (val) => setState(() { enableBasketTp = val; }),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  _buildControllerInputField('Target (\$)', basketTpController, TextInputType.number),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF121212),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.orangeAccent, width: 1.5),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Basket SL', style: TextStyle(color: Colors.orangeAccent, fontSize: 11, fontWeight: FontWeight.bold)),
-                                      Switch(
-                                        value: enableBasketSl,
-                                        activeColor: Colors.orangeAccent,
-                                        onChanged: (val) => setState(() { enableBasketSl = val; }),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  _buildControllerInputField('Limit (\$)', basketSlController, TextInputType.number),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('DAILY TARGET & LOSS CONTROL', style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 12)),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF121212),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.green, width: 1.5),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Daily Target', style: TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
-                                      Switch(
-                                        value: enableDailyTarget,
-                                        activeColor: Colors.green,
-                                        onChanged: (val) => setState(() { enableDailyTarget = val; }),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  _buildControllerInputField('Target (\$)', dailyTargetController, TextInputType.number),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF121212),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.redAccent, width: 1.5),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Daily Loss', style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold)),
-                                      Switch(
-                                        value: enableDailyLoss,
-                                        activeColor: Colors.redAccent,
-                                        onChanged: (val) => setState(() { enableDailyLoss = val; }),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  _buildControllerInputField('Limit (\$)', dailyLossController, TextInputType.number),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
+                  // Input Fields
+                  Row(
+                    children: [
+                      Expanded(child: _buildControllerInputField('Initial Lot', initialLotController, TextInputType.number)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _buildControllerInputField('Max Recovery', maxRecoveryController, TextInputType.number)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: _buildControllerInputField('Max Orders', maxOrdersController, TextInputType.number)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _buildControllerInputField('Recovery Step (Pts)', recoveryStepController, TextInputType.number)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: _buildControllerInputField('SL Points', slPointsController, TextInputType.number)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _buildControllerInputField('Risk Reward', riskRewardController, TextInputType.number)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Calculated TP', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
+                      const SizedBox(height: 4),
+                      Container(
                         width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _saveBotParametersToFirebase,
-                          icon: const Icon(Icons.save, color: Colors.white),
-                          label: const Text('SYNC & SAVE TO EA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF546E7A),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: const BorderSide(color: Color(0xFFB0BEC5), width: 1),
-                            ),
-                          ),
+                        height: 46,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: kDarkBg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: kGoldPrimary.withOpacity(0.3), width: 1),
+                        ),
+                        child: Text(
+                          '${calculatedTP.toStringAsFixed(1)} Pts',
+                          style: const TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold, fontSize: 13, fontStyle: FontStyle.italic),
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      const Divider(color: Colors.white24, height: 24),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'SECURITY & PRIVACY', 
-                        style: TextStyle(color: Color(0xFFCFD8DC), fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'monospace')
-                      ),
-                      const SizedBox(height: 10),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: _buildControllerInputField('Start Time (เวลาไทย)', startTimeController, TextInputType.text)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _buildControllerInputField('End Time (เวลาไทย)', endTimeController, TextInputType.text)),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Divider(color: kGoldPrimary),
+                  const SizedBox(height: 12),
+
+                  // Basket Control
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('BASKET CONTROL', style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 12)),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Reset Security PIN / Login', style: TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace')),
-                                SizedBox(height: 2),
-                                Text('ตั้งค่ารหัส PIN ใหม่', style: TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
-                              ],
-                            ),
-                          ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF546E7A),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            ),
-                            onPressed: _resetPin,
-                            child: const Text('Reset', style: TextStyle(color: Colors.white, fontSize: 12, fontFamily: 'monospace')),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Log Out (เปลี่ยนบัญชี MT5)', style: TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace')),
-                                SizedBox(height: 2),
-                                Text('ออกจากระบบเพื่อกลับไปหน้าล็อกอิน', style: TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
-                              ],
-                            ),
-                          ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              side: const BorderSide(color: Color(0xFFB0BEC5), width: 1.5),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            ),
-                            onPressed: _logoutToLoginScreen,
-                            child: const Text('Log Out', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
+                          const Text('Enable Basket', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                          Switch(
+                            value: enableBasketControl,
+                            activeColor: Colors.blueAccent,
+                            onChanged: (val) => setState(() { enableBasketControl = val; }),
                           ),
                         ],
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 30),
-              ],
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: kDarkBg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.blueAccent, width: 1.5),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Basket TP', style: TextStyle(color: Colors.blueAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                                  Switch(
+                                    value: enableBasketTp,
+                                    activeColor: Colors.blueAccent,
+                                    onChanged: (val) => setState(() { enableBasketTp = val; }),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              _buildControllerInputField('Target (\$)', basketTpController, TextInputType.number),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: kDarkBg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: kRedNeon, width: 1.5),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Basket SL', style: TextStyle(color: kRedNeon, fontSize: 11, fontWeight: FontWeight.bold)),
+                                  Switch(
+                                    value: enableBasketSl,
+                                    activeColor: kRedNeon,
+                                    onChanged: (val) => setState(() { enableBasketSl = val; }),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              _buildControllerInputField('Limit (\$)', basketSlController, TextInputType.number),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('DAILY TARGET & LOSS CONTROL', style: TextStyle(color: kGreenNeon, fontWeight: FontWeight.bold, fontSize: 12)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: kDarkBg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: kGreenNeon, width: 1.5),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Daily Target', style: TextStyle(color: kGreenNeon, fontSize: 11, fontWeight: FontWeight.bold)),
+                                  Switch(
+                                    value: enableDailyTarget,
+                                    activeColor: kGreenNeon,
+                                    onChanged: (val) => setState(() { enableDailyTarget = val; }),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              _buildControllerInputField('Target (\$)', dailyTargetController, TextInputType.number),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: kDarkBg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: kRedNeon, width: 1.5),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Daily Loss', style: TextStyle(color: kRedNeon, fontSize: 11, fontWeight: FontWeight.bold)),
+                                  Switch(
+                                    value: enableDailyLoss,
+                                    activeColor: kRedNeon,
+                                    onChanged: (val) => setState(() { enableDailyLoss = val; }),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              _buildControllerInputField('Limit (\$)', dailyLossController, TextInputType.number),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _saveBotParametersToFirebase,
+                      icon: const Icon(Icons.save, color: kGoldPrimary),
+                      label: const Text('SYNC & SAVE TO EA', style: TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kDarkBg,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(color: kGoldPrimary, width: 1.5),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Divider(color: kGoldPrimary, height: 24),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'SECURITY & PRIVACY', 
+                    style: TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'monospace')
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Reset Security PIN / Login', style: TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace')),
+                            SizedBox(height: 2),
+                            Text('ตั้งค่ารหัส PIN ใหม่', style: TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
+                          ],
+                        ),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kDarkBg,
+                          side: const BorderSide(color: kGoldPrimary, width: 1),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        ),
+                        onPressed: _resetPin,
+                        child: const Text('Reset', style: TextStyle(color: kGoldPrimary, fontSize: 12, fontFamily: 'monospace')),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Log Out (เปลี่ยนบัญชี MT5)', style: TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace')),
+                            SizedBox(height: 2),
+                            Text('ออกจากระบบเพื่อกลับไปหน้าล็อกอิน', style: TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
+                          ],
+                        ),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          side: const BorderSide(color: kGoldPrimary, width: 1.5),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        ),
+                        onPressed: _logoutToLoginScreen,
+                        child: const Text('Log Out', style: TextStyle(color: kGoldPrimary, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 30),
+          ],
+        ),
       ),
     );
   }
