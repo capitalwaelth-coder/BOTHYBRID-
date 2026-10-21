@@ -4015,7 +4015,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
 }
 
 // ==========================================
-// #11 โหมดการตั้งค่าพารามิเตอร์ (SettingsScreen)
+// #11 โหมดการตั้งค่าพารามิเตอร์ (SettingsScreen) - Full Version
 // ==========================================
 
 class SettingsScreen extends StatefulWidget {
@@ -4204,11 +4204,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _isEditing = false;
       });
 
+      // ==========================================
+      // 🌟 ป็อปอัปแจ้งเตือนเรืองแสงแบบ Luxury Neon
+      // ==========================================
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Parameters Synced & Saved to EA Successfully!'),
-          backgroundColor: kDarkCard,
-          duration: Duration(seconds: 2),
+        SnackBar(
+          elevation: 10,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          duration: const Duration(seconds: 3),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          content: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: kDarkCard.withOpacity(0.95),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: kGoldPrimary, width: 1.8),
+              boxShadow: [
+                BoxShadow(
+                  color: kGoldPrimary.withOpacity(0.5),
+                  blurRadius: 16,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: kGreenNeon.withOpacity(0.2),
+                    border: Border.all(color: kGreenNeon, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: kGreenNeon.withOpacity(0.6),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_outline,
+                    color: kGreenNeon,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'SYNC & SAVE SUCCESS!',
+                        style: TextStyle(
+                          color: kGoldPrimary,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                          letterSpacing: 1.2,
+                          fontFamily: 'monospace',
+                          shadows: [
+                            Shadow(
+                              color: kGoldPrimary,
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'อัปเดตพารามิเตอร์ส่งไปยัง EA เรียบร้อยแล้ว',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     } catch (e) {
