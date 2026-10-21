@@ -5017,44 +5017,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 
 // ==========================================
-// #12 GOLD PRO Floating Robot Bubble
-// ขยายวงกลมให้ใหญ่ขึ้นจับถนัดนิ้ว + เด้งขึ้นลง + ลากย้ายได้อิสระ
+// #12 GOLD PRO Floating Robot Bubble (แก้ไข Error moveWindow แล้ว)
 // ==========================================
-
-@pragma("vm:entry-point")
-void overlayMain() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  bool firebaseReady = false;
-
-  try {
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: const FirebaseOptions(
-          apiKey: "AIzaSyBnKyMazopUyD1k-kcIXo3bFedWfHXN0JA",
-          appId: "1:155532929563:android:49d8a1e0040dc87ce766be",
-          messagingSenderId: "155532929563",
-          projectId: "liquidity-b8739",
-          storageBucket: "liquidity-b8739.firebasestorage.app",
-          databaseURL:
-              "https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app",
-        ),
-      );
-    }
-    firebaseReady = true;
-  } catch (e) {
-    debugPrint("Overlay Firebase init error: $e");
-  }
-
-  runApp(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: GoldProFloatingBubble(
-        firebaseReady: firebaseReady,
-      ),
-    ),
-  );
-}
 
 class GoldProFloatingBubble extends StatefulWidget {
   final bool firebaseReady;
@@ -5174,19 +5138,16 @@ class _GoldProFloatingBubbleState
                       alignment: Alignment.center,
                       clipBehavior: Clip.none,
                       children: [
-                        // วงกลมใหญ่ขึ้น ขอบทอง + ระบบลากวางอิสระและกดเต็มวงนิ้ว
+                        // วงกลมขนาดใหญ่จับถนัดนิ้ว พร้อมเปิดให้ระบบลากหน้าต่างทำงาน
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onPanUpdate: (details) async {
-                            await FlutterOverlayWindow.moveWindow(details.delta);
-                          },
                           onTap: () {
                             setState(() {
                               _showInfo = !_showInfo;
                             });
                           },
                           child: Container(
-                            width: 92, // ขยายขนาดวงกลมใหญ่ขึ้น (จากเดิม 76)
+                            width: 92,
                             height: 92,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
@@ -5205,7 +5166,7 @@ class _GoldProFloatingBubbleState
                             ),
                             child: ClipOval(
                               child: Image.asset(
-                                "assets/images/0.jpg",
+                                "assets/images/1.jpg",
                                 width: 92,
                                 height: 92,
                                 fit: BoxFit.cover,
@@ -5223,7 +5184,7 @@ class _GoldProFloatingBubbleState
                           ),
                         ),
 
-                        // จุดสถานะสีเขียว / สีแดง (ขยับออกมุมขวาบนเล็กน้อย ไม่บังรูป)
+                        // จุดสถานะสีเขียว / สีแดง (มุมขวาบน ไม่บังรูปโรบอท)
                         Positioned(
                           right: 8,
                           top: 8,
