@@ -2375,7 +2375,7 @@ class ScannerClipper extends CustomClipper<Rect> {
 
 
 // ==========================================
-// #7 โหมด HomeScreen (GOLD PRO) - Dual Image Scanner
+// #7 โหมด HomeScreen (GOLD PRO) - ปรับลดขนาดกล่องให้กระชับ
 // ==========================================
 
 class HomeScreen extends StatefulWidget {
@@ -2408,7 +2408,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   bool isConnected = false;
 
-  // ตัวแปรควบคุมการสลับรูปภาพ 0.jpg และ 1.jpg
   int _currentImageIndex = 0;
   Timer? _imageTimer;
 
@@ -2417,7 +2416,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     vsync: this,
   )..repeat(reverse: true);
 
-  // AnimationController สำหรับเอฟเฟกต์เรืองแสงชื่อบอท (GOLD PRO)
   late final AnimationController _titleGlowController = AnimationController(
     duration: const Duration(milliseconds: 1500),
     vsync: this,
@@ -2436,7 +2434,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _listenToConnectionStatus();
     _listenToHistoryForStats(widget.accountLogin);
 
-    // ตั้งเวลาสลับรูปภาพระหว่าง 0.jpg และ 1.jpg ทุกๆ 3 วินาที
     _imageTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (mounted) {
         setState(() {
@@ -2460,7 +2457,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void dispose() {
     _scannerController.dispose();
     _titleGlowController.dispose();
-    _imageTimer?.cancel(); // ลบ Timer สลับรูปภาพเมื่อปิดหน้าจอ
+    _imageTimer?.cancel();
     super.dispose();
   }
 
@@ -2633,8 +2630,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: Column(
                   children: [
                     const SizedBox(height: 15),
-                    
-                    // กล่องสแกนเนอร์ที่ใส่ 2 รูปภาพ (0.jpg และ 1.jpg)
                     Center(
                       child: Container(
                         width: 220,
@@ -2653,12 +2648,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(18),
                           child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 800), // เอฟเฟกต์เฟดสลับรูป
+                            duration: const Duration(milliseconds: 800),
                             child: Opacity(
                               key: ValueKey<int>(_currentImageIndex),
                               opacity: 0.9,
                               child: Image.asset(
-                                'assets/images/$_currentImageIndex.jpg', // เรียกใช้ 0.jpg หรือ 1.jpg
+                                'assets/images/$_currentImageIndex.jpg',
                                 width: double.infinity,
                                 height: double.infinity,
                                 fit: BoxFit.cover,
@@ -2676,10 +2671,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                       ),
                     ),
-                    
                     const SizedBox(height: 20),
-                    
-                    // 1, 2 & 3: ลบกรอบชื่อ, เพิ่มขนาดฟอนต์ และใส่เอฟเฟกต์เคลื่อนไหวเรืองแสง
                     AnimatedBuilder(
                       animation: _titleGlowController,
                       builder: (context, child) {
@@ -2705,7 +2697,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         );
                       },
                     ),
-
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -2730,8 +2721,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           onPressed: _closeAllOrders,
                         ),
                         const SizedBox(width: 20),
-                        
-                        // 5: วงกลม Stop มีสีแดงเรืองแสงรอบกรอบวงกลมเมื่อบอททำงานอยู่
                         _buildCircularButton(
                           label: isRunning ? 'STOP' : 'START',
                           icon: isRunning ? Icons.stop : Icons.play_arrow,
@@ -2740,7 +2729,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           onPressed: () => _toggleBotStatus(!isRunning),
                           isLarge: true,
                         ),
-                        
                         const SizedBox(width: 18),
                         _buildCircularButton(
                           label: 'STATS', 
@@ -2777,7 +2765,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Center(
                   child: Container(
                     width: MediaQuery.of(context).size.width * 0.92,
-                    height: MediaQuery.of(context).size.height * 0.62,
+                    height: MediaQuery.of(context).size.height * 0.52, // ปรับลดความสูงกล่องลงตามต้องการ
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: kGoldPrimary, width: 2.5),
@@ -2794,7 +2782,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0), // ปรับ Padding ให้แคบลง
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -2827,7 +2815,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         const Divider(color: kGoldPrimary, height: 1, thickness: 1.5),
                         Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.all(14.0),
+                            padding: const EdgeInsets.all(10.0), // กระชับพื้นที่ภายใน
                             child: _buildDashboardStatsContent(),
                           ),
                         ),
@@ -2892,7 +2880,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   icon: Icons.pie_chart,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: _buildStatCard(
                   title: 'MAX DRAWDOWN',
@@ -2904,7 +2892,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -2916,7 +2904,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   icon: Icons.receipt_long,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: _buildStatCard(
                   title: 'NET PROFIT',
@@ -2928,14 +2916,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: kDarkCard.withOpacity(0.85),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: kGoldPrimary, width: 1.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: kGoldPrimary, width: 1.2),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -2944,17 +2932,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   'WIN RATE & CYCLES',
                   style: TextStyle(
                     color: kGoldPrimary,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 1.5,
+                    letterSpacing: 1.2,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: kDarkBg.withOpacity(0.75),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: kGoldPrimary.withOpacity(0.5), width: 1.0),
                   ),
                   child: Column(
@@ -2966,24 +2954,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('WIN RATE', style: TextStyle(color: kGreenNeon, fontSize: 10, fontWeight: FontWeight.bold)),
-                              Text('${displayWinRate.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              const Text('WIN RATE', style: TextStyle(color: kGreenNeon, fontSize: 9, fontWeight: FontWeight.bold)),
+                              Text('${displayWinRate.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                             ],
                           ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              const Text('LOSS RATE', style: TextStyle(color: kRedNeon, fontSize: 10, fontWeight: FontWeight.bold)),
-                              Text('${lossRate.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              const Text('LOSS RATE', style: TextStyle(color: kRedNeon, fontSize: 9, fontWeight: FontWeight.bold)),
+                              Text('${lossRate.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 6),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                         child: Container(
-                          height: 12,
+                          height: 10,
                           width: double.infinity,
                           color: kRedNeon.withOpacity(0.4),
                           child: FractionallySizedBox(
@@ -3006,11 +2994,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildStatCard({required String title, required String value, required String subText, required Color color, required IconData icon}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: kDarkBg.withOpacity(0.75),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.6), width: 1.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.6), width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3019,20 +3007,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold)),
-              Icon(icon, color: color, size: 16),
+              Text(title, style: const TextStyle(color: Colors.grey, fontSize: 9, fontWeight: FontWeight.bold)),
+              Icon(icon, color: color, size: 14),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Center(
             child: Text(
               value, 
-              style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.w900),
+              style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w900),
               textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: 2),
-          Text(subText, style: const TextStyle(color: Colors.white54, fontSize: 9)),
+          const SizedBox(height: 1),
+          Text(subText, style: const TextStyle(color: Colors.white54, fontSize: 8)),
         ],
       ),
     );
@@ -3103,7 +3091,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     const Text('BID', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
                     const SizedBox(height: 6),
-                    // 4: เปลี่ยน Bid เป็นสีแดงนีออน (kRedNeon)
                     Text(
                       realTimeBid > 0 ? realTimeBid.toStringAsFixed(2) : '81390.48',
                       style: const TextStyle(color: kRedNeon, fontSize: 18, fontFamily: 'monospace', fontWeight: FontWeight.w900),
@@ -3115,7 +3102,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     const Text('ASK', style: TextStyle(color: kGoldPrimary, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
                     const SizedBox(height: 6),
-                    // 4: เปลี่ยน Ask เป็นสีเขียวนีออน (kGreenNeon)
                     Text(
                       realTimeAsk > 0 ? realTimeAsk.toStringAsFixed(2) : '81395.48',
                       style: const TextStyle(color: kGreenNeon, fontSize: 18, fontFamily: 'monospace', fontWeight: FontWeight.w900),
@@ -3177,6 +3163,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 }
+
 
 
 
