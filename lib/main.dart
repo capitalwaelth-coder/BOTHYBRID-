@@ -915,6 +915,12 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 // #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
 // ==========================================
 
+import 'dart:async';
+import 'package:flutter/material.h';
+import 'package:firebase_database/firebase_database.id'; // ปรับตาม package จริงของคุณ
+import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
@@ -957,6 +963,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     'assets/images/6.png',
   ];
   int _imageIndex = 0; // ตัวนับบอกลำดับรูปปัจจุบัน (0, 1, 2)
+  Timer? _imageTimer; // ตัวตั้งเวลาสลับรูปภาพ
 
   late final AnimationController _bounceController =
       AnimationController(
@@ -1001,21 +1008,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       _listenToOrdersForDialog();
     });
 
-    _scannerController.addStatusListener((status) {
-      if (status == AnimationStatus.completed ||
-          status == AnimationStatus.dismissed) {
-        if (mounted) {
-          setState(() {
-            // วนลูปเปลี่ยน index ทีละ 1 (0 -> 1 -> 2 -> 0 -> ...)
-            _imageIndex = (_imageIndex + 1) % _images.length;
-          });
-        }
+    // ตั้งเวลาสลับรูปภาพอัตโนมัติทุกๆ 3 วินาที
+    _imageTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (mounted) {
+        setState(() {
+          _imageIndex = (_imageIndex + 1) % _images.length;
+        });
       }
     });
   }
 
   @override
   void dispose() {
+    _imageTimer?.cancel();
     _bounceController.dispose();
     _scannerController.dispose();
     super.dispose();
@@ -1357,7 +1362,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           fit: StackFit.expand,
           children: [
             Image.asset(
-              'assets/images/0.png',
+              'assets/images/8.png',
               fit: BoxFit.cover,
               opacity: const AlwaysStoppedAnimation(0.25),
               errorBuilder: (context, error, stackTrace) {
@@ -1780,7 +1785,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             child: Opacity(
               opacity: 0.9,
               child: Image.asset(
-                'assets/images/3.png',
+                'assets/images/7.png',
                 fit: BoxFit.cover,
                 width: 54,
                 height: 54,
@@ -1820,7 +1825,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     bool isTotalProfit,
   ) {
     final bool isServerActive = isConnected && isRunning;
-    // ดึงรูปภาพปัจจุบันตาม index ที่วนลูปไว้
     final String scanImage = _images[_imageIndex];
 
     return Container(
@@ -1855,24 +1859,27 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                       return Stack(
                         fit: StackFit.expand,
                         children: [
-                          Image.asset(
-                            scanImage,
-                            key: ValueKey(scanImage),
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: 150,
-                            errorBuilder: (context, error, stackTrace) {
-                              debugPrint('GOLD PRO image error: $error');
-                              return const ColoredBox(
-                                color: Colors.black,
-                                child: Center(
-                                  child: Icon(
-                                    Icons.broken_image,
-                                    color: Colors.amber,
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 800),
+                            child: Image.asset(
+                              scanImage,
+                              key: ValueKey<String>(scanImage),
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: 150,
+                              errorBuilder: (context, error, stackTrace) {
+                                debugPrint('GOLD PRO image error: $error');
+                                return const ColoredBox(
+                                  color: Colors.black,
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.broken_image,
+                                      color: Colors.amber,
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
+                                );
+                              },
+                            ),
                           ),
                           Positioned(
                             top: scanValue.clamp(0.0, 147.0),
@@ -2123,26 +2130,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 }
 
-class ScannerClipper extends CustomClipper<Rect> {
-  final double scanValue;
-
-  ScannerClipper(this.scanValue);
-
-  @override
-  Rect getClip(Size size) {
-    return Rect.fromLTRB(
-      0,
-      0,
-      size.width,
-      scanValue.clamp(0.0, size.height),
-    );
-  }
-
-  @override
-  bool shouldReclip(covariant ScannerClipper oldClipper) {
-    return oldClipper.scanValue != scanValue;
-  }
-}
 
 
 
@@ -2428,7 +2415,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               key: ValueKey<int>(_currentImageIndex),
                               opacity: 0.9,
                               child: Image.asset(
-                                'assets/images/0.png',
+                                'assets/images/8.png',
                                 width: double.infinity,
                                 height: double.infinity,
                                 fit: BoxFit.cover,
