@@ -1,4 +1,4 @@
-package com.algohost.hybridpro
+package com.algohost.goldpro
 
 import io.flutter.embedding.android.FlutterActivity
 
