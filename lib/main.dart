@@ -2370,6 +2370,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
+  // ฟังก์ชันสำหรับเปิดหน้าต่าง Trading Calendar Popup (เมื่อกดปุ่มดาว ⭐)
+  void _showTradingCalendarDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return const TradingCalendarDialog();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Color startStopColor = isRunning ? kGreenNeon : kRedNeon;
@@ -2555,11 +2566,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Row(
+                              Row(
                                 children: [
-                                  Icon(Icons.dashboard_outlined, color: kGoldPrimary, size: 18),
-                                  SizedBox(width: 8),
-                                  Text(
+                                  const Icon(Icons.dashboard_outlined, color: kGoldPrimary, size: 18),
+                                  const SizedBox(width: 8),
+                                  const Text(
                                     'DASHBOARD STATS',
                                     style: TextStyle(
                                       fontSize: 15,
@@ -2567,6 +2578,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       color: kGoldPrimary,
                                       letterSpacing: 1,
                                     ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // *** ปุ่มรูปดาว ⭐ เพิ่มไว้ที่หัวข้อ Dashboard Stats เพื่อเปิด Trading Calendar ***
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    icon: const Icon(Icons.star, color: Color(0xFFFFD700), size: 20),
+                                    onPressed: () => _showTradingCalendarDialog(context),
                                   ),
                                 ],
                               ),
@@ -2934,6 +2953,285 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 }
+
+// ==========================================
+// 🌟 โค้ดกล่องป๊อปอัป Trading Calendar (ธีมดำ-ทอง)
+// ==========================================
+class TradingCalendarDialog extends StatefulWidget {
+  const TradingCalendarDialog({Key? key}) : super(key: key);
+
+  @override
+  State<TradingCalendarDialog> createState() => _TradingCalendarDialogState();
+}
+
+class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
+  int selectedTimeframe = 1; // 0: Week, 1: Month, 2: Year, 3: All time
+
+  final Map<int, double?> dailyPnL = {
+    1: -1005.86, 2: -544.21, 5: 1013.75, 6: -3701.13, 7: 1220.17,
+    8: 547.37, 9: 413.37, 12: 411.00, 13: 652.55, 14: 1550.14,
+    15: 758.79, 16: 1020.60,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0D1117),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFFFD700), width: 1.5),
+          boxShadow: [
+            BoxShadow(color: Colors.amber.withOpacity(0.2), blurRadius: 12, spreadRadius: 2),
+          ],
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.calendar_month, color: Color(0xFFFFD700), size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'TRADING JOURNAL',
+                        style: TextStyle(
+                          color: Color(0xFFFFD700),
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                  // ปุ่มปิดกล่อง (X)
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white, size: 22),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const Divider(color: Color(0xFFFFD700), thickness: 0.5),
+              const SizedBox(height: 10),
+
+              // Timeframe Selector
+              _buildTimeframeSelector(),
+              const SizedBox(height: 12),
+
+              // Month Selector Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  Icon(Icons.chevron_left, color: Colors.white, size: 20),
+                  Text('October 2026', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                  Icon(Icons.chevron_right, color: Colors.white, size: 20),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Overview Cards
+              Row(
+                children: [
+                  Expanded(child: _buildCard('Total P&L', '\$2336.54', Colors.greenAccent)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildGoalCard('Monthly goal', '\$2337.00', 'Not set yet')),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Dropdown texts
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  Text('Weekends: OFF ∨', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  Text('Main Account ∨', style: TextStyle(color: Colors.cyan, fontSize: 11, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Day Names (MON-FRI)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: const ['MON', 'TUE', 'WED', 'THU', 'FRI']
+                    .map((day) => Expanded(
+                          child: Center(
+                            child: Text(day, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                          ),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 8),
+
+              // Grid Calendar
+              _buildCalendarGrid(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimeframeSelector() {
+    List<String> options = ['Week', 'Month', 'Year', 'All time'];
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: List.generate(options.length, (index) {
+          bool isSelected = selectedTimeframe == index;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => selectedTimeframe = index),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFF2EA043) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    options[index],
+                    style: TextStyle(
+                      color: isSelected ? Colors.black : Colors.white70,
+                      fontSize: 11,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildCard(String title, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+          const SizedBox(height: 4),
+          Text(value, style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGoalCard(String title, String currentVal, String targetVal) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+              const Icon(Icons.edit_note, color: Colors.cyan, size: 14),
+            ],
+          ),
+          const SizedBox(height: 6),
+          LinearProgressIndicator(
+            value: 0.9,
+            backgroundColor: Colors.grey[800],
+            color: Colors.greenAccent,
+            minHeight: 4,
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(currentVal, style: const TextStyle(color: Colors.greenAccent, fontSize: 9)),
+              Text(targetVal, style: const TextStyle(color: Colors.grey, fontSize: 9)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalendarGrid() {
+    List<int?> dayNumbers = [
+      null, null, null, 1, 2,
+      5, 6, 7, 8, 9,
+      12, 13, 14, 15, 16,
+      19, 20, 21, 22, 23,
+      26, 27, 28, 29, 30,
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 5,
+        childAspectRatio: 0.9,
+        crossAxisSpacing: 6,
+        mainAxisSpacing: 6,
+      ),
+      itemCount: dayNumbers.length,
+      itemBuilder: (context, index) {
+        int? day = dayNumbers[index];
+        if (day == null) return const SizedBox.shrink();
+
+        double? pnl = dailyPnL[day];
+        Color cardColor = const Color(0xFF161B22);
+        if (pnl != null) {
+          cardColor = pnl > 0 ? const Color(0xFF137333) : const Color(0xFFA50E0E);
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('$day', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+              if (pnl != null)
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '${pnl > 0 ? "+" : ""}${pnl.toStringAsFixed(2)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                  ),
+                )
+              else
+                const Text('-', style: TextStyle(color: Colors.grey, fontSize: 10)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 
 // ==========================================
 // #8 โหมดรายงานออเดอร์ (OrdersScreen)
