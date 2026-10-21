@@ -2129,7 +2129,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
 
 // ==========================================
-// #7 โหมด HomeScreen (GOLD PRO)
+// #7 โหมด HomeScreen (GOLD PRO) - ดึงข้อมูลจริง
 // ==========================================
 
 class HomeScreen extends StatefulWidget {
@@ -2172,7 +2172,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   late final AnimationController _titleGlowController = AnimationController(
     duration: const Duration(milliseconds: 1500),
-    vsync: this,
   )..repeat(reverse: true);
 
   double realTimeBid = 0.0;
@@ -2370,13 +2369,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // ฟังก์ชันสำหรับเปิดหน้าต่าง Trading Calendar Popup (เมื่อกดปุ่มดาว ⭐)
+  // เรียกเปิด Trading Calendar พร้อมส่งข้อมูล _historyTrades จริงเข้าไป
   void _showTradingCalendarDialog(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: true,
       builder: (BuildContext context) {
-        return const TradingCalendarDialog();
+        return TradingCalendarDialog(historyTrades: _historyTrades);
       },
     );
   }
@@ -2580,7 +2579,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  // *** ปุ่มรูปดาว ⭐ เพิ่มไว้ที่หัวข้อ Dashboard Stats เพื่อเปิด Trading Calendar ***
                                   IconButton(
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
@@ -2955,10 +2953,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 }
 
 // ==========================================
-// 🌟 โค้ดกล่องป๊อปอัป Trading Calendar (ธีมดำ-ทอง)
+// 🌟 กล่อง Trading Calendar คำนวณจากประวัติจริง
 // ==========================================
 class TradingCalendarDialog extends StatefulWidget {
-  const TradingCalendarDialog({Key? key}) : super(key: key);
+  final List<Map<dynamic, dynamic>> historyTrades;
+  const TradingCalendarDialog({Key? key, required this.historyTrades}) : super(key: key);
 
   @override
   State<TradingCalendarDialog> createState() => _TradingCalendarDialogState();
@@ -2966,15 +2965,43 @@ class TradingCalendarDialog extends StatefulWidget {
 
 class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
   int selectedTimeframe = 1; // 0: Week, 1: Month, 2: Year, 3: All time
+  DateTime currentMonth = DateTime.now();
 
-  final Map<int, double?> dailyPnL = {
-    1: -1005.86, 2: -544.21, 5: 1013.75, 6: -3701.13, 7: 1220.17,
-    8: 547.37, 9: 413.37, 12: 411.00, 13: 652.55, 14: 1550.14,
-    15: 758.79, 16: 1020.60,
-  };
+  // ฟังก์ชันคำนวณกำไร/ขาดทุน รายวัน จากข้อมูลจริง
+  Map<int, double> _getDailyPnLFromHistory() {
+    Map<int, double> pnlMap = {};
+
+    for (var trade in widget.historyTrades) {
+      double profit = double.tryParse(trade['profit']?.toString() ?? '0.0') ?? 0.0;
+
+      // ตรวจสอบฟีลด์เวลาจากประวัติออเดอร์ (close_time หรือ timestamp)
+      dynamic closeTimeRaw = trade['close_time'] ?? trade['timestamp'] ?? trade['time'];
+      if (closeTimeRaw != null) {
+        DateTime? tradeDate;
+        if (closeTimeRaw is int) {
+          tradeDate = DateTime.fromMillisecondsSinceEpoch(closeTimeRaw);
+        } else if (closeTimeRaw is String) {
+          tradeDate = DateTime.tryParse(closeTimeRaw);
+        }
+
+        if (tradeDate != null) {
+          // รวมกำไร/ขาดทุน เฉพาะออเดอร์ที่ปิดในเดือนและปีที่เลือก
+          if (tradeDate.month == currentMonth.month && tradeDate.year == currentMonth.year) {
+            int day = tradeDate.day;
+            pnlMap[day] = (pnlMap[day] ?? 0.0) + profit;
+          }
+        }
+      }
+    }
+
+    return pnlMap;
+  }
 
   @override
   Widget build(BuildContext context) {
+    Map<int, double> dailyPnLReal = _getDailyPnLFromHistory();
+    double totalPnL = dailyPnLReal.values.fold(0.0, (sum, item) => sum + item);
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
@@ -3013,7 +3040,6 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
                       ),
                     ],
                   ),
-                  // ปุ่มปิดกล่อง (X)
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white, size: 22),
                     onPressed: () => Navigator.of(context).pop(),
@@ -3023,32 +3049,52 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
               const Divider(color: Color(0xFFFFD700), thickness: 0.5),
               const SizedBox(height: 10),
 
-              // Timeframe Selector
               _buildTimeframeSelector(),
               const SizedBox(height: 12),
 
-              // Month Selector Header
+              // ตัวเลือกเดือน (สามารถเลื่อนเดือนย้อนหลัง/ถัดไปได้)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Icon(Icons.chevron_left, color: Colors.white, size: 20),
-                  Text('October 2026', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                  Icon(Icons.chevron_right, color: Colors.white, size: 20),
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left, color: Colors.white, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        currentMonth = DateTime(currentMonth.year, currentMonth.month - 1);
+                      });
+                    },
+                  ),
+                  Text(
+                    '${_getMonthName(currentMonth.month)} ${currentMonth.year}',
+                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right, color: Colors.white, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        currentMonth = DateTime(currentMonth.year, currentMonth.month + 1);
+                      });
+                    },
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
 
-              // Overview Cards
               Row(
                 children: [
-                  Expanded(child: _buildCard('Total P&L', '\$2336.54', Colors.greenAccent)),
+                  Expanded(
+                    child: _buildCard(
+                      'Total P&L',
+                      '${totalPnL >= 0 ? "+" : ""}\$${totalPnL.toStringAsFixed(2)}',
+                      totalPnL >= 0 ? Colors.greenAccent : Colors.redAccent,
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(child: _buildGoalCard('Monthly goal', '\$2337.00', 'Not set yet')),
                 ],
               ),
               const SizedBox(height: 12),
 
-              // Dropdown texts
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
@@ -3058,7 +3104,6 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
               ),
               const SizedBox(height: 8),
 
-              // Day Names (MON-FRI)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: const ['MON', 'TUE', 'WED', 'THU', 'FRI']
@@ -3071,13 +3116,17 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
               ),
               const SizedBox(height: 8),
 
-              // Grid Calendar
-              _buildCalendarGrid(),
+              _buildCalendarGrid(dailyPnLReal),
             ],
           ),
         ),
       ),
     );
+  }
+
+  String _getMonthName(int month) {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return months[month - 1];
   }
 
   Widget _buildTimeframeSelector() {
@@ -3157,7 +3206,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
           ),
           const SizedBox(height: 6),
           LinearProgressIndicator(
-            value: 0.9,
+            value: 0.0,
             backgroundColor: Colors.grey[800],
             color: Colors.greenAccent,
             minHeight: 4,
@@ -3175,14 +3224,17 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 
-  Widget _buildCalendarGrid() {
-    List<int?> dayNumbers = [
-      null, null, null, 1, 2,
-      5, 6, 7, 8, 9,
-      12, 13, 14, 15, 16,
-      19, 20, 21, 22, 23,
-      26, 27, 28, 29, 30,
-    ];
+  Widget _buildCalendarGrid(Map<int, double> dailyPnLReal) {
+    int daysInMonth = DateTime(currentMonth.year, currentMonth.month + 1, 0).day;
+    List<int?> dayNumbers = [];
+
+    // สร้างลิสต์ของวันในเดือนโดยคัดวันเสาร์-อาทิตย์ออก
+    for (int day = 1; day <= daysInMonth; day++) {
+      DateTime date = DateTime(currentMonth.year, currentMonth.month, day);
+      if (date.weekday != DateTime.saturday && date.weekday != DateTime.sunday) {
+        dayNumbers.add(day);
+      }
+    }
 
     return GridView.builder(
       shrinkWrap: true,
@@ -3198,10 +3250,10 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
         int? day = dayNumbers[index];
         if (day == null) return const SizedBox.shrink();
 
-        double? pnl = dailyPnL[day];
+        double? pnl = dailyPnLReal[day];
         Color cardColor = const Color(0xFF161B22);
         if (pnl != null) {
-          cardColor = pnl > 0 ? const Color(0xFF137333) : const Color(0xFFA50E0E);
+          cardColor = pnl > 0 ? const Color(0xFF137333) : (pnl < 0 ? const Color(0xFFA50E0E) : const Color(0xFF161B22));
         }
 
         return Container(
@@ -3231,6 +3283,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 }
+
 
 
 // ==========================================
