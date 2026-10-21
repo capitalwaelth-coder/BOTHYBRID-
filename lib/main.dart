@@ -2120,6 +2120,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
 
 
+
 // ==========================================
 // 🌟 HomeScreen (GOLD PRO)
 // ==========================================
@@ -2551,7 +2552,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header Dashboard Stats พร้อมย้ายไอคอนปฏิทินดาวไปฝั่งขวา
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                           child: Row(
@@ -2580,7 +2580,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     constraints: const BoxConstraints(),
                                     icon: const Icon(
                                       Icons.star, 
-                                      color: Colors.white, // ปรับสีขาวให้เข้ากับปุ่มกากบาท
+                                      color: Colors.white, 
                                       size: 20,
                                     ),
                                     tooltip: 'Trading Journal',
@@ -2957,7 +2957,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 }
 
 // ==========================================
-// 🌟 TradingCalendarDialog (Week, Month, Year Dynamic & Clean UI)
+// 🌟 TradingCalendarDialog
 // ==========================================
 class TradingCalendarDialog extends StatefulWidget {
   final List<Map<dynamic, dynamic>> historyTrades;
@@ -2968,7 +2968,6 @@ class TradingCalendarDialog extends StatefulWidget {
 }
 
 class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
-  // 0: Week, 1: Month, 2: Year
   int selectedTimeframe = 1; 
   DateTime currentDate = DateTime.now();
   double monthlyGoal = 2000.0;
@@ -2994,7 +2993,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     });
   }
 
-    void _showEditGoalDialog() {
+  void _showEditGoalDialog() {
     TextEditingController goalController = TextEditingController(
       text: monthlyGoal > 0 ? monthlyGoal.toStringAsFixed(2) : '',
     );
@@ -3008,7 +3007,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
           side: const BorderSide(color: Color(0xFFFFD700), width: 1.5),
         ),
         title: const Text(
-          'ตั้งเป้าหมายกำไร (\$)', // เติม \ หน้า $
+          'ตั้งเป้าหมายกำไร (\$)',
           style: TextStyle(color: Color(0xFFFFD700), fontSize: 16, fontWeight: FontWeight.bold),
         ),
         content: TextField(
@@ -3016,7 +3015,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
           decoration: const InputDecoration(
-            hintText: 'กรอกจำนวนเงิน (\$)', // เติม \ หน้า $
+            hintText: 'กรอกจำนวนเงิน (\$)',
             hintStyle: TextStyle(color: Colors.grey, fontSize: 13),
             enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFFFD700))),
             focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00E676), width: 2)),
@@ -3042,7 +3041,6 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
       ),
     );
   }
-
 
   DateTime? _parseTradeDate(dynamic rawTime) {
     if (rawTime == null) return null;
@@ -3382,13 +3380,20 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
       );
     } 
     else if (selectedTimeframe == 1) {
+      DateTime firstDayOfMonth = DateTime(currentDate.year, currentDate.month, 1);
       int daysInMonth = DateTime(currentDate.year, currentDate.month + 1, 0).day;
-      List<int> monthDays = [];
+      int firstWeekday = firstDayOfMonth.weekday; 
+
+      List<int?> gridItems = [];
+      int offset = (firstWeekday <= 5) ? (firstWeekday - 1) : 0; 
+      for (int i = 0; i < offset; i++) {
+        gridItems.add(null);
+      }
 
       for (int day = 1; day <= daysInMonth; day++) {
         DateTime date = DateTime(currentDate.year, currentDate.month, day);
         if (date.weekday != DateTime.saturday && date.weekday != DateTime.sunday) {
-          monthDays.add(day);
+          gridItems.add(day);
         }
       }
 
@@ -3401,9 +3406,12 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
           crossAxisSpacing: 6,
           mainAxisSpacing: 6,
         ),
-        itemCount: monthDays.length,
+        itemCount: gridItems.length,
         itemBuilder: (context, index) {
-          int day = monthDays[index];
+          int? day = gridItems[index];
+          if (day == null) {
+            return const SizedBox.shrink();
+          }
           double? pnl = dataMap['$day'];
           return _buildGridCell(label: '$day', pnl: pnl);
         },
