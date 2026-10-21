@@ -909,7 +909,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 
 // ==========================================
 // #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
-// GOLD PRO - ROBOT DASHBOARD EDITION
+// GOLD PRO - ROBOT DASHBOARD EDITION (เหลือบอลลูนโรบอทเดี่ยว สะอาดตา)
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -931,12 +931,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   DatabaseReference? _logsRef;
   DatabaseReference? _ordersRef;
 
-  Offset _orderBubbleOffset = const Offset(20, 100);
+  // เหลือบอลลูนโรบอทเพียงตัวเดียว
   Offset _robotBubbleOffset = const Offset(320, 600);
   Offset _modalOffset = const Offset(16, 80);
 
   bool _isLiveStatusVisible = true;
-  bool _isOrderBubblePressed = false;
   bool _isRobotBubblePressed = false;
   bool _isLargeLogsModalOpen = false;
   bool isRunning = false;
@@ -949,8 +948,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   List<Map<String, dynamic>> _botLogs = [];
   List<Map<dynamic, dynamic>> activeOrders = [];
 
-  final String _imageA = 'assets/images/0.png';
-  final String _imageB = 'assets/images/1.jpg';
+  final String _imageA = 'assets/images/1792250396366.png';
+  final String _imageB = 'assets/images/1792250396366.png';
   bool _showMorphImage = false;
 
   late final AnimationController _bounceController =
@@ -1690,55 +1689,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   ),
                 ),
               ),
-            Positioned(
-              left: _orderBubbleOffset.dx,
-              top: _orderBubbleOffset.dy,
-              child: AnimatedBuilder(
-                animation: _bounceAnimation,
-                builder: (context, child) {
-                  return Transform.translate(
-                    offset: Offset(0, _bounceAnimation.value),
-                    child: child,
-                  );
-                },
-                child: Draggable(
-                  feedback: Material(
-                    color: Colors.transparent,
-                    child: _buildSymbolBubbleWidget(),
-                  ),
-                  childWhenDragging: const SizedBox.shrink(),
-                  onDragEnd: (details) {
-                    setState(() {
-                      _orderBubbleOffset = details.offset;
-                    });
-                  },
-                  child: GestureDetector(
-                    onTapDown: (_) {
-                      setState(() {
-                        _isOrderBubblePressed = true;
-                      });
-                    },
-                    onTapUp: (_) {
-                      setState(() {
-                        _isOrderBubblePressed = false;
-                        _isLargeLogsModalOpen =
-                            !_isLargeLogsModalOpen;
-                      });
-                    },
-                    onTapCancel: () {
-                      setState(() {
-                        _isOrderBubblePressed = false;
-                      });
-                    },
-                    child: AnimatedScale(
-                      scale: _isOrderBubblePressed ? 0.85 : 1.0,
-                      duration: const Duration(milliseconds: 100),
-                      child: _buildSymbolBubbleWidget(),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            // คงเหลือบอลลูนโรบอทเดี่ยว ลากวางได้และควบคุมเปิด/ปิด Status & Logs
             Positioned(
               left: _robotBubbleOffset.dx,
               top: _robotBubbleOffset.dy,
@@ -1793,67 +1744,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 
-  Widget _buildSymbolBubbleWidget() {
-    final bool isServerActive = isConnected && isRunning;
-
-    return Container(
-      width: 58,
-      height: 58,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: kDarkCard,
-        border: Border.all(
-          color: kGoldPrimary,
-          width: 2.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (isServerActive ? kGreenNeon : kRedNeon)
-                .withOpacity(0.6),
-            blurRadius: 10,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          ClipOval(
-            child: Opacity(
-              opacity: 0.9,
-              child: Image.asset(
-                _showMorphImage ? _imageB : _imageA,
-                fit: BoxFit.cover,
-                width: 54,
-                height: 54,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(color: Colors.black);
-                },
-              ),
-            ),
-          ),
-          Positioned(
-            right: -2,
-            top: -2,
-            child: Container(
-              width: 14,
-              height: 14,
-              decoration: BoxDecoration(
-                color: isServerActive ? kGreenNeon : kRedNeon,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.black,
-                  width: 2,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildRobotBubbleWidget() {
     final bool isServerActive = isConnected && isRunning;
 
@@ -1884,7 +1774,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             child: Opacity(
               opacity: 0.9,
               child: Image.asset(
-                'assets/images/0.png',
+                'assets/images/1792250396366.png',
                 fit: BoxFit.cover,
                 width: 54,
                 height: 54,
@@ -2526,7 +2416,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               key: ValueKey<int>(_currentImageIndex),
                               opacity: 0.9,
                               child: Image.asset(
-                                'assets/images/$_currentImageIndex.jpg',
+                                'assets/images/1792250396366.png',
                                 width: double.infinity,
                                 height: double.infinity,
                                 fit: BoxFit.cover,
@@ -2534,7 +2424,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   return Container(
                                     color: Colors.black,
                                     child: const Center(
-                                      child: Icon(Icons.image_not_supported, color: kGoldPrimary),
+                                      child: Icon(Icons.smart_toy, color: kGoldPrimary, size: 80),
                                     ),
                                   );
                                 },
