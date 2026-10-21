@@ -907,6 +907,10 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
   }
 }
 
+
+
+
+
 // ==========================================
 // #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
 // ==========================================
@@ -946,9 +950,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   List<Map<String, dynamic>> _botLogs = [];
   List<Map<dynamic, dynamic>> activeOrders = [];
 
-  final String _imageA = 'assets/images/2.png';
-  final String _imageB = 'assets/images/4.png';
-  bool _showMorphImage = false;
+  // กำหนดรายการรูปภาพทั้ง 3 รูป
+  final List<String> _images = [
+    'assets/images/2.png',
+    'assets/images/4.png',
+    'assets/images/6.png',
+  ];
+  int _imageIndex = 0; // ตัวนับบอกลำดับรูปปัจจุบัน (0, 1, 2)
 
   late final AnimationController _bounceController =
       AnimationController(
@@ -998,7 +1006,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           status == AnimationStatus.dismissed) {
         if (mounted) {
           setState(() {
-            _showMorphImage = !_showMorphImage;
+            // วนลูปเปลี่ยน index ทีละ 1 (0 -> 1 -> 2 -> 0 -> ...)
+            _imageIndex = (_imageIndex + 1) % _images.length;
           });
         }
       }
@@ -1811,7 +1820,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     bool isTotalProfit,
   ) {
     final bool isServerActive = isConnected && isRunning;
-    final String scanImage = _showMorphImage ? _imageB : _imageA;
+    // ดึงรูปภาพปัจจุบันตาม index ที่วนลูปไว้
+    final String scanImage = _images[_imageIndex];
 
     return Container(
       width: double.infinity,
@@ -2133,6 +2143,9 @@ class ScannerClipper extends CustomClipper<Rect> {
     return oldClipper.scanValue != scanValue;
   }
 }
+
+
+
 
 // ==========================================
 // #7 โหมด HomeScreen (GOLD PRO)
