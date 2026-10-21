@@ -8,9 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_overlay_window/flutter_overlay_window.dart';
-
-
 
 // ค่าสีหลักสำหรับธีม Luxury Gold & Dark Metallic
 const Color kGoldPrimary = Color(0xFFFFD700); // สีทองหลัก
@@ -423,21 +420,44 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                       const SizedBox(height: 25),
                       SizedBox(
                         width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _submitMT5Login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: kDarkCard.withOpacity(0.8),
-                            foregroundColor: kGoldPrimary,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              side: const BorderSide(color: kGoldPrimary, width: 1.5),
+                        height: 54,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: const LinearGradient(
+                              colors: [kGoldPrimary, kGoldAccent],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                            elevation: 4,
+                            boxShadow: [
+                              BoxShadow(
+                                color: kGoldPrimary.withOpacity(0.6),
+                                blurRadius: 16,
+                                spreadRadius: 2,
+                              ),
+                            ],
                           ),
-                          child: _isLoading 
-                              ? const CircularProgressIndicator(color: kGoldPrimary)
-                              : const Text('VERIFY & CONNECT', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _submitMT5Login,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: _isLoading 
+                                ? const CircularProgressIndicator(color: Colors.black)
+                                : const Text(
+                                    'VERIFY & CONNECT',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 15,
+                                      letterSpacing: 1.5,
+                                    ),
+                                  ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -887,11 +907,9 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
   }
 }
 
-
- 
- // ==========================================
+// ==========================================
 // #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
-// GOLD PRO - ROBOT OVERLAY EDITION
+// GOLD PRO - ROBOT DASHBOARD EDITION
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -903,7 +921,7 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
+    with TickerProviderStateMixin {
   int _currentIndex = 2;
   String currentLogin = "235305975";
   int unreadAlertsCount = 0;
@@ -914,9 +932,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   DatabaseReference? _ordersRef;
 
   Offset _orderBubbleOffset = const Offset(20, 100);
-  // พิกัดเริ่มต้นสำหรับบอลลูนโรบอทลอยได้ (มุมล่างขวา)
   Offset _robotBubbleOffset = const Offset(320, 600);
-
   Offset _modalOffset = const Offset(16, 80);
 
   bool _isLiveStatusVisible = true;
@@ -925,11 +941,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   bool _isLargeLogsModalOpen = false;
   bool isRunning = false;
   bool isConnected = false;
-
-  // สถานะการเปิดบอลลูน Overlay
-  bool _isOverlayOpening = false;
-  bool _waitingForOverlayPermission = false;
-  bool _overlayResumePending = false;
 
   String symbol = "XAUUSD";
   String timeframe = "M1";
@@ -970,14 +981,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     ),
   );
 
-  // ==========================================
-  // เริ่มต้นหน้าจอ
-  // ==========================================
   @override
   void initState() {
     super.initState();
-
-    WidgetsBinding.instance.addObserver(this);
 
     _loadSavedLogin().then((_) {
       if (!mounted) return;
@@ -1002,53 +1008,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     });
   }
 
-  // ==========================================
-  // กลับจากหน้าตั้งค่าสิทธิ์ Android
-  // ==========================================
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-
-    if (state != AppLifecycleState.resumed) return;
-    if (!_waitingForOverlayPermission) return;
-
-    if (_isOverlayOpening) {
-      _overlayResumePending = true;
-      return;
-    }
-
-    _checkOverlayPermissionAndOpen();
-  }
-
-  Future<void> _checkOverlayPermissionAndOpen() async {
-    if (!mounted || _isOverlayOpening) return;
-
-    try {
-      final granted =
-          await FlutterOverlayWindow.isPermissionGranted() ?? false;
-
-      if (!mounted) return;
-
-      if (granted) {
-        _waitingForOverlayPermission = false;
-        await _startFloatingOverlay();
-      }
-    } catch (e) {
-      debugPrint('GOLD PRO permission check error: $e');
-    }
-  }
-
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _bounceController.dispose();
     _scannerController.dispose();
     super.dispose();
   }
 
-  // ==========================================
-  // โหลดบัญชีที่บันทึกไว้
-  // ==========================================
   Future<void> _loadSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('mt5_login');
@@ -1060,9 +1026,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ==========================================
-  // ฟังบัญชีที่กำลังใช้งาน
-  // ==========================================
   void _listenToActiveAccount() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1093,9 +1056,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ==========================================
-  // ฟังจำนวนแจ้งเตือน
-  // ==========================================
   void _listenToAlertsCount() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1134,9 +1094,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ==========================================
-  // ฟังสถานะ EA
-  // ==========================================
   void _initFirebaseAndListen() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1171,9 +1128,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ==========================================
-  // ฟังสถานะการเชื่อมต่อ Firebase
-  // ==========================================
   void _listenToConnectionStatus() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1197,9 +1151,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ==========================================
-  // ฟัง Activity Logs
-  // ==========================================
   void _listenToLogs() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1265,9 +1216,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ==========================================
-  // ฟัง Orders
-  // ==========================================
   void _listenToOrdersForDialog() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1308,9 +1256,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ==========================================
-  // ลบ Log รายการเดียว
-  // ==========================================
   void _clearLogItem(String key) async {
     try {
       if (_logsRef != null) {
@@ -1321,9 +1266,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ==========================================
-  // ลบ Logs ทั้งหมด
-  // ==========================================
   void _clearAllLogs() async {
     try {
       if (_logsRef != null) {
@@ -1340,100 +1282,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
- // ==========================================
-// เปิดบอลลูน GOLD PRO ลอยทับแอปอื่น
-// ==========================================
-Future<void> _startFloatingOverlay() async {
-if (_isOverlayOpening || !mounted) return;
-
-setState(() {  
-  _isOverlayOpening = true;  
-});  
-
-bool overlayStarted = false;  
-
-try {  
-  bool granted =  
-      await FlutterOverlayWindow.isPermissionGranted() ?? false;  
-
-  if (!granted) {  
-    _waitingForOverlayPermission = true;  
-    _overlayResumePending = false;  
-
-    await FlutterOverlayWindow.requestPermission();  
-
-    granted =  
-        await FlutterOverlayWindow.isPermissionGranted() ?? false;  
-  }  
-
-  if (!mounted) return;  
-
-  if (!granted) {  
-    _waitingForOverlayPermission = true;  
-
-    ScaffoldMessenger.of(context).showSnackBar(  
-      const SnackBar(  
-        content: Text(  
-          'กรุณาอนุญาต GOLD PRO ให้แสดงทับแอปอื่น',  
-        ),  
-      ),  
-    );  
-    return;  
-  }  
-
-  _waitingForOverlayPermission = false;  
-
-  await FlutterOverlayWindow.showOverlay(
-height: 100,
-width: 100,
-alignment: OverlayAlignment.centerRight,
-enableDrag: true,
-overlayTitle: 'GOLD PRO',
-overlayContent: 'GOLD PRO Robot',
-visibility: NotificationVisibility.visibilityPublic,
-positionGravity: PositionGravity.auto,
-flag: OverlayFlag.defaultFlag,
-);
-
-overlayStarted = true;  
-} catch (e) {  
-  debugPrint('GOLD PRO overlay error: $e');  
-
-  if (mounted) {  
-    ScaffoldMessenger.of(context).showSnackBar(  
-      const SnackBar(  
-        content: Text(  
-          'เปิดบอลลูนไม่ได้ กรุณาตรวจสอบสิทธิ์แอป',  
-        ),  
-      ),  
-    );  
-  }  
-} finally {  
-  if (mounted) {  
-    setState(() {  
-      _isOverlayOpening = false;  
-    });  
-
-    final shouldCheckAgain =  
-        _overlayResumePending && _waitingForOverlayPermission;  
-
-    _overlayResumePending = false;  
-
-    if (shouldCheckAgain && !overlayStarted) {  
-      WidgetsBinding.instance.addPostFrameCallback((_) {  
-        if (mounted) {  
-          _checkOverlayPermissionAndOpen();  
-        }  
-      });  
-    }  
-  }  
-}
-}
-
-  // ==========================================
-  // ปุ่มย้อนกลับของ Android
-  // ปิด Logs ก่อน / กลับหน้า Home / ออกจากหน้าจอ
-  // ==========================================
   Future<bool> _handleBackButton() async {
     if (_isLargeLogsModalOpen) {
       setState(() {
@@ -1452,9 +1300,6 @@ overlayStarted = true;
     return true;
   }
 
-  // ==========================================
-  // หน้าจอหลัก
-  // ==========================================
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
@@ -1505,9 +1350,6 @@ overlayStarted = true;
         body: Stack(
           fit: StackFit.expand,
           children: [
-            // ==========================================
-            // พื้นหลังภาพโรบอท
-            // ==========================================
             Image.asset(
               'assets/images/1792250396366.png',
               fit: BoxFit.cover,
@@ -1516,10 +1358,6 @@ overlayStarted = true;
                 return Container(color: kDarkBg);
               },
             ),
-
-            // ==========================================
-            // เคลือบเงาดำ
-            // ==========================================
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -1532,7 +1370,6 @@ overlayStarted = true;
                 ),
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.only(bottom: 65.0),
               child: IndexedStack(
@@ -1540,10 +1377,6 @@ overlayStarted = true;
                 children: pages,
               ),
             ),
-
-            // ==========================================
-            // แถบเมนูด้านล่าง
-            // ==========================================
             Positioned(
               left: 0,
               right: 0,
@@ -1589,10 +1422,6 @@ overlayStarted = true;
                 ),
               ),
             ),
-
-            // ==========================================
-            // หน้าต่าง STATUS & LOGS
-            // ==========================================
             if (_isLargeLogsModalOpen)
               Positioned(
                 left: _modalOffset.dx,
@@ -1710,13 +1539,11 @@ overlayStarted = true;
                             ],
                           ),
                         ),
-
                         const Divider(
                           color: kGoldPrimary,
                           height: 1,
                           thickness: 1.5,
                         ),
-
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.all(12.0),
@@ -1734,7 +1561,6 @@ overlayStarted = true;
                                   ),
                                   const SizedBox(height: 12),
                                 ],
-
                                 const Row(
                                   children: [
                                     Icon(
@@ -1754,9 +1580,7 @@ overlayStarted = true;
                                     ),
                                   ],
                                 ),
-
                                 const SizedBox(height: 8),
-
                                 if (_botLogs.isEmpty)
                                   const Expanded(
                                     child: Center(
@@ -1866,10 +1690,6 @@ overlayStarted = true;
                   ),
                 ),
               ),
-
-            // ==========================================
-            // บอลลูนออเดอร์ภายในแอป (ลากวางได้ + เด้งดึ๋งได้)
-            // ==========================================
             Positioned(
               left: _orderBubbleOffset.dx,
               top: _orderBubbleOffset.dy,
@@ -1919,10 +1739,6 @@ overlayStarted = true;
                 ),
               ),
             ),
-
-            // ==========================================
-            // บอลลูนโรบอทลอยได้ภายในแอป (ลากวางได้ + เด้งดึ๋งได้ + ควบคุมเปิด/ปิด Status & Logs)
-            // ==========================================
             Positioned(
               left: _robotBubbleOffset.dx,
               top: _robotBubbleOffset.dy,
@@ -1971,44 +1787,12 @@ overlayStarted = true;
                 ),
               ),
             ),
-
-            // ==========================================
-            // ปุ่มเปิดบอลลูนโรบอทลอยทับแอปอื่น (มุมบนซ้าย)
-            // ==========================================
-            Positioned(
-              left: 16,
-              top: 48,
-              child: FloatingActionButton.small(
-                heroTag: 'goldProOverlayButton',
-                backgroundColor: kGoldPrimary,
-                foregroundColor: Colors.black,
-                tooltip: 'เปิดปิดแอปลอยทับ',
-                onPressed: _isOverlayOpening
-                    ? null
-                    : _startFloatingOverlay,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    'assets/images/1792250396366.png',
-                    width: 38,
-                    height: 38,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.smart_toy);
-                    },
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
     );
   }
 
-   // ==========================================
-  // วิดเจ็ตบอลลูนออเดอร์ภายในแดชบอร์ด
-  // ==========================================
   Widget _buildSymbolBubbleWidget() {
     final bool isServerActive = isConnected && isRunning;
 
@@ -2070,9 +1854,6 @@ overlayStarted = true;
     );
   }
 
-  // ==========================================
-  // วิดเจ็ตบอลลูนโรบอทลอยได้ (ควบคุมเปิด/ปิด Status & Logs)
-  // ==========================================
   Widget _buildRobotBubbleWidget() {
     final bool isServerActive = isConnected && isRunning;
 
@@ -2103,7 +1884,7 @@ overlayStarted = true;
             child: Opacity(
               opacity: 0.9,
               child: Image.asset(
-                'assets/images/1792250396366.png',
+                'assets/images/0.png',
                 fit: BoxFit.cover,
                 width: 54,
                 height: 54,
@@ -2134,9 +1915,6 @@ overlayStarted = true;
     );
   }
 
-  // ==========================================
-  // กล่องรายงานสถานะ LIVE STATUS
-  // ==========================================
   Widget _buildStatusReportBox(
     String symbol,
     String tf,
@@ -2349,10 +2127,6 @@ overlayStarted = true;
     );
   }
 
-
-  // ==========================================
-  // เมนูนำทางด้านล่าง
-  // ==========================================
   Widget _buildCustomNavItem(
     int index,
     IconData icon,
@@ -2452,9 +2226,6 @@ overlayStarted = true;
   }
 }
 
-// ==========================================
-// ตัวตัดภาพสำหรับเอฟเฟกต์สแกน
-// ==========================================
 class ScannerClipper extends CustomClipper<Rect> {
   final double scanValue;
 
@@ -2476,10 +2247,8 @@ class ScannerClipper extends CustomClipper<Rect> {
   }
 }
 
-
-
 // ==========================================
-// #7 โหมด HomeScreen (GOLD PRO) - ปรับลดขนาดกล่องให้กระชับ
+// #7 โหมด HomeScreen (GOLD PRO)
 // ==========================================
 
 class HomeScreen extends StatefulWidget {
@@ -3278,9 +3047,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 }
-
-
-
 
 // ==========================================
 // #8 โหมดรายงานออเดอร์ (OrdersScreen)
@@ -5122,239 +4888,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-
-
-
-// ==========================================
-// #12 GOLD PRO Floating Robot Bubble
-// ==========================================
-
-class GoldProFloatingBubble extends StatefulWidget {
-  final bool firebaseReady;
-
-  const GoldProFloatingBubble({
-    super.key,
-    required this.firebaseReady,
-  });
-
-  @override
-  State<GoldProFloatingBubble> createState() =>
-      _GoldProFloatingBubbleState();
-}
-
-class _GoldProFloatingBubbleState
-    extends State<GoldProFloatingBubble>
-    with SingleTickerProviderStateMixin {
-  bool _connected = false;
-  bool _showInfo = false;
-
-  StreamSubscription<DatabaseEvent>? _connectionSubscription;
-
-  late final AnimationController _bounceController = AnimationController(
-    duration: const Duration(milliseconds: 1200),
-    vsync: this,
-  )..repeat(reverse: true);
-
-  late final Animation<double> _bounceAnimation = Tween<double>(
-    begin: -6.0,
-    end: 6.0,
-  ).animate(
-    CurvedAnimation(
-      parent: _bounceController,
-      curve: Curves.easeInOut,
-    ),
-  );
-
-  @override
-  void initState() {
-    super.initState();
-
-    if (widget.firebaseReady) {
-      _listenFirebaseConnection();
-    }
-  }
-
-  void _listenFirebaseConnection() {
-    try {
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL:
-            "https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app",
-      );
-
-      _connectionSubscription =
-          database.ref(".info/connected").onValue.listen(
-        (event) {
-          if (!mounted) return;
-
-          final val = event.snapshot.value;
-          setState(() {
-            _connected = (val == true);
-          });
-        },
-        onError: (Object error) {
-          if (!mounted) return;
-
-          setState(() {
-            _connected = false;
-          });
-        },
-      );
-    } catch (e) {
-      debugPrint("Overlay connection error: $e");
-      if (mounted) {
-        setState(() {
-          _connected = false;
-        });
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _bounceController.dispose();
-    _connectionSubscription?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final statusColor = _connected
-        ? const Color(0xFF00E676)
-        : const Color(0xFFFF1744);
-
-    return Material(
-      color: Colors.transparent,
-      child: FlutterOverlayWindow.isPermissionGranted() == false
-          ? const SizedBox.shrink()
-          : SizedBox(
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              child: Center(
-                child: AnimatedBuilder(
-                  animation: _bounceAnimation,
-                  builder: (context, child) {
-                    return Transform.translate(
-                      offset: Offset(0, _bounceAnimation.value),
-                      child: child,
-                    );
-                  },
-                  child: SizedBox(
-                    width: 110,
-                    height: 110,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      clipBehavior: Clip.none,
-                      children: [
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            setState(() {
-                              _showInfo = !_showInfo;
-                            });
-                          },
-                          child: Container(
-                            width: 92,
-                            height: 92,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFF111111),
-                              border: Border.all(
-                                color: const Color(0xFFFFD700),
-                                width: 3.0,
-                              ),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x77FFD700),
-                                  blurRadius: 14,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                "assets/images/1.jpg",
-                                width: 92,
-                                height: 92,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Center(
-                                    child: Icon(
-                                      Icons.smart_toy,
-                                      color: Color(0xFFFFD700),
-                                      size: 50,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        Positioned(
-                          right: 8,
-                          top: 8,
-                          child: IgnorePointer(
-                            child: Container(
-                              width: 18,
-                              height: 18,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: statusColor,
-                                border: Border.all(
-                                  color: const Color(0xFF111111),
-                                  width: 2.5,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: statusColor.withOpacity(0.7),
-                                    blurRadius: 6,
-                                    spreadRadius: 1,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        if (_showInfo)
-                          Positioned(
-                            top: 98,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF111111),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: const Color(0xFFFFD700),
-                                ),
-                              ),
-                              child: Text(
-                                _connected
-                                    ? "SERVER CONNECTED"
-                                    : "SERVER DISCONNECTED",
-                                maxLines: 1,
-                                style: TextStyle(
-                                  color: statusColor,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
     );
   }
 }
