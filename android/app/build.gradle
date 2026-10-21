@@ -5,7 +5,7 @@ id "dev.flutter.flutter-gradle-plugin"
 }
 
 android {
-namespace "com.algohost.hybridpro"
+namespace "com.algohost.goldpro"
 compileSdk 34
 
 compileOptions {
@@ -18,7 +18,7 @@ kotlinOptions {
 }
 
 defaultConfig {
-    applicationId "com.algohost.hybridpro"
+    applicationId "com.algohost.goldpro"
     minSdk 21
     targetSdk 34
     versionCode 1
