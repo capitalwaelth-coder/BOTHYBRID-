@@ -33,10 +33,10 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/1792250578954.jpg
-    - assets/images/1792250396366.jpg
+    - assets/images/1792250578954.png
+    - assets/images/1792250396366.png
 
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/images/1792250578954.jpg"
+  image_path: "assets/images/1792250578954.png"
