@@ -2119,6 +2119,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 }
 
 
+
 // ==========================================
 // 🌟 HomeScreen (GOLD PRO)
 // ==========================================
@@ -2550,16 +2551,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Header Dashboard Stats พร้อมย้ายไอคอนปฏิทินดาวไปฝั่งขวา
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
+                              const Row(
                                 children: [
-                                  const Icon(Icons.dashboard_outlined, color: kGoldPrimary, size: 18),
-                                  const SizedBox(width: 8),
-                                  const Text(
+                                  Icon(Icons.dashboard_outlined, color: kGoldPrimary, size: 18),
+                                  SizedBox(width: 8),
+                                  Text(
                                     'DASHBOARD STATS',
                                     style: TextStyle(
                                       fontSize: 15,
@@ -2568,22 +2570,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       letterSpacing: 1,
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                ],
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
                                   IconButton(
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
-                                    icon: const Icon(Icons.star, color: Color(0xFFFFD700), size: 20),
+                                    icon: const Icon(
+                                      Icons.star, 
+                                      color: Colors.white, // ปรับสีขาวให้เข้ากับปุ่มกากบาท
+                                      size: 20,
+                                    ),
+                                    tooltip: 'Trading Journal',
                                     onPressed: () => _showTradingCalendarDialog(context),
                                   ),
+                                  const SizedBox(width: 12),
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                    onPressed: () {
+                                      setState(() {
+                                        _isChartModalOpen = false;
+                                      });
+                                    },
+                                  ),
                                 ],
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                                onPressed: () {
-                                  setState(() {
-                                    _isChartModalOpen = false;
-                                  });
-                                },
                               ),
                             ],
                           ),
@@ -2943,7 +2957,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 }
 
 // ==========================================
-// 🌟 TradingCalendarDialog (แก้ไขสมบูรณ์ดึงประวัติเทรดได้ + ตั้งเป้าหมายได้)
+// 🌟 TradingCalendarDialog (Week, Month, Year Dynamic & Clean UI)
 // ==========================================
 class TradingCalendarDialog extends StatefulWidget {
   final List<Map<dynamic, dynamic>> historyTrades;
@@ -2954,26 +2968,25 @@ class TradingCalendarDialog extends StatefulWidget {
 }
 
 class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
-  int selectedTimeframe = 1; // 0: Week, 1: Month, 2: Year, 3: All time
-  DateTime currentMonth = DateTime.now();
-  double monthlyGoal = 0.0; // ค่าเป้าหมายกำไรต่อเดือน
+  // 0: Week, 1: Month, 2: Year
+  int selectedTimeframe = 1; 
+  DateTime currentDate = DateTime.now();
+  double monthlyGoal = 2000.0;
 
   @override
   void initState() {
     super.initState();
-    _loadMonthlyGoal();
+    _loadGoal();
   }
 
-  // โหลดค่าเป้าหมายประจำเดือนที่เคยเซฟไว้ในเครื่อง
-  Future<void> _loadMonthlyGoal() async {
+  Future<void> _loadGoal() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       monthlyGoal = prefs.getDouble('saved_monthly_goal') ?? 2000.0;
     });
   }
 
-  // เซฟค่าเป้าหมายใหม่ลงเครื่อง
-  Future<void> _saveMonthlyGoal(double value) async {
+  Future<void> _saveGoal(double value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('saved_monthly_goal', value);
     setState(() {
@@ -2981,7 +2994,6 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     });
   }
 
-  // แสดง Dialog ให้กรอกตัวเลขเป้าหมายเมื่อกดไอคอนดินสอ
   void _showEditGoalDialog() {
     TextEditingController goalController = TextEditingController(
       text: monthlyGoal > 0 ? monthlyGoal.toStringAsFixed(2) : '',
@@ -2993,11 +3005,11 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
         backgroundColor: const Color(0xFF161B22),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: kGoldPrimary, width: 1.5),
+          side: const BorderSide(color: Color(0xFFFFD700), width: 1.5),
         ),
         title: const Text(
-          'ตั้งเป้าหมายกำไรรายเดือน',
-          style: TextStyle(color: kGoldPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+          'ตั้งเป้าหมายกำไร ($)',
+          style: TextStyle(color: Color(0xFFFFD700), fontSize: 16, fontWeight: FontWeight.bold),
         ),
         content: TextField(
           controller: goalController,
@@ -3006,8 +3018,8 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
           decoration: const InputDecoration(
             hintText: 'กรอกจำนวนเงิน ($)',
             hintStyle: TextStyle(color: Colors.grey, fontSize: 13),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: kGoldPrimary)),
-            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: kGreenNeon, width: 2)),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFFFD700))),
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00E676), width: 2)),
           ),
         ),
         actions: [
@@ -3016,11 +3028,11 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
             child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: kGoldPrimary),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFFD700)),
             onPressed: () {
               double? newGoal = double.tryParse(goalController.text.trim());
               if (newGoal != null && newGoal >= 0) {
-                _saveMonthlyGoal(newGoal);
+                _saveGoal(newGoal);
               }
               Navigator.pop(ctx);
             },
@@ -3031,55 +3043,99 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 
-  // ฟังก์ชันแปลงประวัติและคำนวณยอด P&L รายวันตามจริง
-  Map<int, double> _getDailyPnLFromHistory() {
-    Map<int, double> pnlMap = {};
+  DateTime? _parseTradeDate(dynamic rawTime) {
+    if (rawTime == null) return null;
+    if (rawTime is int) return DateTime.fromMillisecondsSinceEpoch(rawTime);
+    if (rawTime is String) {
+      String clean = rawTime.trim();
+      try {
+        List<String> parts = clean.split(' ')[0].replaceAll('/', '.').replaceAll('-', '.').split('.');
+        if (parts.length == 3) {
+          int d = int.parse(parts[0]);
+          int m = int.parse(parts[1]);
+          int y = int.parse(parts[2]);
+          if (y < 100) y += 2000;
+          return DateTime(y, m, d);
+        }
+      } catch (_) {
+        return DateTime.tryParse(clean);
+      }
+    }
+    return null;
+  }
+
+  DateTime _getStartOfWeek(DateTime date) {
+    return date.subtract(Duration(days: date.weekday - 1));
+  }
+
+  Map<String, double> _calculateData() {
+    Map<String, double> pnlMap = {};
 
     for (var trade in widget.historyTrades) {
       double profit = double.tryParse(trade['profit']?.toString() ?? '0.0') ?? 0.0;
-      dynamic closeTimeRaw = trade['close_time'] ?? trade['timestamp'] ?? trade['time'];
-      
-      if (closeTimeRaw != null) {
-        DateTime? tradeDate;
-        
-        if (closeTimeRaw is int) {
-          tradeDate = DateTime.fromMillisecondsSinceEpoch(closeTimeRaw);
-        } else if (closeTimeRaw is String) {
-          String raw = closeTimeRaw.trim();
-          
-          // ตัวอย่างฟอร์แมต: 21.10.2026 19:24:14 -> แยกประมวลผล วัน.เดือน.ปี
-          try {
-            List<String> dateTimeParts = raw.split(' ');
-            List<String> dateParts = dateTimeParts[0].replaceAll('/', '.').replaceAll('-', '.').split('.');
-            
-            if (dateParts.length == 3) {
-              int day = int.parse(dateParts[0]);
-              int month = int.parse(dateParts[1]);
-              int year = int.parse(dateParts[2]);
-              if (year < 100) year += 2000;
-              
-              tradeDate = DateTime(year, month, day);
-            }
-          } catch (_) {
-            tradeDate = DateTime.tryParse(raw);
-          }
-        }
+      DateTime? tradeDate = _parseTradeDate(trade['close_time'] ?? trade['timestamp'] ?? trade['time']);
 
-        if (tradeDate != null) {
-          if (tradeDate.month == currentMonth.month && tradeDate.year == currentMonth.year) {
-            int day = tradeDate.day;
-            pnlMap[day] = (pnlMap[day] ?? 0.0) + profit;
-          }
+      if (tradeDate == null) continue;
+
+      if (selectedTimeframe == 0) {
+        DateTime startOfWeek = _getStartOfWeek(currentDate);
+        DateTime endOfWeek = startOfWeek.add(const Duration(days: 6, hours: 23, minutes: 59));
+        if (tradeDate.isAfter(startOfWeek.subtract(const Duration(seconds: 1))) && 
+            tradeDate.isBefore(endOfWeek)) {
+          String key = '${tradeDate.day}';
+          pnlMap[key] = (pnlMap[key] ?? 0.0) + profit;
+        }
+      } else if (selectedTimeframe == 1) {
+        if (tradeDate.month == currentDate.month && tradeDate.year == currentDate.year) {
+          String key = '${tradeDate.day}';
+          pnlMap[key] = (pnlMap[key] ?? 0.0) + profit;
+        }
+      } else if (selectedTimeframe == 2) {
+        if (tradeDate.year == currentDate.year) {
+          String key = '${tradeDate.month}';
+          pnlMap[key] = (pnlMap[key] ?? 0.0) + profit;
         }
       }
     }
     return pnlMap;
   }
 
+  void _navigateTime(bool isNext) {
+    setState(() {
+      if (selectedTimeframe == 0) {
+        currentDate = isNext 
+            ? currentDate.add(const Duration(days: 7)) 
+            : currentDate.subtract(const Duration(days: 7));
+      } else if (selectedTimeframe == 1) {
+        currentDate = DateTime(currentDate.year, isNext ? currentDate.month + 1 : currentDate.month - 1);
+      } else if (selectedTimeframe == 2) {
+        currentDate = DateTime(isNext ? currentDate.year + 1 : currentDate.year - 1);
+      }
+    });
+  }
+
+  String _getHeaderTitle() {
+    if (selectedTimeframe == 0) {
+      DateTime start = _getStartOfWeek(currentDate);
+      DateTime end = start.add(const Duration(days: 4));
+      return '${start.day} ${_getMonthName(start.month, true)} - ${end.day} ${_getMonthName(end.month, true)} ${currentDate.year}';
+    } else if (selectedTimeframe == 1) {
+      return '${_getMonthName(currentDate.month, false)} ${currentDate.year}';
+    } else {
+      return 'YEAR ${currentDate.year}';
+    }
+  }
+
+  String _getMonthName(int month, bool isShort) {
+    const shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const fullMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return isShort ? shortMonths[month - 1] : fullMonths[month - 1];
+  }
+
   @override
   Widget build(BuildContext context) {
-    Map<int, double> dailyPnLReal = _getDailyPnLFromHistory();
-    double totalPnL = dailyPnLReal.values.fold(0.0, (sum, item) => sum + item);
+    Map<String, double> dataMap = _calculateData();
+    double totalPnL = dataMap.values.fold(0.0, (sum, val) => sum + val);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -3104,8 +3160,8 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: const [
+                  const Row(
+                    children: [
                       Icon(Icons.calendar_month, color: Color(0xFFFFD700), size: 20),
                       SizedBox(width: 8),
                       Text(
@@ -3135,24 +3191,16 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.chevron_left, color: Colors.white, size: 20),
-                    onPressed: () {
-                      setState(() {
-                        currentMonth = DateTime(currentMonth.year, currentMonth.month - 1);
-                      });
-                    },
+                    icon: const Icon(Icons.chevron_left, color: Colors.white, size: 22),
+                    onPressed: () => _navigateTime(false),
                   ),
                   Text(
-                    '${_getMonthName(currentMonth.month)} ${currentMonth.year}',
+                    _getHeaderTitle(),
                     style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.chevron_right, color: Colors.white, size: 20),
-                    onPressed: () {
-                      setState(() {
-                        currentMonth = DateTime(currentMonth.year, currentMonth.month + 1);
-                      });
-                    },
+                    icon: const Icon(Icons.chevron_right, color: Colors.white, size: 22),
+                    onPressed: () => _navigateTime(true),
                   ),
                 ],
               ),
@@ -3164,43 +3212,36 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
                     child: _buildCard(
                       'Total P&L',
                       '${totalPnL >= 0 ? "+" : ""}\$${totalPnL.toStringAsFixed(2)}',
-                      totalPnL >= 0 ? Colors.greenAccent : Colors.redAccent,
+                      totalPnL >= 0 ? const Color(0xFF00E676) : const Color(0xFFFF1744),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: _buildGoalCard(
-                      'Monthly goal',
+                      'Goal Target',
                       totalPnL,
                       monthlyGoal,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text('Weekends: OFF ∨', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                  Text('Main Account ∨', style: TextStyle(color: Colors.cyan, fontSize: 11, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              const SizedBox(height: 8),
+              if (selectedTimeframe != 2) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: const ['MON', 'TUE', 'WED', 'THU', 'FRI']
+                      .map((day) => Expanded(
+                            child: Center(
+                              child: Text(day, style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                          ))
+                      .toList(),
+                ),
+                const SizedBox(height: 8),
+              ],
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: const ['MON', 'TUE', 'WED', 'THU', 'FRI']
-                    .map((day) => Expanded(
-                          child: Center(
-                            child: Text(day, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                          ),
-                        ))
-                    .toList(),
-              ),
-              const SizedBox(height: 8),
-
-              _buildCalendarGrid(dailyPnLReal),
+              _buildDynamicGrid(dataMap),
             ],
           ),
         ),
@@ -3208,13 +3249,8 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 
-  String _getMonthName(int month) {
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    return months[month - 1];
-  }
-
   Widget _buildTimeframeSelector() {
-    List<String> options = ['Week', 'Month', 'Year', 'All time'];
+    List<String> options = ['Week', 'Month', 'Year'];
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
@@ -3228,7 +3264,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
             child: GestureDetector(
               onTap: () => setState(() => selectedTimeframe = index),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
                   color: isSelected ? const Color(0xFF2EA043) : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
@@ -3238,7 +3274,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
                     options[index],
                     style: TextStyle(
                       color: isSelected ? Colors.black : Colors.white70,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
@@ -3264,7 +3300,10 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
         children: [
           Text(title, style: const TextStyle(color: Colors.grey, fontSize: 10)),
           const SizedBox(height: 4),
-          Text(value, style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(value, style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );
@@ -3288,7 +3327,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
             children: [
               Text(title, style: const TextStyle(color: Colors.grey, fontSize: 10)),
               GestureDetector(
-                onTap: _showEditGoalDialog, // กดไอคอนดินสอแล้วเรียก ป๊อปอัป แก้ไขเป้าหมาย
+                onTap: _showEditGoalDialog,
                 child: const Icon(Icons.edit_note, color: Colors.cyan, size: 16),
               ),
             ],
@@ -3297,7 +3336,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
           LinearProgressIndicator(
             value: progress,
             backgroundColor: Colors.grey[800],
-            color: Colors.greenAccent,
+            color: const Color(0xFF00E676),
             minHeight: 4,
           ),
           const SizedBox(height: 4),
@@ -3305,11 +3344,11 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${currentProfit >= 0 ? "+" : ""}\$${currentProfit.toStringAsFixed(2)}',
-                style: const TextStyle(color: Colors.greenAccent, fontSize: 9, fontWeight: FontWeight.bold),
+                '${currentProfit >= 0 ? "+" : ""}\$${currentProfit.toStringAsFixed(1)}',
+                style: const TextStyle(color: Color(0xFF00E676), fontSize: 9, fontWeight: FontWeight.bold),
               ),
               Text(
-                targetGoal > 0 ? '\$${targetGoal.toStringAsFixed(2)}' : 'Not set yet',
+                targetGoal > 0 ? '\$${targetGoal.toStringAsFixed(0)}' : 'Set goal',
                 style: const TextStyle(color: Colors.grey, fontSize: 9, fontWeight: FontWeight.bold),
               ),
             ],
@@ -3319,64 +3358,122 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 
-  Widget _buildCalendarGrid(Map<int, double> dailyPnLReal) {
-    int daysInMonth = DateTime(currentMonth.year, currentMonth.month + 1, 0).day;
-    List<int?> dayNumbers = [];
+  Widget _buildDynamicGrid(Map<String, double> dataMap) {
+    if (selectedTimeframe == 0) {
+      DateTime start = _getStartOfWeek(currentDate);
+      List<DateTime> weekDays = List.generate(5, (i) => start.add(Duration(days: i)));
 
-    for (int day = 1; day <= daysInMonth; day++) {
-      DateTime date = DateTime(currentMonth.year, currentMonth.month, day);
-      if (date.weekday != DateTime.saturday && date.weekday != DateTime.sunday) {
-        dayNumbers.add(day);
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 5,
+          childAspectRatio: 0.9,
+          crossAxisSpacing: 6,
+          mainAxisSpacing: 6,
+        ),
+        itemCount: 5,
+        itemBuilder: (context, index) {
+          DateTime dayDate = weekDays[index];
+          double? pnl = dataMap['${dayDate.day}'];
+          return _buildGridCell(label: '${dayDate.day}', pnl: pnl);
+        },
+      );
+    } 
+    else if (selectedTimeframe == 1) {
+      int daysInMonth = DateTime(currentDate.year, currentDate.month + 1, 0).day;
+      List<int> monthDays = [];
+
+      for (int day = 1; day <= daysInMonth; day++) {
+        DateTime date = DateTime(currentDate.year, currentDate.month, day);
+        if (date.weekday != DateTime.saturday && date.weekday != DateTime.sunday) {
+          monthDays.add(day);
+        }
+      }
+
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 5,
+          childAspectRatio: 0.9,
+          crossAxisSpacing: 6,
+          mainAxisSpacing: 6,
+        ),
+        itemCount: monthDays.length,
+        itemBuilder: (context, index) {
+          int day = monthDays[index];
+          double? pnl = dataMap['$day'];
+          return _buildGridCell(label: '$day', pnl: pnl);
+        },
+      );
+    } 
+    else {
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          childAspectRatio: 1.2,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+        ),
+        itemCount: 12,
+        itemBuilder: (context, index) {
+          int monthNum = index + 1;
+          double? pnl = dataMap['$monthNum'];
+          String monthName = _getMonthName(monthNum, true);
+          return _buildGridCell(label: monthName, pnl: pnl, isYearMode: true);
+        },
+      );
+    }
+  }
+
+  Widget _buildGridCell({required String label, double? pnl, bool isYearMode = false}) {
+    Color cardColor = const Color(0xFF161B22);
+    if (pnl != null) {
+      if (pnl > 0) {
+        cardColor = const Color(0xFF137333);
+      } else if (pnl < 0) {
+        cardColor = const Color(0xFFA50E0E);
       }
     }
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 5,
-        childAspectRatio: 0.9,
-        crossAxisSpacing: 6,
-        mainAxisSpacing: 6,
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white10),
       ),
-      itemCount: dayNumbers.length,
-      itemBuilder: (context, index) {
-        int? day = dayNumbers[index];
-        if (day == null) return const SizedBox.shrink();
-
-        double? pnl = dailyPnLReal[day];
-        Color cardColor = const Color(0xFF161B22);
-        if (pnl != null) {
-          cardColor = pnl > 0 ? const Color(0xFF137333) : (pnl < 0 ? const Color(0xFFA50E0E) : const Color(0xFF161B22));
-        }
-
-        return Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(6),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            label, 
+            style: TextStyle(
+              color: Colors.white, 
+              fontSize: isYearMode ? 12 : 10, 
+              fontWeight: FontWeight.bold
+            ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('$day', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-              if (pnl != null)
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    '${pnl > 0 ? "+" : ""}${pnl.toStringAsFixed(2)}',
-                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                  ),
-                )
-              else
-                const Text('-', style: TextStyle(color: Colors.grey, fontSize: 10)),
-            ],
-          ),
-        );
-      },
+          const SizedBox(height: 4),
+          if (pnl != null)
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '${pnl > 0 ? "+" : ""}\$${pnl.toStringAsFixed(2)}',
+                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+            )
+          else
+            const Text('-', style: TextStyle(color: Colors.grey, fontSize: 10)),
+        ],
+      ),
     );
   }
 }
+
 
 
 // ==========================================
