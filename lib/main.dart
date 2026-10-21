@@ -2293,7 +2293,7 @@ class ScannerClipper extends CustomClipper<Rect> {
 }
 
 // ==========================================
-// #7 โหมด HomeScreen (GOLD PRO)
+// #7 โหมด HomeScreen (GOLD PRO) - Dual Image Scanner
 // ==========================================
 
 class HomeScreen extends StatefulWidget {
@@ -2326,12 +2326,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   bool isConnected = false;
 
+  // ตัวแปรควบคุมการสลับรูปภาพ 0.jpg และ 1.jpg
+  int _currentImageIndex = 0;
+  Timer? _imageTimer;
+
   late final AnimationController _scannerController = AnimationController(
     duration: const Duration(seconds: 2),
     vsync: this,
   )..repeat(reverse: true);
 
-  // เพิ่ม AnimationController สำหรับเอฟเฟกต์ชื่อบอท (GOLD PRO)
+  // AnimationController สำหรับเอฟเฟกต์เรืองแสงชื่อบอท (GOLD PRO)
   late final AnimationController _titleGlowController = AnimationController(
     duration: const Duration(milliseconds: 1500),
     vsync: this,
@@ -2349,6 +2353,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _listenToOrdersForDialog(widget.accountLogin);
     _listenToConnectionStatus();
     _listenToHistoryForStats(widget.accountLogin);
+
+    // ตั้งเวลาสลับรูปภาพระหว่าง 0.jpg และ 1.jpg ทุกๆ 3 วินาที
+    _imageTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (mounted) {
+        setState(() {
+          _currentImageIndex = (_currentImageIndex == 0) ? 1 : 0;
+        });
+      }
+    });
   }
 
   @override
@@ -2364,7 +2377,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _scannerController.dispose();
-    _titleGlowController.dispose(); // Dispose แอนิเมชันชื่อบอท
+    _titleGlowController.dispose();
+    _imageTimer?.cancel(); // ลบ Timer สลับรูปภาพเมื่อปิดหน้าจอ
     super.dispose();
   }
 
@@ -2537,6 +2551,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: Column(
                   children: [
                     const SizedBox(height: 15),
+                    
+                    // กล่องสแกนเนอร์ที่ใส่ 2 รูปภาพ (0.jpg และ 1.jpg)
                     Center(
                       child: Container(
                         width: 220,
@@ -2554,32 +2570,44 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(18),
-                          child: Opacity(
-                            opacity: 0.9,
-                            child: Image.asset(
-                              'assets/images/1792250396366.png',
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(color: Colors.black);
-                              },
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 800), // เอฟเฟกต์เฟดสลับรูป
+                            child: Opacity(
+                              key: ValueKey<int>(_currentImageIndex),
+                              opacity: 0.9,
+                              child: Image.asset(
+                                'assets/images/$_currentImageIndex.jpg', // เรียกใช้ 0.jpg หรือ 1.jpg
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.black,
+                                    child: const Center(
+                                      child: Icon(Icons.image_not_supported, color: kGoldPrimary),
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
+                    
                     const SizedBox(height: 20),
                     
-                    // 1, 2 & 3: ลบกรอบทิ้ง, เพิ่มขนาดฟอนต์ และใส่เอฟเฟกต์เคลื่อนไหวเรืองแสงให้กับชื่อ GOLD PRO
+                    // 1, 2 & 3: ลบกรอบชื่อ, เพิ่มขนาดฟอนต์ และใส่เอฟเฟกต์เคลื่อนไหวเรืองแสง
                     AnimatedBuilder(
                       animation: _titleGlowController,
                       builder: (context, child) {
                         return Transform.scale(
-                          scale: 1.0 + (_titleGlowController.value * 0.05), // ขยายเข้าออกเบาๆ
+                          scale: 1.0 + (_titleGlowController.value * 0.05),
                           child: Text(
                             'GOLD PRO',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 28, // ขยายฟอนต์ให้ใหญ่ขึ้นจากเดิม
+                              fontSize: 28,
                               fontWeight: FontWeight.w900,
                               color: kGoldPrimary,
                               letterSpacing: 3.0,
@@ -2621,12 +2649,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                         const SizedBox(width: 20),
                         
-                        // 5: ปุ่ม STOP เปลี่ยนสีและเรืองแสงสีแดงเรืองแสงรอบกรอบวงกลมเมื่อบอททำงานอยู่ (isRunning == true)
+                        // 5: วงกลม Stop มีสีแดงเรืองแสงรอบกรอบวงกลมเมื่อบอททำงานอยู่
                         _buildCircularButton(
                           label: isRunning ? 'STOP' : 'START',
                           icon: isRunning ? Icons.stop : Icons.play_arrow,
-                          borderColor: isRunning ? kRedNeon : kGoldPrimary, // เปลี่ยนขอบเป็นสีแดงเมื่อรันอยู่
-                          glowColor: isRunning ? kRedNeon : kGoldPrimary, // เรืองแสงสีแดงรอบวงกลม
+                          borderColor: isRunning ? kRedNeon : kGoldPrimary,
+                          glowColor: isRunning ? kRedNeon : kGoldPrimary,
                           onPressed: () => _toggleBotStatus(!isRunning),
                           isLarge: true,
                         ),
@@ -3044,12 +3072,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               boxShadow: [
                 BoxShadow(
                   color: (glowColor ?? borderColor).withOpacity(0.6),
-                  blurRadius: isLarge && isRunning ? 16 : 10, // เพิ่มรัศมีการเรืองแสงให้ปุ่ม Stop เมื่อทำงาน
+                  blurRadius: isLarge && isRunning ? 16 : 10,
                   spreadRadius: isLarge && isRunning ? 3 : 1,
                 ),
               ],
             ),
-            // เปลี่ยนสีไอคอนข้างในปุ่ม Stop ให้เป็นสีแดงตามสถานะด้วยเพื่อให้เข้ากัน
             child: Icon(icon, color: isLarge && isRunning ? kRedNeon : kGoldPrimary, size: isLarge ? 34 : 28),
           ),
           const SizedBox(height: 6),
@@ -3068,6 +3095,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 }
+
 
 
 
