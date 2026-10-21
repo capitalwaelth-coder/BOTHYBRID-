@@ -14,8 +14,8 @@ const Color kGoldPrimary = Color(0xFFFFD700); // สีทองหลัก
 const Color kGoldAccent = Color(0xFFFFC107);  // สีทองสว่าง
 const Color kDarkBg = Color(0xFF0D0D0D);      // พื้นหลังดำเมทัลลิก
 const Color kDarkCard = Color(0xFF161616);    // การ์ดดำเข้ม
-const Color kRedNeon = Color(0xFFFF1744);     // สีแดง SELL / Loss
-const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Profit
+const Color kRedNeon = Color(0xFFFF1744);     // สีแดง SELL / Loss / Stop
+const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Profit / Start
 
 // ==========================================
 // #2 โหมดเมนหลัก
@@ -909,7 +909,6 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 
 // ==========================================
 // #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
-// GOLD PRO - ROBOT DASHBOARD EDITION (เหลือบอลลูนโรบอทเดี่ยว สะอาดตา)
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -931,7 +930,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   DatabaseReference? _logsRef;
   DatabaseReference? _ordersRef;
 
-  // เหลือบอลลูนโรบอทเพียงตัวเดียว
   Offset _robotBubbleOffset = const Offset(320, 600);
   Offset _modalOffset = const Offset(16, 80);
 
@@ -1689,7 +1687,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   ),
                 ),
               ),
-            // คงเหลือบอลลูนโรบอทเดี่ยว ลากวางได้และควบคุมเปิด/ปิด Status & Logs
             Positioned(
               left: _robotBubbleOffset.dx,
               top: _robotBubbleOffset.dy,
@@ -2381,6 +2378,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    Color startStopColor = isRunning ? kGreenNeon : kRedNeon;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
@@ -2498,8 +2497,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         _buildCircularButton(
                           label: isRunning ? 'STOP' : 'START',
                           icon: isRunning ? Icons.stop : Icons.play_arrow,
-                          borderColor: isRunning ? kRedNeon : kGoldPrimary,
-                          glowColor: isRunning ? kRedNeon : kGoldPrimary,
+                          borderColor: startStopColor,
+                          glowColor: startStopColor,
+                          iconColor: startStopColor,
+                          labelColor: startStopColor,
                           onPressed: () => _toggleBotStatus(!isRunning),
                           isLarge: true,
                         ),
@@ -2895,6 +2896,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     required IconData icon,
     required Color borderColor,
     Color? glowColor,
+    Color? iconColor,
+    Color? labelColor,
     required VoidCallback onPressed,
     bool isLarge = false,
   }) {
@@ -2914,18 +2917,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               boxShadow: [
                 BoxShadow(
                   color: (glowColor ?? borderColor).withOpacity(0.6),
-                  blurRadius: isLarge && isRunning ? 16 : 10,
-                  spreadRadius: isLarge && isRunning ? 3 : 1,
+                  blurRadius: isLarge ? 16 : 10,
+                  spreadRadius: isLarge ? 3 : 1,
                 ),
               ],
             ),
-            child: Icon(icon, color: isLarge && isRunning ? kRedNeon : kGoldPrimary, size: isLarge ? 34 : 28),
+            child: Icon(icon, color: iconColor ?? kGoldPrimary, size: isLarge ? 34 : 28),
           ),
           const SizedBox(height: 6),
           Text(
             label,
             style: TextStyle(
-              color: isLarge && isRunning ? kRedNeon : kGoldPrimary,
+              color: labelColor ?? kGoldPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 11,
               letterSpacing: 0.5,
@@ -4118,6 +4121,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
             lotMode = data['lot_mode']?.toString() ?? 'Fixed';
             selectedTf = data['timeframe']?.toString() ?? 'M1';
             enableTrendFilter = data['enable_trend_filter'] ?? true;
+
+            enableBasketControl = data['enable_basket_control'] ?? true;
+            enableBasketTp = data['enable_basket_tp'] ?? true;
+            basketTpController.text = (data['basket_tp'] ?? 10).toString();
+
+            enableBasketSl = data['enable_basket_sl'] ?? false;
+            basketSlController.text = (data['basket_sl'] ?? 5).toString();
+
+            enableDailyTarget = data['enable_daily_target'] ?? true;
+            dailyTargetController.text = (data['daily_target'] ?? 100.0).toString();
+
+            enableDailyLoss = data['enable_daily_loss'] ?? false;
+            dailyLossController.text = (data['daily_loss'] ?? 50.0).toString();
+
+            initialLotController.text = (data['initial_lot'] ?? 0.01).toString();
+            maxRecoveryController.text = (data['max_recovery'] ?? 10).toString();
+            maxOrdersController.text = (data['max_orders'] ?? 10).toString();
+            recoveryStepController.text = (data['recovery_step'] ?? 200).toString();
+            slPointsController.text = (data['sl_points'] ?? 500).toString();
+            riskRewardController.text = (data['risk_reward'] ?? 2.0).toString();
+            startTimeController.text = data['start_time_th']?.toString() ?? '08:00';
+            endTimeController.text = data['end_time_th']?.toString() ?? '22:00';
+
             _isInitialized = true;
           });
         }
@@ -4129,12 +4155,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _saveBotParametersToFirebase() {
     try {
-      final payload = {
+      final double? basketTpVal = double.tryParse(basketTpController.text.trim());
+      final double? basketSlVal = double.tryParse(basketSlController.text.trim());
+      final double? dailyTargetVal = double.tryParse(dailyTargetController.text.trim());
+      final double? dailyLossVal = double.tryParse(dailyLossController.text.trim());
+      final double? initialLotVal = double.tryParse(initialLotController.text.trim());
+      final int? maxRecoveryVal = int.tryParse(maxRecoveryController.text.trim());
+      final int? maxOrdersVal = int.tryParse(maxOrdersController.text.trim());
+      final int? recoveryStepVal = int.tryParse(recoveryStepController.text.trim());
+      final double? slPointsVal = double.tryParse(slPointsController.text.trim());
+      final double? riskRewardVal = double.tryParse(riskRewardController.text.trim());
+
+      final Map<String, dynamic> payload = {
         'symbol': selectedSymbol,
         'trading_mode': tradingMode,
         'lot_mode': lotMode,
         'timeframe': selectedTf,
         'enable_trend_filter': enableTrendFilter,
+
+        'enable_basket_control': enableBasketControl,
+        'enable_basket_tp': enableBasketTp,
+        'basket_tp': basketTpVal ?? 10,
+
+        'enable_basket_sl': enableBasketSl,
+        'basket_sl': basketSlVal ?? 5,
+
+        'enable_daily_target': enableDailyTarget,
+        'daily_target': dailyTargetVal ?? 100.0,
+
+        'enable_daily_loss': enableDailyLoss,
+        'daily_loss': dailyLossVal ?? 50.0,
+
+        'initial_lot': initialLotVal ?? 0.01,
+        'max_recovery': maxRecoveryVal ?? 10,
+        'max_orders': maxOrdersVal ?? 10,
+        'recovery_step': recoveryStepVal ?? 200,
+        'sl_points': slPointsVal ?? 500,
+        'risk_reward': riskRewardVal ?? 2.0,
+        'start_time_th': startTimeController.text.trim(),
+        'end_time_th': endTimeController.text.trim(),
+
+        'command_timestamp': DateTime.now().millisecondsSinceEpoch,
       };
 
       _statusRef?.update(payload);
@@ -4147,10 +4208,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SnackBar(
           content: Text('Parameters Synced & Saved to EA Successfully!'),
           backgroundColor: kDarkCard,
+          duration: Duration(seconds: 2),
         ),
       );
     } catch (e) {
       debugPrint("Save bot parameters error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving parameters: $e'),
+          backgroundColor: kRedNeon,
+        ),
+      );
     }
   }
 
