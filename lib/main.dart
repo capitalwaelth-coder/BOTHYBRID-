@@ -2118,10 +2118,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 }
 
-// ==========================================
-// #7 โหมด HomeScreen (GOLD PRO) - ดึงข้อมูลจริง
-// ==========================================
 
+// ==========================================
+// 🌟 HomeScreen (GOLD PRO)
+// ==========================================
 class HomeScreen extends StatefulWidget {
   final String accountLogin;
   const HomeScreen({super.key, required this.accountLogin});
@@ -2162,7 +2162,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   late final AnimationController _titleGlowController = AnimationController(
     duration: const Duration(milliseconds: 1500),
-    vsync: this, // แก้ไขใส่ vsync: this ให้ถูกต้องแล้ว
+    vsync: this,
   )..repeat(reverse: true);
 
   double realTimeBid = 0.0;
@@ -2868,7 +2868,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     const Text('BID', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
                     const SizedBox(height: 6),
                     Text(
-                      realTimeBid > 0 ? realTimeBid.toStringAsFixed(2) : '81390.48',
+                      realTimeBid > 0 ? realTimeBid.toStringAsFixed(2) : '0.00',
                       style: const TextStyle(color: kRedNeon, fontSize: 18, fontFamily: 'monospace', fontWeight: FontWeight.w900),
                     ),
                   ],
@@ -2879,7 +2879,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     const Text('ASK', style: TextStyle(color: kGoldPrimary, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
                     const SizedBox(height: 6),
                     Text(
-                      realTimeAsk > 0 ? realTimeAsk.toStringAsFixed(2) : '81395.48',
+                      realTimeAsk > 0 ? realTimeAsk.toStringAsFixed(2) : '0.00',
                       style: const TextStyle(color: kGreenNeon, fontSize: 18, fontFamily: 'monospace', fontWeight: FontWeight.w900),
                     ),
                   ],
@@ -2943,7 +2943,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 }
 
 // ==========================================
-// 🌟 กล่อง Trading Calendar ดึงข้อมูลจริงจาก History
+// 🌟 TradingCalendarDialog (แก้ไขสมบูรณ์ดึงประวัติเทรดได้ + ตั้งเป้าหมายได้)
 // ==========================================
 class TradingCalendarDialog extends StatefulWidget {
   final List<Map<dynamic, dynamic>> historyTrades;
@@ -2956,7 +2956,82 @@ class TradingCalendarDialog extends StatefulWidget {
 class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
   int selectedTimeframe = 1; // 0: Week, 1: Month, 2: Year, 3: All time
   DateTime currentMonth = DateTime.now();
+  double monthlyGoal = 0.0; // ค่าเป้าหมายกำไรต่อเดือน
 
+  @override
+  void initState() {
+    super.initState();
+    _loadMonthlyGoal();
+  }
+
+  // โหลดค่าเป้าหมายประจำเดือนที่เคยเซฟไว้ในเครื่อง
+  Future<void> _loadMonthlyGoal() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      monthlyGoal = prefs.getDouble('saved_monthly_goal') ?? 2000.0;
+    });
+  }
+
+  // เซฟค่าเป้าหมายใหม่ลงเครื่อง
+  Future<void> _saveMonthlyGoal(double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('saved_monthly_goal', value);
+    setState(() {
+      monthlyGoal = value;
+    });
+  }
+
+  // แสดง Dialog ให้กรอกตัวเลขเป้าหมายเมื่อกดไอคอนดินสอ
+  void _showEditGoalDialog() {
+    TextEditingController goalController = TextEditingController(
+      text: monthlyGoal > 0 ? monthlyGoal.toStringAsFixed(2) : '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF161B22),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: kGoldPrimary, width: 1.5),
+        ),
+        title: const Text(
+          'ตั้งเป้าหมายกำไรรายเดือน',
+          style: TextStyle(color: kGoldPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        content: TextField(
+          controller: goalController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          decoration: const InputDecoration(
+            hintText: 'กรอกจำนวนเงิน ($)',
+            hintStyle: TextStyle(color: Colors.grey, fontSize: 13),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: kGoldPrimary)),
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: kGreenNeon, width: 2)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: kGoldPrimary),
+            onPressed: () {
+              double? newGoal = double.tryParse(goalController.text.trim());
+              if (newGoal != null && newGoal >= 0) {
+                _saveMonthlyGoal(newGoal);
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('บันทึก', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ฟังก์ชันแปลงประวัติและคำนวณยอด P&L รายวันตามจริง
   Map<int, double> _getDailyPnLFromHistory() {
     Map<int, double> pnlMap = {};
 
@@ -2966,11 +3041,28 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
       
       if (closeTimeRaw != null) {
         DateTime? tradeDate;
+        
         if (closeTimeRaw is int) {
           tradeDate = DateTime.fromMillisecondsSinceEpoch(closeTimeRaw);
         } else if (closeTimeRaw is String) {
-          String formatted = closeTimeRaw.replaceAll('.', '-').replaceAll('/', '-');
-          tradeDate = DateTime.tryParse(formatted);
+          String raw = closeTimeRaw.trim();
+          
+          // ตัวอย่างฟอร์แมต: 21.10.2026 19:24:14 -> แยกประมวลผล วัน.เดือน.ปี
+          try {
+            List<String> dateTimeParts = raw.split(' ');
+            List<String> dateParts = dateTimeParts[0].replaceAll('/', '.').replaceAll('-', '.').split('.');
+            
+            if (dateParts.length == 3) {
+              int day = int.parse(dateParts[0]);
+              int month = int.parse(dateParts[1]);
+              int year = int.parse(dateParts[2]);
+              if (year < 100) year += 2000;
+              
+              tradeDate = DateTime(year, month, day);
+            }
+          } catch (_) {
+            tradeDate = DateTime.tryParse(raw);
+          }
         }
 
         if (tradeDate != null) {
@@ -3076,7 +3168,13 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Expanded(child: _buildGoalCard('Monthly goal', '\$2337.00', 'Not set yet')),
+                  Expanded(
+                    child: _buildGoalCard(
+                      'Monthly goal',
+                      totalPnL,
+                      monthlyGoal,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -3172,7 +3270,9 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 
-  Widget _buildGoalCard(String title, String currentVal, String targetVal) {
+  Widget _buildGoalCard(String title, double currentProfit, double targetGoal) {
+    double progress = (targetGoal > 0) ? (currentProfit / targetGoal).clamp(0.0, 1.0) : 0.0;
+
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -3187,12 +3287,15 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(title, style: const TextStyle(color: Colors.grey, fontSize: 10)),
-              const Icon(Icons.edit_note, color: Colors.cyan, size: 14),
+              GestureDetector(
+                onTap: _showEditGoalDialog, // กดไอคอนดินสอแล้วเรียก ป๊อปอัป แก้ไขเป้าหมาย
+                child: const Icon(Icons.edit_note, color: Colors.cyan, size: 16),
+              ),
             ],
           ),
           const SizedBox(height: 6),
           LinearProgressIndicator(
-            value: 0.0,
+            value: progress,
             backgroundColor: Colors.grey[800],
             color: Colors.greenAccent,
             minHeight: 4,
@@ -3201,8 +3304,14 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(currentVal, style: const TextStyle(color: Colors.greenAccent, fontSize: 9)),
-              Text(targetVal, style: const TextStyle(color: Colors.grey, fontSize: 9)),
+              Text(
+                '${currentProfit >= 0 ? "+" : ""}\$${currentProfit.toStringAsFixed(2)}',
+                style: const TextStyle(color: Colors.greenAccent, fontSize: 9, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                targetGoal > 0 ? '\$${targetGoal.toStringAsFixed(2)}' : 'Not set yet',
+                style: const TextStyle(color: Colors.grey, fontSize: 9, fontWeight: FontWeight.bold),
+              ),
             ],
           ),
         ],
@@ -3268,6 +3377,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 }
+
 
 // ==========================================
 // #8 โหมดรายงานออเดอร์ (OrdersScreen)
