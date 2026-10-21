@@ -2121,6 +2121,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
 
 
+
 // ==========================================
 // 🌟 HomeScreen (GOLD PRO)
 // ==========================================
@@ -2957,7 +2958,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 }
 
 // ==========================================
-// 🌟 TradingCalendarDialog
+// 🌟 TradingCalendarDialog (7 วันต่อสัปดาห์ รวมเสาร์-อาทิตย์)
 // ==========================================
 class TradingCalendarDialog extends StatefulWidget {
   final List<Map<dynamic, dynamic>> historyTrades;
@@ -2968,6 +2969,7 @@ class TradingCalendarDialog extends StatefulWidget {
 }
 
 class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
+  // 0: Week, 1: Month, 2: Year
   int selectedTimeframe = 1; 
   DateTime currentDate = DateTime.now();
   double monthlyGoal = 2000.0;
@@ -3116,7 +3118,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
   String _getHeaderTitle() {
     if (selectedTimeframe == 0) {
       DateTime start = _getStartOfWeek(currentDate);
-      DateTime end = start.add(const Duration(days: 4));
+      DateTime end = start.add(const Duration(days: 6)); // จันทร์ - อาทิตย์ (7 วัน)
       return '${start.day} ${_getMonthName(start.month, true)} - ${end.day} ${_getMonthName(end.month, true)} ${currentDate.year}';
     } else if (selectedTimeframe == 1) {
       return '${_getMonthName(currentDate.month, false)} ${currentDate.year}';
@@ -3138,12 +3140,12 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 24),
       child: Container(
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: const Color(0xFF0D1117),
           borderRadius: BorderRadius.circular(20),
@@ -3226,13 +3228,21 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
               ),
               const SizedBox(height: 16),
 
+              // หัวตารางครอบคลุมทั้ง 7 วัน (MON - SUN)
               if (selectedTimeframe != 2) ...[
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: const ['MON', 'TUE', 'WED', 'THU', 'FRI']
+                  children: const ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
                       .map((day) => Expanded(
                             child: Center(
-                              child: Text(day, style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
+                              child: Text(
+                                day, 
+                                style: TextStyle(
+                                  color: (day == 'SAT' || day == 'SUN') ? kGoldPrimary : Colors.grey, 
+                                  fontSize: 10, 
+                                  fontWeight: FontWeight.bold
+                                ),
+                              ),
                             ),
                           ))
                       .toList(),
@@ -3357,21 +3367,23 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 
+  // Grid แสดงผลแบบ 7 วันครบทั้งสัปดาห์
   Widget _buildDynamicGrid(Map<String, double> dataMap) {
+    // 1. โหมดสัปดาห์ (Week - 7 วัน)
     if (selectedTimeframe == 0) {
       DateTime start = _getStartOfWeek(currentDate);
-      List<DateTime> weekDays = List.generate(5, (i) => start.add(Duration(days: i)));
+      List<DateTime> weekDays = List.generate(7, (i) => start.add(Duration(days: i)));
 
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 5,
-          childAspectRatio: 0.9,
-          crossAxisSpacing: 6,
-          mainAxisSpacing: 6,
+          crossAxisCount: 7,
+          childAspectRatio: 0.8,
+          crossAxisSpacing: 4,
+          mainAxisSpacing: 4,
         ),
-        itemCount: 5,
+        itemCount: 7,
         itemBuilder: (context, index) {
           DateTime dayDate = weekDays[index];
           double? pnl = dataMap['${dayDate.day}'];
@@ -3379,32 +3391,33 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
         },
       );
     } 
+    // 2. โหมดเดือน (Month - ครบ 1-31 วัน รวมเสาร์-อาทิตย์)
     else if (selectedTimeframe == 1) {
       DateTime firstDayOfMonth = DateTime(currentDate.year, currentDate.month, 1);
       int daysInMonth = DateTime(currentDate.year, currentDate.month + 1, 0).day;
+      
+      // หาว่าวันที่ 1 ตรงกับวันอะไร (1=Mon, 2=Tue ... 7=Sun)
       int firstWeekday = firstDayOfMonth.weekday; 
 
       List<int?> gridItems = [];
-      int offset = (firstWeekday <= 5) ? (firstWeekday - 1) : 0; 
-      for (int i = 0; i < offset; i++) {
+      // เติมช่องว่างเปล่าก่อนถึงวันที่ 1
+      for (int i = 1; i < firstWeekday; i++) {
         gridItems.add(null);
       }
 
+      // ใส่วันที่ 1 ถึง 31 ครบทุกวันไม่มีเว้น
       for (int day = 1; day <= daysInMonth; day++) {
-        DateTime date = DateTime(currentDate.year, currentDate.month, day);
-        if (date.weekday != DateTime.saturday && date.weekday != DateTime.sunday) {
-          gridItems.add(day);
-        }
+        gridItems.add(day);
       }
 
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 5,
-          childAspectRatio: 0.9,
-          crossAxisSpacing: 6,
-          mainAxisSpacing: 6,
+          crossAxisCount: 7, // 7 คอลัมน์ต่อสัปดาห์
+          childAspectRatio: 0.8,
+          crossAxisSpacing: 4,
+          mainAxisSpacing: 4,
         ),
         itemCount: gridItems.length,
         itemBuilder: (context, index) {
@@ -3417,6 +3430,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
         },
       );
     } 
+    // 3. โหมดปี (Year)
     else {
       return GridView.builder(
         shrinkWrap: true,
@@ -3449,10 +3463,10 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
         border: Border.all(color: Colors.white10),
       ),
       child: Column(
@@ -3462,26 +3476,27 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
             label, 
             style: TextStyle(
               color: Colors.white, 
-              fontSize: isYearMode ? 12 : 10, 
+              fontSize: isYearMode ? 12 : 9, 
               fontWeight: FontWeight.bold
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           if (pnl != null)
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                '${pnl > 0 ? "+" : ""}\$${pnl.toStringAsFixed(2)}',
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                '${pnl > 0 ? "+" : ""}\$${pnl.toStringAsFixed(1)}',
+                style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
               ),
             )
           else
-            const Text('-', style: TextStyle(color: Colors.grey, fontSize: 10)),
+            const Text('-', style: TextStyle(color: Colors.grey, fontSize: 9)),
         ],
       ),
     );
   }
 }
+
 
 
 
