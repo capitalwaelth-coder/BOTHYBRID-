@@ -938,7 +938,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   List<Map<String, dynamic>> _botLogs = [];
   List<Map<dynamic, dynamic>> activeOrders = [];
 
-  final String _imageA = 'assets/images/0.jpg';
+  final String _imageA = 'assets/images/0.png';
   final String _imageB = 'assets/images/1.jpg';
   bool _showMorphImage = false;
 
