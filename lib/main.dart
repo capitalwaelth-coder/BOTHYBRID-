@@ -2271,10 +2271,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 }
 
-// ==========================================
-// สิ้นสุด MainNavigationScreen
-// ==========================================
-
 class ScannerClipper extends CustomClipper<Rect> {
   final double scanValue;
 
@@ -2289,6 +2285,12 @@ class ScannerClipper extends CustomClipper<Rect> {
       scanValue,
     );
   }
+
+  @override
+  bool shouldReclip(covariant ScannerClipper oldClipper) {
+    return oldClipper.scanValue != scanValue;
+  }
+}
 
 // ==========================================
 // #7 โหมด HomeScreen (GOLD PRO)
