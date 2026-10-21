@@ -907,10 +907,6 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
   }
 }
 
-
-
-
-
 // ==========================================
 // #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
 // ==========================================
@@ -950,14 +946,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   List<Map<String, dynamic>> _botLogs = [];
   List<Map<dynamic, dynamic>> activeOrders = [];
 
-  // กำหนดรายการรูปภาพทั้ง 3 รูป
   final List<String> _images = [
     'assets/images/2.png',
     'assets/images/4.png',
     'assets/images/6.png',
   ];
-  int _imageIndex = 0; // ตัวนับบอกลำดับรูปปัจจุบัน (0, 1, 2)
-  Timer? _imageTimer; // ตัวตั้งเวลาสลับรูปภาพ
+  int _imageIndex = 0; 
+  Timer? _imageTimer; 
 
   late final AnimationController _bounceController =
       AnimationController(
@@ -1002,7 +997,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       _listenToOrdersForDialog();
     });
 
-    // ตั้งเวลาสลับรูปภาพอัตโนมัติทุกๆ 3 วินาที
     _imageTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (mounted) {
         setState(() {
@@ -2124,10 +2118,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 }
 
-
-
-
-
 // ==========================================
 // #7 โหมด HomeScreen (GOLD PRO) - ดึงข้อมูลจริง
 // ==========================================
@@ -2172,6 +2162,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   late final AnimationController _titleGlowController = AnimationController(
     duration: const Duration(milliseconds: 1500),
+    vsync: this, // แก้ไขใส่ vsync: this ให้ถูกต้องแล้ว
   )..repeat(reverse: true);
 
   double realTimeBid = 0.0;
@@ -2369,7 +2360,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  // เรียกเปิด Trading Calendar พร้อมส่งข้อมูล _historyTrades จริงเข้าไป
   void _showTradingCalendarDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -2953,7 +2943,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 }
 
 // ==========================================
-// 🌟 กล่อง Trading Calendar คำนวณจากประวัติจริง
+// 🌟 กล่อง Trading Calendar ดึงข้อมูลจริงจาก History
 // ==========================================
 class TradingCalendarDialog extends StatefulWidget {
   final List<Map<dynamic, dynamic>> historyTrades;
@@ -2967,25 +2957,23 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
   int selectedTimeframe = 1; // 0: Week, 1: Month, 2: Year, 3: All time
   DateTime currentMonth = DateTime.now();
 
-  // ฟังก์ชันคำนวณกำไร/ขาดทุน รายวัน จากข้อมูลจริง
   Map<int, double> _getDailyPnLFromHistory() {
     Map<int, double> pnlMap = {};
 
     for (var trade in widget.historyTrades) {
       double profit = double.tryParse(trade['profit']?.toString() ?? '0.0') ?? 0.0;
-
-      // ตรวจสอบฟีลด์เวลาจากประวัติออเดอร์ (close_time หรือ timestamp)
       dynamic closeTimeRaw = trade['close_time'] ?? trade['timestamp'] ?? trade['time'];
+      
       if (closeTimeRaw != null) {
         DateTime? tradeDate;
         if (closeTimeRaw is int) {
           tradeDate = DateTime.fromMillisecondsSinceEpoch(closeTimeRaw);
         } else if (closeTimeRaw is String) {
-          tradeDate = DateTime.tryParse(closeTimeRaw);
+          String formatted = closeTimeRaw.replaceAll('.', '-').replaceAll('/', '-');
+          tradeDate = DateTime.tryParse(formatted);
         }
 
         if (tradeDate != null) {
-          // รวมกำไร/ขาดทุน เฉพาะออเดอร์ที่ปิดในเดือนและปีที่เลือก
           if (tradeDate.month == currentMonth.month && tradeDate.year == currentMonth.year) {
             int day = tradeDate.day;
             pnlMap[day] = (pnlMap[day] ?? 0.0) + profit;
@@ -2993,7 +2981,6 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
         }
       }
     }
-
     return pnlMap;
   }
 
@@ -3052,7 +3039,6 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
               _buildTimeframeSelector(),
               const SizedBox(height: 12),
 
-              // ตัวเลือกเดือน (สามารถเลื่อนเดือนย้อนหลัง/ถัดไปได้)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -3228,7 +3214,6 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     int daysInMonth = DateTime(currentMonth.year, currentMonth.month + 1, 0).day;
     List<int?> dayNumbers = [];
 
-    // สร้างลิสต์ของวันในเดือนโดยคัดวันเสาร์-อาทิตย์ออก
     for (int day = 1; day <= daysInMonth; day++) {
       DateTime date = DateTime(currentMonth.year, currentMonth.month, day);
       if (date.weekday != DateTime.saturday && date.weekday != DateTime.sunday) {
@@ -3283,8 +3268,6 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 }
-
-
 
 // ==========================================
 // #8 โหมดรายงานออเดอร์ (OrdersScreen)
@@ -4549,9 +4532,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _isEditing = false;
       });
 
-      // ==========================================
-      // 🌟 ป็อปอัปแจ้งเตือนเรืองแสงแบบ Luxury Neon
-      // ==========================================
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
