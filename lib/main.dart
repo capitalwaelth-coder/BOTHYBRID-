@@ -146,7 +146,7 @@ class LiquiditySweepApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'HYBRID PRO',
+      title: 'GOLD PRO',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: kDarkBg,
@@ -305,7 +305,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
           Image.asset(
             'assets/images/1792250396366.png',
             fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.65),
+            opacity: const AlwaysStoppedAnimation(0.45),
             errorBuilder: (context, error, stackTrace) => Container(color: kDarkBg),
           ),
           Container(
@@ -314,8 +314,8 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.3),
-                  Colors.black.withOpacity(0.75),
+                  Colors.black.withOpacity(0.4),
+                  Colors.black.withOpacity(0.85),
                 ],
               ),
             ),
@@ -344,16 +344,19 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(18),
-                          child: Image.asset(
-                            'assets/images/1792250396366.png',
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(color: Colors.black),
+                          child: Opacity(
+                            opacity: 0.9,
+                            child: Image.asset(
+                              'assets/images/1792250396366.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(color: Colors.black),
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 24),
                       const Text(
-                        'HYBRID PRO',
+                        'GOLD PRO',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 26,
@@ -683,7 +686,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
           Image.asset(
             'assets/images/1792250396366.png',
             fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.65),
+            opacity: const AlwaysStoppedAnimation(0.45),
             errorBuilder: (ctx, err, stack) => Container(color: kDarkBg),
           ),
           Container(
@@ -692,8 +695,8 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.3),
-                  Colors.black.withOpacity(0.8),
+                  Colors.black.withOpacity(0.4),
+                  Colors.black.withOpacity(0.85),
                 ],
               ),
             ),
@@ -718,22 +721,25 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(14),
-                        child: Image.asset(
-                          'assets/images/1792250396366.png',
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                          errorBuilder: (ctx, err, stack) => const Icon(
-                            Icons.smart_toy,
-                            color: kGoldPrimary,
-                            size: 80,
+                        child: Opacity(
+                          opacity: 0.9,
+                          child: Image.asset(
+                            'assets/images/1792250396366.png',
+                            width: 120,
+                            height: 120,
+                            fit: BoxFit.cover,
+                            errorBuilder: (ctx, err, stack) => const Icon(
+                              Icons.smart_toy,
+                              color: kGoldPrimary,
+                              size: 80,
+                            ),
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'HYBRID PRO',
+                      'GOLD PRO',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 22,
@@ -1527,14 +1533,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
         alignment: Alignment.center,
         children: [
           ClipOval(
-            child: Image.asset(
-              _showMorphImage ? _imageB : _imageA,
-              fit: BoxFit.cover,
-              width: 54,
-              height: 54,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(color: Colors.black);
-              },
+            child: Opacity(
+              opacity: 0.9,
+              child: Image.asset(
+                _showMorphImage ? _imageB : _imageA,
+                fit: BoxFit.cover,
+                width: 54,
+                height: 54,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(color: Colors.black);
+                },
+              ),
             ),
           ),
           Positioned(
@@ -1588,21 +1597,27 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                       return Stack(
                         fit: StackFit.expand,
                         children: [
-                          Image.asset(
-                            baseImage,
-                            fit: BoxFit.cover,
-                            alignment: Alignment.center,
-                            width: double.infinity,
-                            height: 150,
-                          ),
-                          ClipRect(
-                            clipper: ScannerClipper(scanValue),
+                          Opacity(
+                            opacity: 0.85,
                             child: Image.asset(
-                              morphImage,
+                              baseImage,
                               fit: BoxFit.cover,
                               alignment: Alignment.center,
                               width: double.infinity,
                               height: 150,
+                            ),
+                          ),
+                          ClipRect(
+                            clipper: ScannerClipper(scanValue),
+                            child: Opacity(
+                              opacity: 0.9,
+                              child: Image.asset(
+                                morphImage,
+                                fit: BoxFit.cover,
+                                alignment: Alignment.center,
+                                width: double.infinity,
+                                height: 150,
+                              ),
                             ),
                           ),
                           Positioned(
@@ -1826,7 +1841,7 @@ class ScannerClipper extends CustomClipper<Rect> {
 }
 
 // ==========================================
-// #7 โหมด HomeScreen (ลบ SNIPER ออกเหลือเฉพาะ HYBRID PRO)
+// #7 โหมด HomeScreen (GOLD PRO)
 // ==========================================
 
 class HomeScreen extends StatefulWidget {
@@ -2073,7 +2088,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           border: Border.all(color: kGoldPrimary, width: 2.0),
                           boxShadow: [
                             BoxShadow(
-                              color: kGoldPrimary.withOpacity(0.2),
+                              color: kGoldPrimary.withOpacity(0.25),
                               blurRadius: 20,
                               spreadRadius: 2,
                             ),
@@ -2081,12 +2096,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(18),
-                          child: Image.asset(
-                            'assets/images/1792250396366.png',
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(color: Colors.black);
-                            },
+                          child: Opacity(
+                            opacity: 0.9,
+                            child: Image.asset(
+                              'assets/images/1792250396366.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(color: Colors.black);
+                              },
+                            ),
                           ),
                         ),
                       ),
@@ -2108,7 +2126,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                       child: const Center(
                         child: Text(
-                          'HYBRID PRO',
+                          'GOLD PRO',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 22,
@@ -3850,7 +3868,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'PARAMETERS',
+                    'PARAMETERS BOT',
                     style: TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.8, fontFamily: 'monospace'),
                   ),
                   const SizedBox(height: 12),
