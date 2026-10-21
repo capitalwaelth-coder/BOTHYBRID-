@@ -2994,7 +2994,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     });
   }
 
-  void _showEditGoalDialog() {
+    void _showEditGoalDialog() {
     TextEditingController goalController = TextEditingController(
       text: monthlyGoal > 0 ? monthlyGoal.toStringAsFixed(2) : '',
     );
@@ -3008,7 +3008,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
           side: const BorderSide(color: Color(0xFFFFD700), width: 1.5),
         ),
         title: const Text(
-          'ตั้งเป้าหมายกำไร ($)',
+          'ตั้งเป้าหมายกำไร (\$)', // เติม \ หน้า $
           style: TextStyle(color: Color(0xFFFFD700), fontSize: 16, fontWeight: FontWeight.bold),
         ),
         content: TextField(
@@ -3016,7 +3016,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
           decoration: const InputDecoration(
-            hintText: 'กรอกจำนวนเงิน ($)',
+            hintText: 'กรอกจำนวนเงิน (\$)', // เติม \ หน้า $
             hintStyle: TextStyle(color: Colors.grey, fontSize: 13),
             enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFFFD700))),
             focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00E676), width: 2)),
@@ -3042,6 +3042,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
       ),
     );
   }
+
 
   DateTime? _parseTradeDate(dynamic rawTime) {
     if (rawTime == null) return null;
