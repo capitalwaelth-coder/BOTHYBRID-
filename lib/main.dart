@@ -948,8 +948,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   List<Map<String, dynamic>> _botLogs = [];
   List<Map<dynamic, dynamic>> activeOrders = [];
 
-  final String _imageA = 'assets/images/1792250396366.png';
-  final String _imageB = 'assets/images/1792250396366.png';
+  final String _imageA = 'assets/images/0.png';
+  final String _imageB = 'assets/images/1.jpg';
   bool _showMorphImage = false;
 
   late final AnimationController _bounceController =
@@ -1350,7 +1350,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           fit: StackFit.expand,
           children: [
             Image.asset(
-              'assets/images/1792250396366.png',
+              'assets/images/0.png',
               fit: BoxFit.cover,
               opacity: const AlwaysStoppedAnimation(0.25),
               errorBuilder: (context, error, stackTrace) {
