@@ -915,12 +915,6 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 // #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
 // ==========================================
 
-import 'dart:async';
-import 'package:flutter/material.h';
-import 'package:firebase_database/firebase_database.id'; // ปรับตาม package จริงของคุณ
-import 'package:firebase_core/firebase_core.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
