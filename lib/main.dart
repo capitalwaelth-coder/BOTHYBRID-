@@ -1,8 +1,8 @@
 // ==========================================
-// #1 โหมดการเชื่อมต่อเซิร์ฟเวอร์
+// #1 โหมดการเชื่อมต่อเซิร์ฟเวอร์ & ธีมสี
 // ==========================================
     
-import 'dart:async';  
+import 'dart0:async';  
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -227,7 +227,7 @@ class LiquiditySweepApp extends StatelessWidget {
 }
 
 // ==========================================
-// #4 โหมดการเข้าใช้งานครั้งแรก (MT5 Login Wrapper)
+// #4 โหมดการเข้าใช้งานครั้งแรก (MT5 Login Wrapper - ปรับให้เห็นรูปชัดเจน)
 // ==========================================
 
 class MT5LoginWrapper extends StatefulWidget {
@@ -347,13 +347,26 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
       body: Stack(
         fit: StackFit.expand,
         children: [
+          // รูปภาพพื้นหลัง (ปรับให้มองเห็นรูปชัดเจน)
           Image.asset(
             'assets/images/1792250396366.jpg',
             fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.25),
+            opacity: const AlwaysStoppedAnimation(0.65), // ปรับเพิ่มความสว่างให้เห็นรูปชัดเจน
             errorBuilder: (context, error, stackTrace) => Container(color: kDarkBg),
           ),
-          Container(color: Colors.black.withOpacity(0.7)),
+          // สาดสีดำจางๆ เพื่อให้อ่านตัวหนังสือออก
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.3),
+                  Colors.black.withOpacity(0.75),
+                ],
+              ),
+            ),
+          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
@@ -363,14 +376,14 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        width: 170,
-                        height: 170,
+                        width: 160,
+                        height: 160,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: kGoldPrimary, width: 2.0),
                           boxShadow: [
                             BoxShadow(
-                              color: kGoldPrimary.withOpacity(0.25),
+                              color: kGoldPrimary.withOpacity(0.3),
                               blurRadius: 16,
                               spreadRadius: 2,
                             ),
@@ -414,12 +427,12 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           hintText: 'Account Login (เช่น 53049695)',
-                          hintStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontStyle: FontStyle.italic, fontSize: 13),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: kGoldPrimary.withOpacity(0.5), width: 1.5)),
+                          hintStyle: TextStyle(color: Colors.white.withOpacity(0.5), fontStyle: FontStyle.italic, fontSize: 13),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: kGoldPrimary.withOpacity(0.6), width: 1.5)),
                           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: kGoldPrimary, width: 2.0)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
                           filled: true,
-                          fillColor: kDarkCard,
+                          fillColor: kDarkCard.withOpacity(0.85),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -429,12 +442,12 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           hintText: 'Investor Password',
-                          hintStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontStyle: FontStyle.italic, fontSize: 13),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: kGoldPrimary.withOpacity(0.5), width: 1.5)),
+                          hintStyle: TextStyle(color: Colors.white.withOpacity(0.5), fontStyle: FontStyle.italic, fontSize: 13),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: kGoldPrimary.withOpacity(0.6), width: 1.5)),
                           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: kGoldPrimary, width: 2.0)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
                           filled: true,
-                          fillColor: kDarkCard,
+                          fillColor: kDarkCard.withOpacity(0.85),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -454,7 +467,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _submitMT5Login,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: kDarkCard,
+                            backgroundColor: kDarkCard.withOpacity(0.9),
                             foregroundColor: kGoldPrimary,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
@@ -486,7 +499,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
 }
 
 // ==========================================
-// #5 PIN AUTH WRAPPER
+// #5 PIN AUTH WRAPPER (ปรับให้เห็นรูปพื้นหลังบอทชัดเจน)
 // ==========================================
 
 class PinAuthWrapper extends StatefulWidget {
@@ -714,14 +727,24 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
       body: Stack(
         fit: StackFit.expand,
         children: [
+          // รูปภาพพื้นหลัง (ปรับให้มองเห็นชัดเจน)
           Image.asset(
             'assets/images/1792250396366.jpg',
             fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.25),
+            opacity: const AlwaysStoppedAnimation(0.65),
             errorBuilder: (ctx, err, stack) => Container(color: kDarkBg),
           ),
           Container(
-            color: Colors.black.withOpacity(0.7),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.3),
+                  Colors.black.withOpacity(0.8),
+                ],
+              ),
+            ),
           ),
           SafeArea(
             child: Center(
@@ -734,6 +757,12 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: kGoldPrimary, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: kGoldPrimary.withOpacity(0.3),
+                            blurRadius: 12,
+                          ),
+                        ],
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(14),
@@ -775,7 +804,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                       titleText,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        color: Colors.white70,
+                        color: Colors.white,
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
@@ -852,7 +881,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
       margin: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: kDarkCard,
+        color: kDarkCard.withOpacity(0.85),
         border: Border.all(
           color: kGoldPrimary,
           width: 1.5,
@@ -3614,7 +3643,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
 }
 
 // ==========================================
-// #11 โหมดการตั้งค่าพารามิเตอร์ (SettingsScreen)
+// #11 โหมดการตั้งค่าพารามิเตอร์ (SettingsScreen - ปุ่มสีทึบเต็มกรอบ)
 // ==========================================
 
 class SettingsScreen extends StatefulWidget {
@@ -3817,6 +3846,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Color _getTradingModeBorderColor(String mode, bool isSelected) {
+    if (isSelected) return kRedNeon;
     if (mode == 'All Mode') return kRedNeon;
     if (mode == 'Liquidity') return const Color(0xFFE91E63);
     if (mode == 'Breakout') return const Color(0xFF00E5FF);
@@ -3824,7 +3854,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return kGoldPrimary.withOpacity(0.4);
   }
 
-  Color _getLotModeBorderColor(String mode) {
+  Color _getLotModeBorderColor(String mode, bool isSelected) {
+    if (isSelected) return kRedNeon;
     if (mode == 'Fixed') return const Color(0xFF00E5FF);
     if (mode == 'Step') return const Color(0xFF9C27B0);
     if (mode == 'Double') return const Color(0xFFFF9100);
@@ -3936,10 +3967,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 tradingMode = mode;
                               }),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: kDarkBg,
+                                backgroundColor: isSelected ? kRedNeon : kDarkBg,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                side: BorderSide(color: borderColor, width: 1.5),
+                                side: BorderSide(color: borderColor, width: isSelected ? 2.0 : 1.5),
                                 elevation: isSelected ? 4 : 0,
                                 padding: EdgeInsets.zero,
                               ),
@@ -3966,7 +3997,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Row(
                     children: lotModeOptions.map((mode) {
                       bool isSelected = lotMode == mode;
-                      Color borderColor = _getLotModeBorderColor(mode);
+                      Color borderColor = _getLotModeBorderColor(mode, isSelected);
                       return Expanded(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -3978,17 +4009,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 lotMode = mode;
                               }),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: (isSelected && mode == 'Fixed') ? const Color(0xFF00E5FF) : kDarkBg,
-                                foregroundColor: (isSelected && mode == 'Fixed') ? Colors.black : Colors.white,
+                                backgroundColor: isSelected ? kRedNeon : kDarkBg,
+                                foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                side: BorderSide(color: borderColor, width: 1.5),
+                                side: BorderSide(color: borderColor, width: isSelected ? 2.0 : 1.5),
                                 elevation: isSelected ? 4 : 0,
                                 padding: EdgeInsets.zero,
                               ),
                               child: Text(
                                 mode,
-                                style: TextStyle(
-                                  color: (isSelected && mode == 'Fixed') ? Colors.black : Colors.white,
+                                style: const TextStyle(
+                                  color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                   fontStyle: FontStyle.italic,
                                   fontSize: 12,
