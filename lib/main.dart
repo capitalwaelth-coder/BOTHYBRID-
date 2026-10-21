@@ -753,7 +753,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'ROBOT',
+                      'ROBOT TRADE',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.white70,
@@ -1390,7 +1390,7 @@ width: 100,
 alignment: OverlayAlignment.centerRight,
 enableDrag: true,
 overlayTitle: 'GOLD PRO',
-overlayContent: 'GOLD PRO Floating Robot',
+overlayContent: 'GOLD PRO Robot',
 visibility: NotificationVisibility.visibilityPublic,
 positionGravity: PositionGravity.auto,
 flag: OverlayFlag.defaultFlag,
@@ -1933,7 +1933,7 @@ overlayStarted = true;
                 heroTag: 'goldProOverlayButton',
                 backgroundColor: kGoldPrimary,
                 foregroundColor: Colors.black,
-                tooltip: 'เปิดบอลลูนโรบอทลอยทับแอปอื่น',
+                tooltip: 'เปิดบอลลูน',
                 onPressed: _isOverlayOpening
                     ? null
                     : _startFloatingOverlay,
@@ -5205,7 +5205,7 @@ class _GoldProFloatingBubbleState
                             ),
                             child: ClipOval(
                               child: Image.asset(
-                                "assets/images/1.jpg",
+                                "assets/images/0.jpg",
                                 width: 92,
                                 height: 92,
                                 fit: BoxFit.cover,
