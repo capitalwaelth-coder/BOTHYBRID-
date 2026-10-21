@@ -303,7 +303,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
         fit: StackFit.expand,
         children: [
           Image.asset(
-            'assets/images/1792250396366.png',
+            'assets/images/5.png',
             fit: BoxFit.cover,
             opacity: const AlwaysStoppedAnimation(0.25),
             errorBuilder: (context, error, stackTrace) => Container(color: kDarkBg),
@@ -347,7 +347,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                           child: Opacity(
                             opacity: 0.9,
                             child: Image.asset(
-                              'assets/images/1792250396366.png',
+                              'assets/images/5.png',
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) => Container(color: Colors.black),
                             ),
@@ -707,7 +707,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
         fit: StackFit.expand,
         children: [
           Image.asset(
-            'assets/images/1792250396366.png',
+            'assets/images/1.jpg',
             fit: BoxFit.cover,
             opacity: const AlwaysStoppedAnimation(0.25),
             errorBuilder: (ctx, err, stack) => Container(color: kDarkBg),
@@ -747,7 +747,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                         child: Opacity(
                           opacity: 0.9,
                           child: Image.asset(
-                            'assets/images/1792250396366.png',
+                            'assets/images/1.jpg',
                             width: 120,
                             height: 120,
                             fit: BoxFit.cover,
@@ -946,8 +946,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   List<Map<String, dynamic>> _botLogs = [];
   List<Map<dynamic, dynamic>> activeOrders = [];
 
-  final String _imageA = 'assets/images/0.png';
-  final String _imageB = 'assets/images/1.jpg';
+  final String _imageA = 'assets/images/2.png';
+  final String _imageB = 'assets/images/4.png';
   bool _showMorphImage = false;
 
   late final AnimationController _bounceController =
@@ -1771,7 +1771,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             child: Opacity(
               opacity: 0.9,
               child: Image.asset(
-                'assets/images/1792250396366.png',
+                'assets/images/3.png',
                 fit: BoxFit.cover,
                 width: 54,
                 height: 54,
@@ -2415,7 +2415,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               key: ValueKey<int>(_currentImageIndex),
                               opacity: 0.9,
                               child: Image.asset(
-                                'assets/images/1792250396366.png',
+                                'assets/images/0.png',
                                 width: double.infinity,
                                 height: double.infinity,
                                 fit: BoxFit.cover,
@@ -3103,7 +3103,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         fit: StackFit.expand,
         children: [
           Image.asset(
-            'assets/images/1792250396366.png',
+            'assets/images/0.png',
             fit: BoxFit.cover,
             opacity: const AlwaysStoppedAnimation(0.25),
             errorBuilder: (context, error, stackTrace) => Container(color: kDarkBg),
@@ -3551,7 +3551,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         fit: StackFit.expand,
         children: [
           Image.asset(
-            'assets/images/1792250396366.png',
+            'assets/images/0.png',
             fit: BoxFit.cover,
             opacity: const AlwaysStoppedAnimation(0.25),
             errorBuilder: (context, error, stackTrace) => Container(color: kDarkBg),
@@ -3926,7 +3926,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         fit: StackFit.expand,
         children: [
           Image.asset(
-            'assets/images/1792250396366.png',
+            'assets/images/0.png',
             fit: BoxFit.cover,
             opacity: const AlwaysStoppedAnimation(0.25),
             errorBuilder: (context, error, stackTrace) => Container(color: kDarkBg),
@@ -4394,7 +4394,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         fit: StackFit.expand,
         children: [
           Image.asset(
-            'assets/images/1792250396366.png',
+            'assets/images/0.png',
             fit: BoxFit.cover,
             opacity: const AlwaysStoppedAnimation(0.25),
             errorBuilder: (context, error, stackTrace) => Container(color: kDarkBg),
