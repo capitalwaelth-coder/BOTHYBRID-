@@ -1957,7 +1957,7 @@ overlayStarted = true;
     );
   }
 
-  // ==========================================
+   // ==========================================
   // วิดเจ็ตบอลลูนออเดอร์ภายในแดชบอร์ด
   // ==========================================
   Widget _buildSymbolBubbleWidget() {
@@ -2064,53 +2064,55 @@ overlayStarted = true;
                       final double scanValue =
                           _scannerAnimation.value * 150;
 
-                      
-return Stack(
-  fit: StackFit.expand,
-  children: [
-    // แสดงภาพปัจจุบันเต็มกรอบ
-    Image.asset(
-      scanImage,
-      key: ValueKey(scanImage),
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: 150,
-      errorBuilder: (context, error, stackTrace) {
-        debugPrint('GOLD PRO image error: $error');
-        return const ColoredBox(
-          color: Colors.black,
-          child: Center(
-            child: Icon(
-              Icons.broken_image,
-              color: Colors.amber,
-            ),
-          ),
-        );
-      },
-    ),
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // แสดงภาพปัจจุบันเต็มกรอบ
+                          Image.asset(
+                            scanImage,
+                            key: ValueKey(scanImage),
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: 150,
+                            errorBuilder: (context, error, stackTrace) {
+                              debugPrint('GOLD PRO image error: $error');
+                              return const ColoredBox(
+                                color: Colors.black,
+                                child: Center(
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    color: Colors.amber,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
 
-    // เส้นสแกนสีทอง
-    Positioned(
-      top: scanValue.clamp(0.0, 147.0),
-      left: 0,
-      right: 0,
-      child: Container(
-        height: 3,
-        decoration: const BoxDecoration(
-          color: kGoldPrimary,
-          boxShadow: [
-            BoxShadow(
-              color: kGoldPrimary,
-              blurRadius: 8,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-      ),
-    ),
-  ],
-);
-
+                          // เส้นสแกนสีทอง
+                          Positioned(
+                            top: scanValue.clamp(0.0, 147.0),
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              height: 3,
+                              decoration: const BoxDecoration(
+                                color: kGoldPrimary,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: kGoldPrimary,
+                                    blurRadius: 8,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: Column(
@@ -2236,6 +2238,7 @@ return Stack(
       ),
     );
   }
+
 
   // ==========================================
   // เมนูนำทางด้านล่าง
