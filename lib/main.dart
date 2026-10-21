@@ -1,8 +1,8 @@
 // ==========================================
 // #1 โหมดการเชื่อมต่อเซิร์ฟเวอร์ & ธีมสี
 // ==========================================
-    
-import 'dart0:async';  
+
+import 'dart:async';  
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -121,51 +121,6 @@ class _TypewriterTextState extends State<TypewriterText> {
   }
 }
 
-// Widget ข้อความกะพริบ SNIPER
-class FlashingSniperText extends StatefulWidget {
-  const FlashingSniperText({super.key});
-
-  @override
-  State<FlashingSniperText> createState() => _FlashingSniperTextState();
-}
-
-class _FlashingSniperTextState extends State<FlashingSniperText> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    )..repeat(reverse: true);
-    _animation = Tween<double>(begin: 0.3, end: 1.0).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _animation,
-      child: const Text(
-        'SNIPER',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: kGoldPrimary,
-          letterSpacing: 2.0,
-        ),
-      ),
-    );
-  }
-}
-
 // ==========================================
 // #3 โหมด LiquiditySweepApp
 // ==========================================
@@ -227,7 +182,7 @@ class LiquiditySweepApp extends StatelessWidget {
 }
 
 // ==========================================
-// #4 โหมดการเข้าใช้งานครั้งแรก (MT5 Login Wrapper - ปรับให้เห็นรูปชัดเจน)
+// #4 โหมดการเข้าใช้งานครั้งแรก (MT5 Login Wrapper)
 // ==========================================
 
 class MT5LoginWrapper extends StatefulWidget {
@@ -347,14 +302,12 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // รูปภาพพื้นหลัง (ปรับให้มองเห็นรูปชัดเจน)
           Image.asset(
-            'assets/images/1792250396366.jpg',
+            'assets/images/1792250396366.png',
             fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.65), // ปรับเพิ่มความสว่างให้เห็นรูปชัดเจน
+            opacity: const AlwaysStoppedAnimation(0.65),
             errorBuilder: (context, error, stackTrace) => Container(color: kDarkBg),
           ),
-          // สาดสีดำจางๆ เพื่อให้อ่านตัวหนังสือออก
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -392,7 +345,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(18),
                           child: Image.asset(
-                            'assets/images/1792250396366.jpg',
+                            'assets/images/1792250396366.png',
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) => Container(color: Colors.black),
                           ),
@@ -499,7 +452,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
 }
 
 // ==========================================
-// #5 PIN AUTH WRAPPER (ปรับให้เห็นรูปพื้นหลังบอทชัดเจน)
+// #5 PIN AUTH WRAPPER
 // ==========================================
 
 class PinAuthWrapper extends StatefulWidget {
@@ -727,9 +680,8 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // รูปภาพพื้นหลัง (ปรับให้มองเห็นชัดเจน)
           Image.asset(
-            'assets/images/1792250396366.jpg',
+            'assets/images/1792250396366.png',
             fit: BoxFit.cover,
             opacity: const AlwaysStoppedAnimation(0.65),
             errorBuilder: (ctx, err, stack) => Container(color: kDarkBg),
@@ -767,7 +719,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(14),
                         child: Image.asset(
-                          'assets/images/1792250396366.jpg',
+                          'assets/images/1792250396366.png',
                           width: 120,
                           height: 120,
                           fit: BoxFit.cover,
@@ -961,8 +913,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
   List<Map<String, dynamic>> _botLogs = [];
   List<Map<dynamic, dynamic>> activeOrders = [];
 
-  final String _imageA = 'assets/images/1792250396366.jpg';
-  final String _imageB = 'assets/images/1792250578954.jpg';
+  final String _imageA = 'assets/images/1792250396366.png';
+  final String _imageB = 'assets/images/1792250578954.png';
   bool _showMorphImage = false; 
 
   late final AnimationController _bounceController = AnimationController(
@@ -1874,7 +1826,7 @@ class ScannerClipper extends CustomClipper<Rect> {
 }
 
 // ==========================================
-// #7 โหมด HomeScreen
+// #7 โหมด HomeScreen (ลบ SNIPER ออกเหลือเฉพาะ HYBRID PRO)
 // ==========================================
 
 class HomeScreen extends StatefulWidget {
@@ -2130,7 +2082,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(18),
                           child: Image.asset(
-                            'assets/images/1792250396366.jpg',
+                            'assets/images/1792250396366.png',
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               return Container(color: Colors.black);
@@ -2141,7 +2093,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 16),
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                       decoration: BoxDecoration(
                         color: kDarkCard,
                         borderRadius: BorderRadius.circular(16),
@@ -2154,21 +2106,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                         ],
                       ),
-                      child: Column(
-                        children: const [
-                          FlashingSniperText(),
-                          SizedBox(height: 4),
-                          Text(
-                            'HYBRID PRO',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: kGoldPrimary,
-                              letterSpacing: 2.5,
-                            ),
+                      child: const Center(
+                        child: Text(
+                          'HYBRID PRO',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: kGoldPrimary,
+                            letterSpacing: 2.5,
                           ),
-                        ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -2639,7 +2587,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 }
 
 // ==========================================
-// #8 โหมดรายงานออเดอร์ (OrdersScreen - Gold Theme)
+// #8 โหมดรายงานออเดอร์ (OrdersScreen)
 // ==========================================
 
 class OrdersScreen extends StatefulWidget {
@@ -3643,7 +3591,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
 }
 
 // ==========================================
-// #11 โหมดการตั้งค่าพารามิเตอร์ (SettingsScreen - ปุ่มสีทึบเต็มกรอบ)
+// #11 โหมดการตั้งค่าพารามิเตอร์ (SettingsScreen)
 // ==========================================
 
 class SettingsScreen extends StatefulWidget {
@@ -3902,7 +3850,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'PARAMETERS BOT',
+                    'PARAMETERS',
                     style: TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.8, fontFamily: 'monospace'),
                   ),
                   const SizedBox(height: 12),
