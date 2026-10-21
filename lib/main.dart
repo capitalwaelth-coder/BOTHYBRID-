@@ -35,7 +35,7 @@ void main() async {
           appId: "1:155532929563:android:49d8a1e0040dc87ce766be",
           messagingSenderId: "155532929563",
           projectId: "liquidity-b8739",
-          storageBucket: "liquidity-b8739-firebasestorage.app",
+          storageBucket: "liquidity-b8739.firebasestorage.app",
           databaseURL: "https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app",
         ),
       );
@@ -242,7 +242,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
             appId: "1:155532929563:android:49d8a1e0040dc87ce766be",
             messagingSenderId: "155532929563",
             projectId: "liquidity-b8739",
-            storageBucket: "liquidity-b8739-firebasestorage.app",
+            storageBucket: "liquidity-b8739.firebasestorage.app",
             databaseURL: "https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app",
           ),
         );
@@ -914,10 +914,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   DatabaseReference? _ordersRef;
 
   Offset _orderBubbleOffset = const Offset(20, 100);
+  // พิกัดเริ่มต้นสำหรับบอลลูนโรบอทลอยได้ (มุมล่างขวา)
+  Offset _robotBubbleOffset = const Offset(320, 600);
+
   Offset _modalOffset = const Offset(16, 80);
 
   bool _isLiveStatusVisible = true;
   bool _isOrderBubblePressed = false;
+  bool _isRobotBubblePressed = false;
   bool _isLargeLogsModalOpen = false;
   bool isRunning = false;
   bool isConnected = false;
@@ -1008,14 +1012,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     if (state != AppLifecycleState.resumed) return;
     if (!_waitingForOverlayPermission) return;
 
-    // ถ้ากำลังรอผลจากหน้าขอสิทธิ์ ให้บันทึกไว้ก่อน
-    // แล้วตรวจสอบอีกครั้งหลังคำขอสิทธิ์เสร็จ
     if (_isOverlayOpening) {
       _overlayResumePending = true;
       return;
     }
 
-    // กลับเข้าแอปแล้ว แต่คำขอสิทธิ์ก่อนหน้าจบไปแล้ว
     _checkOverlayPermissionAndOpen();
   }
 
@@ -1361,7 +1362,6 @@ try {
 
     await FlutterOverlayWindow.requestPermission();  
 
-    // ตรวจสอบสิทธิ์ใหม่หลังกลับจากหน้าตั้งค่า Android  
     granted =  
         await FlutterOverlayWindow.isPermissionGranted() ?? false;  
   }  
@@ -1384,7 +1384,6 @@ try {
   _waitingForOverlayPermission = false;  
 
   await FlutterOverlayWindow.showOverlay(
-
 height: 100,
 width: 100,
 alignment: OverlayAlignment.centerRight,
@@ -1415,8 +1414,6 @@ overlayStarted = true;
       _isOverlayOpening = false;  
     });  
 
-    // ถ้ากลับจากหน้าสิทธิ์ระหว่างที่คำขอกำลังทำงาน  
-    // ให้ตรวจสิทธิ์ซ้ำหลังปลดล็อกการเปิด Overlay  
     final shouldCheckAgain =  
         _overlayResumePending && _waitingForOverlayPermission;  
 
@@ -1871,7 +1868,7 @@ overlayStarted = true;
               ),
 
             // ==========================================
-            // บอลลูนออเดอร์ภายในแอป
+            // บอลลูนออเดอร์ภายในแอป (ลากวางได้ + เด้งดึ๋งได้)
             // ==========================================
             Positioned(
               left: _orderBubbleOffset.dx,
@@ -1924,16 +1921,68 @@ overlayStarted = true;
             ),
 
             // ==========================================
-            // ปุ่มเปิดบอลลูนโรบอทลอยทับแอปอื่น
+            // บอลลูนโรบอทลอยได้ภายในแอป (ลากวางได้ + เด้งดึ๋งได้ + ควบคุมเปิด/ปิด Status & Logs)
             // ==========================================
             Positioned(
-              right: 16,
-              bottom: 82,
+              left: _robotBubbleOffset.dx,
+              top: _robotBubbleOffset.dy,
+              child: AnimatedBuilder(
+                animation: _bounceAnimation,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Offset(0, _bounceAnimation.value),
+                    child: child,
+                  );
+                },
+                child: Draggable(
+                  feedback: Material(
+                    color: Colors.transparent,
+                    child: _buildRobotBubbleWidget(),
+                  ),
+                  childWhenDragging: const SizedBox.shrink(),
+                  onDragEnd: (details) {
+                    setState(() {
+                      _robotBubbleOffset = details.offset;
+                    });
+                  },
+                  child: GestureDetector(
+                    onTapDown: (_) {
+                      setState(() {
+                        _isRobotBubblePressed = true;
+                      });
+                    },
+                    onTapUp: (_) {
+                      setState(() {
+                        _isRobotBubblePressed = false;
+                        _isLargeLogsModalOpen = !_isLargeLogsModalOpen;
+                      });
+                    },
+                    onTapCancel: () {
+                      setState(() {
+                        _isRobotBubblePressed = false;
+                      });
+                    },
+                    child: AnimatedScale(
+                      scale: _isRobotBubblePressed ? 0.85 : 1.0,
+                      duration: const Duration(milliseconds: 100),
+                      child: _buildRobotBubbleWidget(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ==========================================
+            // ปุ่มเปิดบอลลูนโรบอทลอยทับแอปอื่น (มุมบนซ้าย)
+            // ==========================================
+            Positioned(
+              left: 16,
+              top: 48,
               child: FloatingActionButton.small(
                 heroTag: 'goldProOverlayButton',
                 backgroundColor: kGoldPrimary,
                 foregroundColor: Colors.black,
-                tooltip: 'เปิดบอลลูน',
+                tooltip: 'เปิดปิดแอปลอยทับ',
                 onPressed: _isOverlayOpening
                     ? null
                     : _startFloatingOverlay,
@@ -2022,6 +2071,70 @@ overlayStarted = true;
   }
 
   // ==========================================
+  // วิดเจ็ตบอลลูนโรบอทลอยได้ (ควบคุมเปิด/ปิด Status & Logs)
+  // ==========================================
+  Widget _buildRobotBubbleWidget() {
+    final bool isServerActive = isConnected && isRunning;
+
+    return Container(
+      width: 58,
+      height: 58,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: kDarkCard,
+        border: Border.all(
+          color: kGoldPrimary,
+          width: 2.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isServerActive ? kGreenNeon : kRedNeon)
+                .withOpacity(0.6),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          ClipOval(
+            child: Opacity(
+              opacity: 0.9,
+              child: Image.asset(
+                'assets/images/1792250396366.png',
+                fit: BoxFit.cover,
+                width: 54,
+                height: 54,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(Icons.smart_toy, color: kGoldPrimary);
+                },
+              ),
+            ),
+          ),
+          Positioned(
+            right: -2,
+            top: -2,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: isServerActive ? kGreenNeon : kRedNeon,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.black,
+                  width: 2,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==========================================
   // กล่องรายงานสถานะ LIVE STATUS
   // ==========================================
   Widget _buildStatusReportBox(
@@ -2067,7 +2180,6 @@ overlayStarted = true;
                       return Stack(
                         fit: StackFit.expand,
                         children: [
-                          // แสดงภาพปัจจุบันเต็มกรอบ
                           Image.asset(
                             scanImage,
                             key: ValueKey(scanImage),
@@ -2087,8 +2199,6 @@ overlayStarted = true;
                               );
                             },
                           ),
-
-                          // เส้นสแกนสีทอง
                           Positioned(
                             top: scanValue.clamp(0.0, 147.0),
                             left: 0,
@@ -2759,7 +2869,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Center(
                   child: Container(
                     width: MediaQuery.of(context).size.width * 0.92,
-                    height: MediaQuery.of(context).size.height * 0.52, // ปรับลดความสูงกล่องลงตามต้องการ
+                    height: MediaQuery.of(context).size.height * 0.52,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: kGoldPrimary, width: 2.5),
@@ -2776,7 +2886,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0), // ปรับ Padding ให้แคบลง
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -2809,7 +2919,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         const Divider(color: kGoldPrimary, height: 1, thickness: 1.5),
                         Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.all(10.0), // กระชับพื้นที่ภายใน
+                            padding: const EdgeInsets.all(10.0),
                             child: _buildDashboardStatsContent(),
                           ),
                         ),
@@ -4522,7 +4632,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // 1. Trading Symbol Section
                       const Text('Trading Symbol', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
                       const SizedBox(height: 8),
                       Row(
@@ -4564,7 +4673,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // 2. Trading Mode Section
                       const Text('Trading Mode', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
                       const SizedBox(height: 8),
                       Row(
@@ -4606,7 +4714,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // 3. Lot Mode Section
                       const Text('Lot Mode', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
                       const SizedBox(height: 8),
                       Row(
@@ -4650,7 +4757,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(color: kGoldPrimary),
                       const SizedBox(height: 8),
 
-                      // 4. Daily Trend Filter & Timeframe Section
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -4724,7 +4830,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Input Fields
                       Row(
                         children: [
                           Expanded(child: _buildControllerInputField('Initial Lot', initialLotController, TextInputType.number)),
@@ -4783,7 +4888,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(color: kGoldPrimary),
                       const SizedBox(height: 12),
 
-                      // Basket Control
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -5017,7 +5121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 
 // ==========================================
-// #12 GOLD PRO Floating Robot Bubble (แก้ไข Error moveWindow แล้ว)
+// #12 GOLD PRO Floating Robot Bubble
 // ==========================================
 
 class GoldProFloatingBubble extends StatefulWidget {
@@ -5041,7 +5145,6 @@ class _GoldProFloatingBubbleState
 
   StreamSubscription<DatabaseEvent>? _connectionSubscription;
 
-  // แอนิเมชันลอยเด้งขึ้น-ลง
   late final AnimationController _bounceController = AnimationController(
     duration: const Duration(milliseconds: 1200),
     vsync: this,
@@ -5112,8 +5215,8 @@ class _GoldProFloatingBubbleState
   @override
   Widget build(BuildContext context) {
     final statusColor = _connected
-        ? const Color(0xFF00E676) // สีเขียวออนไลน์
-        : const Color(0xFFFF1744); // สีแดงออฟไลน์
+        ? const Color(0xFF00E676)
+        : const Color(0xFFFF1744);
 
     return Material(
       color: Colors.transparent,
@@ -5138,7 +5241,6 @@ class _GoldProFloatingBubbleState
                       alignment: Alignment.center,
                       clipBehavior: Clip.none,
                       children: [
-                        // วงกลมขนาดใหญ่จับถนัดนิ้ว พร้อมเปิดให้ระบบลากหน้าต่างทำงาน
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
@@ -5184,7 +5286,6 @@ class _GoldProFloatingBubbleState
                           ),
                         ),
 
-                        // จุดสถานะสีเขียว / สีแดง (มุมขวาบน ไม่บังรูปโรบอท)
                         Positioned(
                           right: 8,
                           top: 8,
@@ -5211,7 +5312,6 @@ class _GoldProFloatingBubbleState
                           ),
                         ),
 
-                        // ข้อมูลสถานะแสดงเมื่อแตะบอลลูน
                         if (_showInfo)
                           Positioned(
                             top: 98,
@@ -5234,8 +5334,8 @@ class _GoldProFloatingBubbleState
                                 maxLines: 1,
                                 style: TextStyle(
                                   color: statusColor,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
