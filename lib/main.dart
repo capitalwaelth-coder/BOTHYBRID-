@@ -1,7 +1,7 @@
 // ==========================================
 // #1 โหมดการเชื่อมต่อเซิร์ฟเวอร์ & ธีมสี
 // ==========================================
- 
+
 import 'dart:async';  
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -919,8 +919,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
   List<Map<String, dynamic>> _botLogs = [];
   List<Map<dynamic, dynamic>> activeOrders = [];
 
-  final String _imageA = 'assets/images/1792250396366.png';
-  final String _imageB = 'assets/images/1792250578954.png';
+  final String _imageA = 'assets/images/0.jpg';
+  final String _imageB = 'assets/images/1.jpg';
   bool _showMorphImage = false; 
 
   late final AnimationController _bounceController = AnimationController(
@@ -1208,12 +1208,29 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
     bool isTotalProfit = totalOrdersProfit >= 0;
 
     return Scaffold(
-      backgroundColor: kDarkBg,
+      backgroundColor: Colors.transparent, // ปรับให้โปร่งใสเพื่อให้เห็นภาพพื้นหลังด้านหลัง
       body: Stack(
         fit: StackFit.expand,
         children: [
+          // รูปภาพพื้นหลังโปร่งใส (Background Robot Image)
+          Image.asset(
+            'assets/images/1792250396366.png',
+            fit: BoxFit.cover,
+            opacity: const AlwaysStoppedAnimation(0.35), // ปรับความโปร่งใสของรูปพื้นหลังที่นี่
+            errorBuilder: (context, error, stackTrace) => Container(color: kDarkBg),
+          ),
+          // เลเยอร์ชาโดว์สีดำจางๆ เพื่อให้อ่านตัวหนังสือบนจอได้ง่ายขึ้น
           Container(
-            color: kDarkBg,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.5),
+                  Colors.black.withOpacity(0.85),
+                ],
+              ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.only(bottom: 65.0),
@@ -1231,7 +1248,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                 decoration: BoxDecoration(
-                  color: kDarkCard,
+                  color: kDarkCard.withOpacity(0.9), // ปรับให้แถบเมนูด้านล่างโปร่งแสงเล็กน้อย
                   border: Border(
                     top: BorderSide(color: kGoldPrimary.withOpacity(0.5), width: 1.5),
                   ),
@@ -1285,7 +1302,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                         spreadRadius: 2,
                       ),
                     ],
-                    color: kDarkCard,
+                    color: kDarkCard.withOpacity(0.95),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1754,7 +1771,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? kDarkCard : Colors.transparent,
+          color: isSelected ? kDarkCard.withOpacity(0.9) : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isSelected ? kGoldPrimary : Colors.transparent,
@@ -2067,11 +2084,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kDarkBg,
+      backgroundColor: Colors.transparent,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          Container(color: kDarkBg),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
@@ -2113,7 +2129,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                       decoration: BoxDecoration(
-                        color: kDarkCard,
+                        color: kDarkCard.withOpacity(0.85),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: kGoldPrimary, width: 1.5),
                         boxShadow: [
@@ -2143,7 +2159,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: kGoldPrimary, width: 1.2),
-                        color: Colors.black,
+                        color: Colors.black.withOpacity(0.8),
                       ),
                       child: const Text(
                         'Powered By Algohost',
@@ -2216,7 +2232,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           spreadRadius: 3,
                         ),
                       ],
-                      color: kDarkCard,
+                      color: kDarkCard.withOpacity(0.95),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2361,7 +2377,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: kDarkBg,
+              color: kDarkCard.withOpacity(0.9),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: kGoldPrimary, width: 1.5),
             ),
@@ -2381,7 +2397,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: kDarkCard,
+                    color: kDarkBg.withOpacity(0.8),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: kGoldPrimary.withOpacity(0.5), width: 1.0),
                   ),
@@ -2436,7 +2452,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: kDarkBg,
+        color: kDarkBg.withOpacity(0.8),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: color.withOpacity(0.6), width: 1.5),
       ),
@@ -2477,7 +2493,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: kGoldPrimary, width: 1.5),
-        color: kDarkCard,
+        color: kDarkCard.withOpacity(0.85),
         boxShadow: [
           BoxShadow(
             color: kGoldPrimary.withOpacity(0.15),
@@ -2489,7 +2505,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: kDarkBg,
+          color: kDarkBg.withOpacity(0.8),
           borderRadius: BorderRadius.circular(13),
         ),
         child: Column(
@@ -2512,7 +2528,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.black,
+                    color: Colors.black.withOpacity(0.8),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: kGoldPrimary, width: 1),
                   ),
@@ -2575,7 +2591,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             height: size,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: kDarkCard,
+              color: kDarkCard.withOpacity(0.9),
               border: Border.all(color: borderColor, width: 2.0),
               boxShadow: [
                 BoxShadow(
@@ -2717,7 +2733,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
-        color: kDarkBg,
+        color: kDarkBg.withOpacity(0.8),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kGoldPrimary.withOpacity(0.3), width: 1),
       ),
@@ -2756,10 +2772,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
     bool isTotalProfit = totalOrdersProfit >= 0;
 
     return Scaffold(
-      backgroundColor: kDarkBg,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Orders & Portfolio', style: TextStyle(fontFamily: 'monospace', color: kGoldPrimary, fontWeight: FontWeight.bold)),
-        backgroundColor: kDarkBg,
+        backgroundColor: kDarkBg.withOpacity(0.85),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -2770,7 +2786,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: kDarkCard,
+                color: kDarkCard.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: kGoldPrimary,
@@ -2803,7 +2819,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.black,
+                          color: Colors.black.withOpacity(0.8),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: kGoldPrimary, width: 1),
                         ),
@@ -2853,7 +2869,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   color: kGoldPrimary.withOpacity(0.8),
                   width: 1.5,
                 ),
-                color: kDarkCard,
+                color: kDarkCard.withOpacity(0.9),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(14.0),
@@ -2879,7 +2895,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: kDarkBg,
+                        color: kDarkBg.withOpacity(0.8),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isTotalProfit ? kGreenNeon : kRedNeon,
@@ -2945,7 +2961,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 margin: const EdgeInsets.only(bottom: 10),
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: kDarkBg,
+                                  color: kDarkBg.withOpacity(0.8),
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
                                     color: typeColor.withOpacity(0.6),
@@ -3182,10 +3198,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
     });
 
     return Scaffold(
-      backgroundColor: kDarkBg,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('History', style: TextStyle(fontFamily: 'monospace', color: kGoldPrimary, fontWeight: FontWeight.bold)),
-        backgroundColor: kDarkBg,
+        backgroundColor: kDarkBg.withOpacity(0.85),
       ),
       body: Column(
         children: [
@@ -3204,7 +3220,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     label: Text(filter, style: const TextStyle(fontFamily: 'monospace')),
                     selected: isSelected,
                     selectedColor: kGoldPrimary,
-                    backgroundColor: kDarkCard,
+                    backgroundColor: kDarkCard.withOpacity(0.9),
                     labelStyle: TextStyle(
                       color: isSelected ? Colors.black : Colors.white70,
                       fontWeight: FontWeight.bold,
@@ -3226,7 +3242,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: kDarkCard,
+              color: kDarkCard.withOpacity(0.9),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: kGoldPrimary,
@@ -3269,7 +3285,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: BoxDecoration(
-                color: kDarkCard,
+                color: kDarkCard.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: kGoldPrimary.withOpacity(0.5),
@@ -3304,7 +3320,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             margin: const EdgeInsets.only(bottom: 10),
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: kDarkBg,
+                              color: kDarkBg.withOpacity(0.8),
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                 color: (isBuy ? kGreenNeon : kRedNeon).withOpacity(0.4),
@@ -3526,10 +3542,10 @@ class _AlertsScreenState extends State<AlertsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kDarkBg,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Alerts & Notifications', style: TextStyle(fontFamily: 'monospace', color: kGoldPrimary, fontWeight: FontWeight.bold)),
-        backgroundColor: kDarkBg,
+        backgroundColor: kDarkBg.withOpacity(0.85),
         actions: [
           if (alertItems.isNotEmpty)
             IconButton(
@@ -3542,7 +3558,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
       body: Container(
         margin: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: kDarkCard,
+          color: kDarkCard.withOpacity(0.9),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: kGoldPrimary,
@@ -3567,7 +3583,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: kDarkBg,
+                        color: kDarkBg.withOpacity(0.8),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: kGoldPrimary.withOpacity(0.3),
@@ -3783,7 +3799,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
-            color: kDarkBg,
+            color: kDarkBg.withOpacity(0.8),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: kGoldPrimary.withOpacity(0.3), width: 1),
           ),
@@ -3835,10 +3851,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     double calculatedTP = sl * rr;
 
     return Scaffold(
-      backgroundColor: kDarkBg,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Settings Bot Parameters', style: TextStyle(fontFamily: 'monospace', color: kGoldPrimary, fontWeight: FontWeight.bold)),
-        backgroundColor: kDarkBg,
+        backgroundColor: kDarkBg.withOpacity(0.85),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -3850,7 +3866,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: kDarkCard,
+                color: kDarkCard.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: kGoldPrimary,
@@ -3891,7 +3907,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 selectedSymbol = sym;
                               }),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: isSelected ? kRedNeon : kDarkBg,
+                                backgroundColor: isSelected ? kRedNeon : kDarkBg.withOpacity(0.8),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 side: BorderSide(color: borderColor, width: isSelected ? 2.0 : 1.5),
@@ -3933,7 +3949,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 tradingMode = mode;
                               }),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: isSelected ? kRedNeon : kDarkBg,
+                                backgroundColor: isSelected ? kRedNeon : kDarkBg.withOpacity(0.8),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 side: BorderSide(color: borderColor, width: isSelected ? 2.0 : 1.5),
@@ -3975,7 +3991,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 lotMode = mode;
                               }),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: isSelected ? kRedNeon : kDarkBg,
+                                backgroundColor: isSelected ? kRedNeon : kDarkBg.withOpacity(0.8),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 side: BorderSide(color: borderColor, width: isSelected ? 2.0 : 1.5),
@@ -4005,7 +4021,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: kDarkBg,
+                      color: kDarkBg.withOpacity(0.8),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: kRedNeon, width: 1.5),
                     ),
@@ -4049,7 +4065,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 selectedTf = tf;
                               }),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: isSelected ? kRedNeon : Colors.black,
+                                backgroundColor: isSelected ? kRedNeon : Colors.black.withOpacity(0.8),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 side: const BorderSide(
@@ -4111,7 +4127,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         alignment: Alignment.center,
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
-                          color: kDarkBg,
+                          color: kDarkBg.withOpacity(0.8),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: kGoldPrimary.withOpacity(0.3), width: 1),
                         ),
@@ -4158,7 +4174,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: kDarkBg,
+                            color: kDarkBg.withOpacity(0.8),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.blueAccent, width: 1.5),
                           ),
@@ -4187,7 +4203,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: kDarkBg,
+                            color: kDarkBg.withOpacity(0.8),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: kRedNeon, width: 1.5),
                           ),
@@ -4222,7 +4238,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: kDarkBg,
+                            color: kDarkBg.withOpacity(0.8),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: kGreenNeon, width: 1.5),
                           ),
@@ -4251,7 +4267,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: kDarkBg,
+                            color: kDarkBg.withOpacity(0.8),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: kRedNeon, width: 1.5),
                           ),
@@ -4285,7 +4301,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: const Icon(Icons.save, color: kGoldPrimary),
                       label: const Text('SYNC & SAVE TO EA', style: TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: kDarkBg,
+                        backgroundColor: kDarkBg.withOpacity(0.8),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -4317,7 +4333,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: kDarkBg,
+                          backgroundColor: kDarkBg.withOpacity(0.8),
                           side: const BorderSide(color: kGoldPrimary, width: 1),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         ),
