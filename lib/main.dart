@@ -5018,7 +5018,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 // ==========================================
 // #12 GOLD PRO Floating Robot Bubble
-// วงกลมโรบอท + สถานะ Firebase + ลากย้ายได้
+// ขยายวงกลมให้ใหญ่ขึ้นจับถนัดนิ้ว + เด้งขึ้นลง + ลากย้ายได้อิสระ
 // ==========================================
 
 @pragma("vm:entry-point")
@@ -5070,11 +5070,28 @@ class GoldProFloatingBubble extends StatefulWidget {
 }
 
 class _GoldProFloatingBubbleState
-    extends State<GoldProFloatingBubble> {
+    extends State<GoldProFloatingBubble>
+    with SingleTickerProviderStateMixin {
   bool _connected = false;
   bool _showInfo = false;
 
   StreamSubscription<DatabaseEvent>? _connectionSubscription;
+
+  // แอนิเมชันลอยเด้งขึ้น-ลง
+  late final AnimationController _bounceController = AnimationController(
+    duration: const Duration(milliseconds: 1200),
+    vsync: this,
+  )..repeat(reverse: true);
+
+  late final Animation<double> _bounceAnimation = Tween<double>(
+    begin: -6.0,
+    end: 6.0,
+  ).animate(
+    CurvedAnimation(
+      parent: _bounceController,
+      curve: Curves.easeInOut,
+    ),
+  );
 
   @override
   void initState() {
@@ -5098,8 +5115,9 @@ class _GoldProFloatingBubbleState
         (event) {
           if (!mounted) return;
 
+          final val = event.snapshot.value;
           setState(() {
-            _connected = event.snapshot.value == true;
+            _connected = (val == true);
           });
         },
         onError: (Object error) {
@@ -5112,12 +5130,17 @@ class _GoldProFloatingBubbleState
       );
     } catch (e) {
       debugPrint("Overlay connection error: $e");
-      _connected = false;
+      if (mounted) {
+        setState(() {
+          _connected = false;
+        });
+      }
     }
   }
 
   @override
   void dispose() {
+    _bounceController.dispose();
     _connectionSubscription?.cancel();
     super.dispose();
   }
@@ -5125,124 +5148,143 @@ class _GoldProFloatingBubbleState
   @override
   Widget build(BuildContext context) {
     final statusColor = _connected
-        ? const Color(0xFF00E676)
-        : const Color(0xFFFF1744);
+        ? const Color(0xFF00E676) // สีเขียวออนไลน์
+        : const Color(0xFFFF1744); // สีแดงออฟไลน์
 
     return Material(
       color: Colors.transparent,
-      child: Align(
-        alignment: Alignment.center,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            setState(() {
-              _showInfo = !_showInfo;
-            });
-          },
-          child: SizedBox(
-            width: 96,
-            height: 96,
-            child: Stack(
-              alignment: Alignment.center,
-              clipBehavior: Clip.none,
-              children: [
-                // วงกลมสีดำ ขอบทอง
-                Container(
-                  width: 76,
-                  height: 76,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFF111111),
-                    border: Border.all(
-                      color: const Color(0xFFFFD700),
-                      width: 2.5,
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x66FFD700),
-                        blurRadius: 12,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      "assets/images/1.jpg",
-                      width: 76,
-                      height: 76,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Center(
-                          child: Icon(
-                            Icons.smart_toy,
-                            color: Color(0xFFFFD700),
-                            size: 42,
+      child: FlutterOverlayWindow.isPermissionGranted() == false
+          ? const SizedBox.shrink()
+          : SizedBox(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              child: Center(
+                child: AnimatedBuilder(
+                  animation: _bounceAnimation,
+                  builder: (context, child) {
+                    return Transform.translate(
+                      offset: Offset(0, _bounceAnimation.value),
+                      child: child,
+                    );
+                  },
+                  child: SizedBox(
+                    width: 110,
+                    height: 110,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      clipBehavior: Clip.none,
+                      children: [
+                        // วงกลมใหญ่ขึ้น ขอบทอง + ระบบลากวางอิสระและกดเต็มวงนิ้ว
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onPanUpdate: (details) async {
+                            await FlutterOverlayWindow.moveWindow(details.delta);
+                          },
+                          onTap: () {
+                            setState(() {
+                              _showInfo = !_showInfo;
+                            });
+                          },
+                          child: Container(
+                            width: 92, // ขยายขนาดวงกลมใหญ่ขึ้น (จากเดิม 76)
+                            height: 92,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF111111),
+                              border: Border.all(
+                                color: const Color(0xFFFFD700),
+                                width: 3.0,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x77FFD700),
+                                  blurRadius: 14,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: ClipOval(
+                              child: Image.asset(
+                                "assets/images/1.jpg",
+                                width: 92,
+                                height: 92,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Center(
+                                    child: Icon(
+                                      Icons.smart_toy,
+                                      color: Color(0xFFFFD700),
+                                      size: 50,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-                // จุดสถานะสีเขียว / สีแดง
-                Positioned(
-                  right: 3,
-                  bottom: 7,
-                  child: Container(
-                    width: 17,
-                    height: 17,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: statusColor,
-                      border: Border.all(
-                        color: const Color(0xFF111111),
-                        width: 2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: statusColor.withOpacity(0.65),
-                          blurRadius: 7,
-                          spreadRadius: 1,
                         ),
+
+                        // จุดสถานะสีเขียว / สีแดง (ขยับออกมุมขวาบนเล็กน้อย ไม่บังรูป)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: IgnorePointer(
+                            child: Container(
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: statusColor,
+                                border: Border.all(
+                                  color: const Color(0xFF111111),
+                                  width: 2.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: statusColor.withOpacity(0.7),
+                                    blurRadius: 6,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // ข้อมูลสถานะแสดงเมื่อแตะบอลลูน
+                        if (_showInfo)
+                          Positioned(
+                            top: 98,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF111111),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xFFFFD700),
+                                ),
+                              ),
+                              child: Text(
+                                _connected
+                                    ? "SERVER CONNECTED"
+                                    : "SERVER DISCONNECTED",
+                                maxLines: 1,
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
                 ),
-
-                // ข้อมูลสถานะแสดงเมื่อแตะบอลลูน
-                if (_showInfo)
-                  Positioned(
-                    top: 82,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF111111),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: const Color(0xFFFFD700),
-                        ),
-                      ),
-                      child: Text(
-                        _connected
-                            ? "SERVER CONNECTED"
-                            : "SERVER DISCONNECTED",
-                        maxLines: 1,
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }
