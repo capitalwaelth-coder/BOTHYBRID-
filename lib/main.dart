@@ -890,9 +890,9 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 
  
  // ==========================================
- // #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
- // GOLD PRO - ROBOT OVERLAY EDITION
- // ==========================================
+// #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
+// GOLD PRO - ROBOT OVERLAY EDITION
+// ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -903,7 +903,7 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   int _currentIndex = 2;
   String currentLogin = "235305975";
   int unreadAlertsCount = 0;
@@ -921,7 +921,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   bool _isLargeLogsModalOpen = false;
   bool isRunning = false;
   bool isConnected = false;
+
+  // สถานะการเปิดบอลลูน Overlay
   bool _isOverlayOpening = false;
+  bool _waitingForOverlayPermission = false;
+  bool _overlayResumePending = false;
 
   String symbol = "XAUUSD";
   String timeframe = "M1";
@@ -962,9 +966,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     ),
   );
 
+  // ==========================================
+  // เริ่มต้นหน้าจอ
+  // ==========================================
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
 
     _loadSavedLogin().then((_) {
       if (!mounted) return;
@@ -989,13 +998,56 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     });
   }
 
+  // ==========================================
+  // กลับจากหน้าตั้งค่าสิทธิ์ Android
+  // ==========================================
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (state != AppLifecycleState.resumed) return;
+    if (!_waitingForOverlayPermission) return;
+
+    // ถ้ากำลังรอผลจากหน้าขอสิทธิ์ ให้บันทึกไว้ก่อน
+    // แล้วตรวจสอบอีกครั้งหลังคำขอสิทธิ์เสร็จ
+    if (_isOverlayOpening) {
+      _overlayResumePending = true;
+      return;
+    }
+
+    // กลับเข้าแอปแล้ว แต่คำขอสิทธิ์ก่อนหน้าจบไปแล้ว
+    _checkOverlayPermissionAndOpen();
+  }
+
+  Future<void> _checkOverlayPermissionAndOpen() async {
+    if (!mounted || _isOverlayOpening) return;
+
+    try {
+      final granted =
+          await FlutterOverlayWindow.isPermissionGranted() ?? false;
+
+      if (!mounted) return;
+
+      if (granted) {
+        _waitingForOverlayPermission = false;
+        await _startFloatingOverlay();
+      }
+    } catch (e) {
+      debugPrint('GOLD PRO permission check error: $e');
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _bounceController.dispose();
     _scannerController.dispose();
     super.dispose();
   }
 
+  // ==========================================
+  // โหลดบัญชีที่บันทึกไว้
+  // ==========================================
   Future<void> _loadSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('mt5_login');
@@ -1007,6 +1059,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
+  // ==========================================
+  // ฟังบัญชีที่กำลังใช้งาน
+  // ==========================================
   void _listenToActiveAccount() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1037,6 +1092,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
+  // ==========================================
+  // ฟังจำนวนแจ้งเตือน
+  // ==========================================
   void _listenToAlertsCount() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1075,6 +1133,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
+  // ==========================================
+  // ฟังสถานะ EA
+  // ==========================================
   void _initFirebaseAndListen() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1086,13 +1147,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       _dbRef = database.ref('accounts/$currentLogin/status');
 
       _dbRef?.onValue.listen((DatabaseEvent event) {
-        final data =
-            event.snapshot.value as Map<dynamic, dynamic>?;
+        final rawData = event.snapshot.value;
 
-        if (data != null && mounted) {
+        if (rawData is Map && mounted) {
+          final data = Map<dynamic, dynamic>.from(rawData);
+
           setState(() {
-            isRunning = data['is_running'] ?? false;
-            profit = (data['profit'] ?? 0.0).toDouble();
+            isRunning = data['is_running'] == true;
+
+            final rawProfit = data['profit'];
+            profit = rawProfit is num
+                ? rawProfit.toDouble()
+                : double.tryParse(rawProfit?.toString() ?? '0') ?? 0.0;
+
             symbol = data['symbol']?.toString() ?? 'BTCUSD';
             timeframe = data['timeframe']?.toString() ?? 'M1';
           });
@@ -1103,6 +1170,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
+  // ==========================================
+  // ฟังสถานะการเชื่อมต่อ Firebase
+  // ==========================================
   void _listenToConnectionStatus() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1126,6 +1196,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
+  // ==========================================
+  // ฟัง Activity Logs
+  // ==========================================
   void _listenToLogs() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1139,64 +1212,61 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       _logsRef?.onValue.listen((DatabaseEvent event) {
         final data = event.snapshot.value;
 
-        if (mounted) {
-          List<Map<String, dynamic>> tempLogs = [];
+        if (!mounted) return;
 
-          if (data is Map) {
-            var sortedEntries = data.entries.toList()
-              ..sort(
-                (a, b) => b.key.toString().compareTo(
-                      a.key.toString(),
-                    ),
+        List<Map<String, dynamic>> tempLogs = [];
+
+        if (data is Map) {
+          final sortedEntries = data.entries.toList()
+            ..sort(
+              (a, b) => b.key.toString().compareTo(
+                    a.key.toString(),
+                  ),
+            );
+
+          for (final entry in sortedEntries) {
+            if (entry.value != null) {
+              final rawMsg = entry.value.toString();
+              final cleanMsg = rawMsg.replaceAll(
+                RegExp(r'command\s*', caseSensitive: false),
+                '',
               );
 
-            for (var entry in sortedEntries) {
-              if (entry.value != null) {
-                String rawMsg = entry.value.toString();
-                String cleanMsg = rawMsg.replaceAll(
-                  RegExp(
-                    r'command\s*',
-                    caseSensitive: false,
-                  ),
-                  '',
-                );
-
-                tempLogs.add({
-                  'key': entry.key.toString(),
-                  'message': cleanMsg,
-                });
-              }
-            }
-          } else if (data is List) {
-            for (int i = data.length - 1; i >= 0; i--) {
-              if (data[i] != null) {
-                String rawMsg = data[i].toString();
-                String cleanMsg = rawMsg.replaceAll(
-                  RegExp(
-                    r'command\s*',
-                    caseSensitive: false,
-                  ),
-                  '',
-                );
-
-                tempLogs.add({
-                  'key': i.toString(),
-                  'message': cleanMsg,
-                });
-              }
+              tempLogs.add({
+                'key': entry.key.toString(),
+                'message': cleanMsg,
+              });
             }
           }
+        } else if (data is List) {
+          for (int i = data.length - 1; i >= 0; i--) {
+            if (data[i] != null) {
+              final rawMsg = data[i].toString();
+              final cleanMsg = rawMsg.replaceAll(
+                RegExp(r'command\s*', caseSensitive: false),
+                '',
+              );
 
-          setState(() {
-            _botLogs = tempLogs;
-          });
+              tempLogs.add({
+                'key': i.toString(),
+                'message': cleanMsg,
+              });
+            }
+          }
         }
+
+        setState(() {
+          _botLogs = tempLogs;
+        });
       });
     } catch (e) {
       debugPrint("Logs listen error: $e");
     }
   }
 
+  // ==========================================
+  // ฟัง Orders
+  // ==========================================
   void _listenToOrdersForDialog() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1205,43 +1275,41 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
 
-      _ordersRef =
-          database.ref('accounts/$currentLogin/orders');
+      _ordersRef = database.ref('accounts/$currentLogin/orders');
 
       _ordersRef?.onValue.listen((DatabaseEvent event) {
         final data = event.snapshot.value;
 
-        if (mounted) {
-          List<Map<dynamic, dynamic>> newOrders = [];
+        if (!mounted) return;
 
-          if (data is Map) {
-            data.forEach((key, value) {
-              if (value is Map) {
-                newOrders.add(
-                  Map<dynamic, dynamic>.from(value),
-                );
-              }
-            });
-          } else if (data is List) {
-            for (var e in data) {
-              if (e is Map) {
-                newOrders.add(
-                  Map<dynamic, dynamic>.from(e),
-                );
-              }
+        List<Map<dynamic, dynamic>> newOrders = [];
+
+        if (data is Map) {
+          data.forEach((key, value) {
+            if (value is Map) {
+              newOrders.add(Map<dynamic, dynamic>.from(value));
+            }
+          });
+        } else if (data is List) {
+          for (final item in data) {
+            if (item is Map) {
+              newOrders.add(Map<dynamic, dynamic>.from(item));
             }
           }
-
-          setState(() {
-            activeOrders = newOrders;
-          });
         }
+
+        setState(() {
+          activeOrders = newOrders;
+        });
       });
     } catch (e) {
       debugPrint("Orders listen error: $e");
     }
   }
 
+  // ==========================================
+  // ลบ Log รายการเดียว
+  // ==========================================
   void _clearLogItem(String key) async {
     try {
       if (_logsRef != null) {
@@ -1252,6 +1320,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
+  // ==========================================
+  // ลบ Logs ทั้งหมด
+  // ==========================================
   void _clearAllLogs() async {
     try {
       if (_logsRef != null) {
@@ -1272,26 +1343,33 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   // เปิดบอลลูน GOLD PRO ลอยทับแอปอื่น
   // ==========================================
   Future<void> _startFloatingOverlay() async {
-    if (_isOverlayOpening) return;
+    if (_isOverlayOpening || !mounted) return;
 
     setState(() {
       _isOverlayOpening = true;
     });
 
+    bool overlayStarted = false;
+
     try {
       bool granted =
-          await FlutterOverlayWindow.isPermissionGranted() ??
-              false;
+          await FlutterOverlayWindow.isPermissionGranted() ?? false;
 
       if (!granted) {
-        final result =
-            await FlutterOverlayWindow.requestPermission();
+        _waitingForOverlayPermission = true;
+        _overlayResumePending = false;
 
-        granted = result == true;
+        await FlutterOverlayWindow.requestPermission();
+
+        // ตรวจสอบสิทธิ์ใหม่หลังกลับจากหน้าตั้งค่า Android
+        granted =
+            await FlutterOverlayWindow.isPermissionGranted() ?? false;
       }
 
+      if (!mounted) return;
+
       if (!granted) {
-        if (!mounted) return;
+        _waitingForOverlayPermission = true;
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1302,6 +1380,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         );
         return;
       }
+
+      _waitingForOverlayPermission = false;
 
       await FlutterOverlayWindow.showOverlay(
         height: 100,
@@ -1314,27 +1394,69 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         positionGravity: PositionGravity.auto,
         flag: OverlayFlag.defaultFlag,
       );
+
+      overlayStarted = true;
     } catch (e) {
       debugPrint('GOLD PRO overlay error: $e');
 
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'เปิดบอลลูนไม่ได้ กรุณาตรวจสอบสิทธิ์แอป',
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'เปิดบอลลูนไม่ได้ กรุณาตรวจสอบสิทธิ์แอป',
+            ),
           ),
-        ),
-      );
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
           _isOverlayOpening = false;
         });
+
+        // ถ้ากลับจากหน้าสิทธิ์ระหว่างที่คำขอกำลังทำงาน
+        // ให้ตรวจสิทธิ์ซ้ำหลังปลดล็อกการเปิด Overlay
+        final shouldCheckAgain =
+            _overlayResumePending && _waitingForOverlayPermission;
+
+        _overlayResumePending = false;
+
+        if (shouldCheckAgain && !overlayStarted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _checkOverlayPermissionAndOpen();
+            }
+          });
+        }
       }
     }
   }
 
+  // ==========================================
+  // ปุ่มย้อนกลับของ Android
+  // ปิด Logs ก่อน / กลับหน้า Home / ออกจากหน้าจอ
+  // ==========================================
+  Future<bool> _handleBackButton() async {
+    if (_isLargeLogsModalOpen) {
+      setState(() {
+        _isLargeLogsModalOpen = false;
+      });
+      return false;
+    }
+
+    if (_currentIndex != 2) {
+      setState(() {
+        _currentIndex = 2;
+      });
+      return false;
+    }
+
+    return true;
+  }
+
+  // ==========================================
+  // หน้าจอหลัก
+  // ==========================================
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
@@ -1345,6 +1467,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       AlertsScreen(
         accountLogin: currentLogin,
         onAlertsRead: () {
+          if (!mounted) return;
+
           setState(() {
             unreadAlertsCount = 0;
           });
@@ -1352,7 +1476,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       ),
     ];
 
-    double totalOrdersProfit = activeOrders.fold(
+    final double totalOrdersProfit = activeOrders.fold(
       0.0,
       (sum, item) {
         return sum +
@@ -1363,7 +1487,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       },
     );
 
-    double totalLots = activeOrders.fold(
+    final double totalLots = activeOrders.fold(
       0.0,
       (sum, item) {
         return sum +
@@ -1374,505 +1498,460 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       },
     );
 
-    bool isTotalProfit = totalOrdersProfit >= 0;
+    final bool isTotalProfit = totalOrdersProfit >= 0;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // พื้นหลังภาพโรบอท
-          Image.asset(
-            'assets/images/1792250396366.png',
-            fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.25),
-            errorBuilder: (context, error, stackTrace) {
-              return Container(color: kDarkBg);
-            },
-          ),
-
-          // เคลือบเงาดำ
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withOpacity(0.35),
-                  Colors.black.withOpacity(0.75),
-                ],
-              ),
+    return WillPopScope(
+      onWillPop: _handleBackButton,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            // ==========================================
+            // พื้นหลังภาพโรบอท
+            // ==========================================
+            Image.asset(
+              'assets/images/1792250396366.png',
+              fit: BoxFit.cover,
+              opacity: const AlwaysStoppedAnimation(0.25),
+              errorBuilder: (context, error, stackTrace) {
+                return Container(color: kDarkBg);
+              },
             ),
-          ),
 
-          Padding(
-            padding: const EdgeInsets.only(bottom: 65.0),
-            child: IndexedStack(
-              index: _currentIndex,
-              children: pages,
-            ),
-          ),
-
-          // ==========================================
-          // แถบเมนูด้านล่าง
-          // ==========================================
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SafeArea(
-              top: false,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 8,
-                  horizontal: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: kDarkCard.withOpacity(0.8),
-                  border: Border(
-                    top: BorderSide(
-                      color: kGoldPrimary.withOpacity(0.5),
-                      width: 1.5,
-                    ),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.8),
-                      blurRadius: 10,
-                      offset: const Offset(0, -5),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildCustomNavItem(
-                      0,
-                      Icons.tune,
-                      'Settings',
-                    ),
-                    _buildCustomNavItem(
-                      1,
-                      Icons.list_alt,
-                      'Orders',
-                    ),
-                    _buildCustomNavItem(
-                      2,
-                      Icons.home_filled,
-                      'Home',
-                    ),
-                    _buildCustomNavItem(
-                      3,
-                      Icons.history,
-                      'History',
-                    ),
-                    _buildCustomNavItem(
-                      4,
-                      Icons.notifications_active,
-                      'Alerts',
-                      badgeCount: unreadAlertsCount,
-                    ),
+            // ==========================================
+            // เคลือบเงาดำ
+            // ==========================================
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.35),
+                    Colors.black.withOpacity(0.75),
                   ],
                 ),
               ),
             ),
-          ),
 
-          // ==========================================
-          // หน้าต่าง STATUS & LOGS
-          // ==========================================
-          if (_isLargeLogsModalOpen)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 65.0),
+              child: IndexedStack(
+                index: _currentIndex,
+                children: pages,
+              ),
+            ),
+
+            // ==========================================
+            // แถบเมนูด้านล่าง
+            // ==========================================
             Positioned(
-              left: _modalOffset.dx,
-              top: _modalOffset.dy,
-              child: GestureDetector(
-                onPanUpdate: (details) {
-                  setState(() {
-                    _modalOffset += details.delta;
-                  });
-                },
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
                 child: Container(
-                  width:
-                      MediaQuery.of(context).size.width * 0.92,
-                  height:
-                      MediaQuery.of(context).size.height * 0.72,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 12,
+                  ),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: kGoldPrimary,
-                      width: 2.0,
+                    color: kDarkCard.withOpacity(0.8),
+                    border: Border(
+                      top: BorderSide(
+                        color: kGoldPrimary.withOpacity(0.5),
+                        width: 1.5,
+                      ),
                     ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.8),
-                        blurRadius: 20,
-                        spreadRadius: 2,
+                        blurRadius: 10,
+                        offset: const Offset(0, -5),
                       ),
                     ],
-                    color: kDarkCard.withOpacity(0.85),
                   ),
-                  child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14.0,
-                          vertical: 10.0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(
-                                  Icons.terminal,
-                                  color: kGoldPrimary,
-                                  size: 18,
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'STATUS & LOGS',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w900,
-                                    color: kGoldPrimary,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: Icon(
-                                    _isLiveStatusVisible
-                                        ? Icons.visibility
-                                        : Icons.visibility_off,
-                                    color: _isLiveStatusVisible
-                                        ? kGreenNeon
-                                        : Colors.grey,
-                                    size: 20,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _isLiveStatusVisible =
-                                          !_isLiveStatusVisible;
-                                    });
-                                  },
-                                  tooltip: _isLiveStatusVisible
-                                      ? 'Hide Live Status'
-                                      : 'Show Live Status',
-                                  constraints:
-                                      const BoxConstraints(),
-                                  padding:
-                                      const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                  ),
-                                ),
-                                if (_botLogs.isNotEmpty)
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_sweep,
-                                      color: kRedNeon,
-                                      size: 20,
-                                    ),
-                                    onPressed: _clearAllLogs,
-                                    tooltip: 'Clear All Logs',
-                                    constraints:
-                                        const BoxConstraints(),
-                                    padding:
-                                        const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                    ),
-                                  ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _isLargeLogsModalOpen =
-                                          false;
-                                    });
-                                  },
-                                  constraints:
-                                      const BoxConstraints(),
-                                  padding: EdgeInsets.zero,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                      _buildCustomNavItem(0, Icons.tune, 'Settings'),
+                      _buildCustomNavItem(1, Icons.list_alt, 'Orders'),
+                      _buildCustomNavItem(2, Icons.home_filled, 'Home'),
+                      _buildCustomNavItem(3, Icons.history, 'History'),
+                      _buildCustomNavItem(
+                        4,
+                        Icons.notifications_active,
+                        'Alerts',
+                        badgeCount: unreadAlertsCount,
                       ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
-                      const Divider(
+            // ==========================================
+            // หน้าต่าง STATUS & LOGS
+            // ==========================================
+            if (_isLargeLogsModalOpen)
+              Positioned(
+                left: _modalOffset.dx,
+                top: _modalOffset.dy,
+                child: GestureDetector(
+                  onPanUpdate: (details) {
+                    setState(() {
+                      _modalOffset += details.delta;
+                    });
+                  },
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.92,
+                    height: MediaQuery.of(context).size.height * 0.72,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
                         color: kGoldPrimary,
-                        height: 1,
-                        thickness: 1.5,
+                        width: 2.0,
                       ),
-
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.8),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                      color: kDarkCard.withOpacity(0.85),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14.0,
+                            vertical: 10.0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              if (_isLiveStatusVisible) ...[
-                                _buildStatusReportBox(
-                                  symbol,
-                                  timeframe,
-                                  totalOrdersProfit,
-                                  activeOrders.length,
-                                  totalLots,
-                                  isTotalProfit,
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-
                               const Row(
                                 children: [
                                   Icon(
-                                    Icons.show_chart,
+                                    Icons.terminal,
                                     color: kGoldPrimary,
-                                    size: 16,
+                                    size: 18,
                                   ),
-                                  SizedBox(width: 6),
+                                  SizedBox(width: 8),
                                   Text(
-                                    'ACTIVITY LOGS',
+                                    'STATUS & LOGS',
                                     style: TextStyle(
-                                      color: kGoldPrimary,
-                                      fontWeight: FontWeight.bold,
                                       fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      color: kGoldPrimary,
                                       letterSpacing: 1,
                                     ),
                                   ),
                                 ],
                               ),
-
-                              const SizedBox(height: 8),
-
-                              if (_botLogs.isEmpty)
-                                const Expanded(
-                                  child: Center(
-                                    child: Text(
-                                      'No log records...',
-                                      style: TextStyle(
-                                        color: Colors.grey,
-                                        fontFamily: 'monospace',
-                                      ),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: Icon(
+                                      _isLiveStatusVisible
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                      color: _isLiveStatusVisible
+                                          ? kGreenNeon
+                                          : Colors.grey,
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _isLiveStatusVisible =
+                                            !_isLiveStatusVisible;
+                                      });
+                                    },
+                                    tooltip: _isLiveStatusVisible
+                                        ? 'Hide Live Status'
+                                        : 'Show Live Status',
+                                    constraints: const BoxConstraints(),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
                                     ),
                                   ),
-                                )
-                              else
-                                Expanded(
-                                  child: ListView.builder(
-                                    itemCount: _botLogs.length,
-                                    itemBuilder:
-                                        (context, index) {
-                                      var log = _botLogs[index];
-                                      bool isLatest = index == 0;
-
-                                      return Padding(
-                                        padding:
-                                            const EdgeInsets.only(
-                                          bottom: 8.0,
-                                        ),
-                                        child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment
-                                                  .start,
-                                          children: [
-                                            Expanded(
-                                              child: isLatest
-                                                  ? Row(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        const Text(
-                                                          '➔ ',
-                                                          style:
-                                                              TextStyle(
-                                                            color:
-                                                                kGreenNeon,
-                                                            fontSize:
-                                                                13,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .bold,
-                                                          ),
-                                                        ),
-                                                        Expanded(
-                                                          child:
-                                                              TypewriterText(
-                                                            text:
-                                                                "${log['message']}",
-                                                            speed:
-                                                                const Duration(
-                                                              milliseconds:
-                                                                  65,
-                                                            ),
-                                                            style:
-                                                                const TextStyle(
-                                                              color:
-                                                                  kGreenNeon,
-                                                              fontFamily:
-                                                                  'monospace',
-                                                              fontSize:
-                                                                  13,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                              height:
-                                                                  1.4,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    )
-                                                  : Text(
-                                                      "> ${log['message']}",
-                                                      style:
-                                                          const TextStyle(
-                                                        color: Colors
-                                                            .white,
-                                                        fontFamily:
-                                                            'monospace',
-                                                        fontSize: 13,
-                                                        fontWeight:
-                                                            FontWeight
-                                                                .bold,
-                                                        height: 1.4,
-                                                      ),
-                                                    ),
-                                            ),
-                                            GestureDetector(
-                                              onTap: () =>
-                                                  _clearLogItem(
-                                                log['key'],
-                                              ),
-                                              child: const Padding(
-                                                padding:
-                                                    EdgeInsets.only(
-                                                  left: 8.0,
-                                                ),
-                                                child: Icon(
-                                                  Icons
-                                                      .delete_outline,
-                                                  color: kRedNeon,
-                                                  size: 15,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
+                                  if (_botLogs.isNotEmpty)
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete_sweep,
+                                        color: kRedNeon,
+                                        size: 20,
+                                      ),
+                                      onPressed: _clearAllLogs,
+                                      tooltip: 'Clear All Logs',
+                                      constraints: const BoxConstraints(),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                      ),
+                                    ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _isLargeLogsModalOpen = false;
+                                      });
                                     },
+                                    constraints: const BoxConstraints(),
+                                    padding: EdgeInsets.zero,
                                   ),
-                                ),
+                                ],
+                              ),
                             ],
                           ),
                         ),
-                      ),
-                    ],
+
+                        const Divider(
+                          color: kGoldPrimary,
+                          height: 1,
+                          thickness: 1.5,
+                        ),
+
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (_isLiveStatusVisible) ...[
+                                  _buildStatusReportBox(
+                                    symbol,
+                                    timeframe,
+                                    totalOrdersProfit,
+                                    activeOrders.length,
+                                    totalLots,
+                                    isTotalProfit,
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+
+                                const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.show_chart,
+                                      color: kGoldPrimary,
+                                      size: 16,
+                                    ),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'ACTIVITY LOGS',
+                                      style: TextStyle(
+                                        color: kGoldPrimary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                if (_botLogs.isEmpty)
+                                  const Expanded(
+                                    child: Center(
+                                      child: Text(
+                                        'No log records...',
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontFamily: 'monospace',
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Expanded(
+                                    child: ListView.builder(
+                                      itemCount: _botLogs.length,
+                                      itemBuilder: (context, index) {
+                                        final log = _botLogs[index];
+                                        final bool isLatest = index == 0;
+
+                                        return Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 8.0,
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Expanded(
+                                                child: isLatest
+                                                    ? Row(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          const Text(
+                                                            '➔ ',
+                                                            style: TextStyle(
+                                                              color: kGreenNeon,
+                                                              fontSize: 13,
+                                                              fontWeight:
+                                                                  FontWeight.bold,
+                                                            ),
+                                                          ),
+                                                          Expanded(
+                                                            child: TypewriterText(
+                                                              text:
+                                                                  '${log['message']}',
+                                                              speed:
+                                                                  const Duration(
+                                                                milliseconds: 65,
+                                                              ),
+                                                              style:
+                                                                  const TextStyle(
+                                                                color: kGreenNeon,
+                                                                fontFamily:
+                                                                    'monospace',
+                                                                fontSize: 13,
+                                                                fontWeight:
+                                                                    FontWeight.bold,
+                                                                height: 1.4,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      )
+                                                    : Text(
+                                                        "> ${log['message']}",
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontFamily: 'monospace',
+                                                          fontSize: 13,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          height: 1.4,
+                                                        ),
+                                                      ),
+                                              ),
+                                              GestureDetector(
+                                                onTap: () =>
+                                                    _clearLogItem(
+                                                  log['key'].toString(),
+                                                ),
+                                                child: const Padding(
+                                                  padding: EdgeInsets.only(
+                                                    left: 8.0,
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.delete_outline,
+                                                    color: kRedNeon,
+                                                    size: 15,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
 
-          // ==========================================
-          // บอลลูนออเดอร์ภายในแอป
-          // ==========================================
-          Positioned(
-            left: _orderBubbleOffset.dx,
-            top: _orderBubbleOffset.dy,
-            child: AnimatedBuilder(
-              animation: _bounceAnimation,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Offset(
-                    0,
-                    _bounceAnimation.value,
-                  ),
-                  child: child,
-                );
-              },
-              child: Draggable(
-                feedback: Material(
-                  color: Colors.transparent,
-                  child: _buildSymbolBubbleWidget(),
-                ),
-                childWhenDragging: Container(),
-                onDragEnd: (details) {
-                  setState(() {
-                    _orderBubbleOffset = details.offset;
-                  });
+            // ==========================================
+            // บอลลูนออเดอร์ภายในแอป
+            // ==========================================
+            Positioned(
+              left: _orderBubbleOffset.dx,
+              top: _orderBubbleOffset.dy,
+              child: AnimatedBuilder(
+                animation: _bounceAnimation,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Offset(0, _bounceAnimation.value),
+                    child: child,
+                  );
                 },
-                child: GestureDetector(
-                  onTapDown: (_) {
-                    setState(() {
-                      _isOrderBubblePressed = true;
-                    });
-                  },
-                  onTapUp: (_) {
-                    setState(() {
-                      _isOrderBubblePressed = false;
-                      _isLargeLogsModalOpen =
-                          !_isLargeLogsModalOpen;
-                    });
-                  },
-                  onTapCancel: () {
-                    setState(() {
-                      _isOrderBubblePressed = false;
-                    });
-                  },
-                  child: AnimatedScale(
-                    scale:
-                        _isOrderBubblePressed ? 0.85 : 1.0,
-                    duration:
-                        const Duration(milliseconds: 100),
+                child: Draggable(
+                  feedback: Material(
+                    color: Colors.transparent,
                     child: _buildSymbolBubbleWidget(),
                   ),
-                ),
-              ),
-            ),
-          ),
-
-          // ==========================================
-          // ปุ่มเปิดบอลลูนโรบอทลอยทับแอปอื่น
-          // ==========================================
-          Positioned(
-            right: 16,
-            bottom: 82,
-            child: FloatingActionButton.small(
-              heroTag: 'goldProOverlayButton',
-              backgroundColor: kGoldPrimary,
-              foregroundColor: Colors.black,
-              tooltip: 'เปิดบอลลูนโรบอทลอยทับแอปอื่น',
-              onPressed: _isOverlayOpening
-                  ? null
-                  : _startFloatingOverlay,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  'assets/images/1792250396366.png',
-                  width: 38,
-                  height: 38,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(Icons.smart_toy);
+                  childWhenDragging: const SizedBox.shrink(),
+                  onDragEnd: (details) {
+                    setState(() {
+                      _orderBubbleOffset = details.offset;
+                    });
                   },
+                  child: GestureDetector(
+                    onTapDown: (_) {
+                      setState(() {
+                        _isOrderBubblePressed = true;
+                      });
+                    },
+                    onTapUp: (_) {
+                      setState(() {
+                        _isOrderBubblePressed = false;
+                        _isLargeLogsModalOpen =
+                            !_isLargeLogsModalOpen;
+                      });
+                    },
+                    onTapCancel: () {
+                      setState(() {
+                        _isOrderBubblePressed = false;
+                      });
+                    },
+                    child: AnimatedScale(
+                      scale: _isOrderBubblePressed ? 0.85 : 1.0,
+                      duration: const Duration(milliseconds: 100),
+                      child: _buildSymbolBubbleWidget(),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+
+            // ==========================================
+            // ปุ่มเปิดบอลลูนโรบอทลอยทับแอปอื่น
+            // ==========================================
+            Positioned(
+              right: 16,
+              bottom: 82,
+              child: FloatingActionButton.small(
+                heroTag: 'goldProOverlayButton',
+                backgroundColor: kGoldPrimary,
+                foregroundColor: Colors.black,
+                tooltip: 'เปิดบอลลูนโรบอทลอยทับแอปอื่น',
+                onPressed: _isOverlayOpening
+                    ? null
+                    : _startFloatingOverlay,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'assets/images/1792250396366.png',
+                    width: 38,
+                    height: 38,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.smart_toy);
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1881,7 +1960,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   // วิดเจ็ตบอลลูนออเดอร์ภายในแดชบอร์ด
   // ==========================================
   Widget _buildSymbolBubbleWidget() {
-    bool isServerActive = isConnected && isRunning;
+    final bool isServerActive = isConnected && isRunning;
 
     return Container(
       width: 58,
@@ -1927,9 +2006,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               width: 14,
               height: 14,
               decoration: BoxDecoration(
-                color: isServerActive
-                    ? kGreenNeon
-                    : kRedNeon,
+                color: isServerActive ? kGreenNeon : kRedNeon,
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: Colors.black,
@@ -1954,9 +2031,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     double totalLots,
     bool isTotalProfit,
   ) {
-    bool isServerActive = isConnected && isRunning;
-    String baseImage = _showMorphImage ? _imageA : _imageB;
-    String morphImage = _showMorphImage ? _imageB : _imageA;
+    final bool isServerActive = isConnected && isRunning;
+    final String baseImage = _showMorphImage ? _imageA : _imageB;
+    final String morphImage = _showMorphImage ? _imageB : _imageA;
 
     return Container(
       width: double.infinity,
@@ -1984,7 +2061,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   child: AnimatedBuilder(
                     animation: _scannerAnimation,
                     builder: (context, child) {
-                      double scanValue =
+                      final double scanValue =
                           _scannerAnimation.value * 150;
 
                       return Stack(
@@ -1998,6 +2075,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                               alignment: Alignment.center,
                               width: double.infinity,
                               height: 150,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(color: Colors.black);
+                              },
                             ),
                           ),
                           ClipRect(
@@ -2010,6 +2090,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                 alignment: Alignment.center,
                                 width: double.infinity,
                                 height: 150,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(color: Colors.black);
+                                },
                               ),
                             ),
                           ),
@@ -2058,9 +2141,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                           width: 8,
                           height: 8,
                           decoration: BoxDecoration(
-                            color: isServerActive
-                                ? kGreenNeon
-                                : kRedNeon,
+                            color: isServerActive ? kGreenNeon : kRedNeon,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
@@ -2074,17 +2155,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          isServerActive
-                              ? 'EA SERVER ONLINE & RUNNING'
-                              : 'EA SERVER OFFLINE / STOPPED',
-                          style: TextStyle(
-                            color: isServerActive
-                                ? kGreenNeon
-                                : kRedNeon,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.8,
+                        Expanded(
+                          child: Text(
+                            isServerActive
+                                ? 'EA SERVER ONLINE & RUNNING'
+                                : 'EA SERVER OFFLINE / STOPPED',
+                            style: TextStyle(
+                              color:
+                                  isServerActive ? kGreenNeon : kRedNeon,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.8,
+                            ),
                           ),
                         ),
                       ],
@@ -2095,8 +2177,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                       height: 6,
                     ),
                     Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'Active Orders: $orderCount',
@@ -2113,14 +2194,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                             fontSize: 10,
                           ),
                         ),
-                        Text(
-                          'P/L: ${isTotalProfit ? "+" : ""}\$${totalOrdersProfit.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            color: isTotalProfit
-                                ? kGreenNeon
-                                : kRedNeon,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                        Flexible(
+                          child: Text(
+                            'P/L: ${isTotalProfit ? "+" : ""}\$${totalOrdersProfit.toStringAsFixed(2)}',
+                            textAlign: TextAlign.end,
+                            style: TextStyle(
+                              color: isTotalProfit
+                                  ? kGreenNeon
+                                  : kRedNeon,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -2171,7 +2255,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     String label, {
     int badgeCount = 0,
   }) {
-    bool isSelected = _currentIndex == index;
+    final bool isSelected = _currentIndex == index;
 
     return GestureDetector(
       onTap: () {
@@ -2195,9 +2279,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected
-                ? kGoldPrimary
-                : Colors.transparent,
+            color: isSelected ? kGoldPrimary : Colors.transparent,
             width: isSelected ? 1.5 : 0,
           ),
           boxShadow: isSelected
@@ -2218,9 +2300,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               children: [
                 Icon(
                   icon,
-                  color: isSelected
-                      ? kGoldPrimary
-                      : Colors.white70,
+                  color: isSelected ? kGoldPrimary : Colors.white70,
                   size: 22,
                 ),
                 if (badgeCount > 0)
@@ -2254,13 +2334,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             Text(
               label,
               style: TextStyle(
-                color: isSelected
-                    ? kGoldPrimary
-                    : Colors.white70,
+                color: isSelected ? kGoldPrimary : Colors.white70,
                 fontSize: 10,
-                fontWeight: isSelected
-                    ? FontWeight.bold
-                    : FontWeight.normal,
+                fontWeight:
+                    isSelected ? FontWeight.bold : FontWeight.normal,
                 fontFamily: 'monospace',
               ),
             ),
@@ -2271,6 +2348,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 }
 
+// ==========================================
+// ตัวตัดภาพสำหรับเอฟเฟกต์สแกน
+// ==========================================
 class ScannerClipper extends CustomClipper<Rect> {
   final double scanValue;
 
@@ -2282,7 +2362,7 @@ class ScannerClipper extends CustomClipper<Rect> {
       0,
       0,
       size.width,
-      scanValue,
+      scanValue.clamp(0.0, size.height),
     );
   }
 
@@ -2291,6 +2371,8 @@ class ScannerClipper extends CustomClipper<Rect> {
     return oldClipper.scanValue != scanValue;
   }
 }
+
+
 
 // ==========================================
 // #7 โหมด HomeScreen (GOLD PRO) - Dual Image Scanner
