@@ -888,8 +888,10 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 
+ 
  // ==========================================
  // #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
+ // GOLD PRO - ROBOT OVERLAY EDITION
  // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -919,6 +921,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   bool _isLargeLogsModalOpen = false;
   bool isRunning = false;
   bool isConnected = false;
+  bool _isOverlayOpening = false;
 
   String symbol = "XAUUSD";
   String timeframe = "M1";
@@ -927,8 +930,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   List<Map<String, dynamic>> _botLogs = [];
   List<Map<dynamic, dynamic>> activeOrders = [];
 
-  final String _imageA = 'assets/images/1792250396366.png';
-  final String _imageB = 'assets/images/1792250578954.png';
+  final String _imageA = 'assets/images/0.jpg';
+  final String _imageB = 'assets/images/1.jpg';
   bool _showMorphImage = false;
 
   late final AnimationController _bounceController =
@@ -1269,8 +1272,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   // เปิดบอลลูน GOLD PRO ลอยทับแอปอื่น
   // ==========================================
   Future<void> _startFloatingOverlay() async {
+    if (_isOverlayOpening) return;
+
+    setState(() {
+      _isOverlayOpening = true;
+    });
+
     try {
-      final bool granted =
+      bool granted =
           await FlutterOverlayWindow.isPermissionGranted() ??
               false;
 
@@ -1278,27 +1287,29 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         final result =
             await FlutterOverlayWindow.requestPermission();
 
-        if (result != true) {
-          if (!mounted) return;
+        granted = result == true;
+      }
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'กรุณาอนุญาตให้ GOLD PRO แสดงทับแอปอื่น',
-              ),
+      if (!granted) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'กรุณาอนุญาต GOLD PRO ให้แสดงทับแอปอื่น',
             ),
-          );
-          return;
-        }
+          ),
+        );
+        return;
       }
 
       await FlutterOverlayWindow.showOverlay(
-        height: 80,
-        width: 80,
+        height: 100,
+        width: 100,
         alignment: OverlayAlignment.centerRight,
         enableDrag: true,
         overlayTitle: 'GOLD PRO',
-        overlayContent: 'GOLD PRO Floating Bubble',
+        overlayContent: 'Robot v.4',
         visibility: NotificationVisibility.visibilityPublic,
         positionGravity: PositionGravity.auto,
         flag: OverlayFlag.defaultFlag,
@@ -1311,10 +1322,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'เปิดบอลลูนไม่สำเร็จ กรุณาตรวจสอบสิทธิ์',
+            'เปิดบอลลูนไม่ได้ กรุณาตรวจสอบสิทธิ์แอป',
           ),
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isOverlayOpening = false;
+        });
+      }
     }
   }
 
@@ -1364,7 +1381,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // พื้นหลังภาพโรบอทโปร่งแสงทั่วแอป
+          // พื้นหลังภาพโรบอท
           Image.asset(
             'assets/images/1792250396366.png',
             fit: BoxFit.cover,
@@ -1374,7 +1391,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             },
           ),
 
-          // เคลือบเงาดำจางๆ เพื่อความคมชัดของข้อความ
+          // เคลือบเงาดำ
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -1770,7 +1787,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             ),
 
           // ==========================================
-          // บอลลูนออเดอร์และหน้าต่าง STATUS & LOGS
+          // บอลลูนออเดอร์ภายในแอป
           // ==========================================
           Positioned(
             left: _orderBubbleOffset.dx,
@@ -1828,8 +1845,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           ),
 
           // ==========================================
-          // ปุ่มเปิดบอลลูน GOLD PRO ลอยทับแอปอื่น
-          // อยู่ใน Stack เดียวกับบอลลูนออเดอร์
+          // ปุ่มเปิดบอลลูนโรบอทลอยทับแอปอื่น
           // ==========================================
           Positioned(
             right: 16,
@@ -1838,10 +1854,21 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               heroTag: 'goldProOverlayButton',
               backgroundColor: kGoldPrimary,
               foregroundColor: Colors.black,
-              tooltip: 'เปิดบอลลูนลอยทับแอปอื่น',
-              onPressed: _startFloatingOverlay,
-              child: const Icon(
-                Icons.picture_in_picture_alt,
+              tooltip: 'เปิดบอลลูนโรบอทลอยทับแอปอื่น',
+              onPressed: _isOverlayOpening
+                  ? null
+                  : _startFloatingOverlay,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  'assets/images/1792250396366.png',
+                  width: 38,
+                  height: 38,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(Icons.smart_toy);
+                  },
+                ),
               ),
             ),
           ),
@@ -1851,7 +1878,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 
   // ==========================================
-  // วิดเจ็ตบอลลูนออเดอร์
+  // วิดเจ็ตบอลลูนออเดอร์ภายในแดชบอร์ด
   // ==========================================
   Widget _buildSymbolBubbleWidget() {
     bool isServerActive = isConnected && isRunning;
@@ -2244,6 +2271,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 }
 
+// ==========================================
+// สิ้นสุด MainNavigationScreen
+// ==========================================
+
 class ScannerClipper extends CustomClipper<Rect> {
   final double scanValue;
 
@@ -2258,12 +2289,6 @@ class ScannerClipper extends CustomClipper<Rect> {
       scanValue,
     );
   }
-
-  @override
-  bool shouldReclip(covariant ScannerClipper oldClipper) {
-    return oldClipper.scanValue != scanValue;
-  }
-}
 
 // ==========================================
 // #7 โหมด HomeScreen (GOLD PRO)
@@ -2304,6 +2329,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     vsync: this,
   )..repeat(reverse: true);
 
+  // เพิ่ม AnimationController สำหรับเอฟเฟกต์ชื่อบอท (GOLD PRO)
+  late final AnimationController _titleGlowController = AnimationController(
+    duration: const Duration(milliseconds: 1500),
+    vsync: this,
+  )..repeat(reverse: true);
+
   double realTimeBid = 0.0;
   double realTimeAsk = 0.0;
 
@@ -2331,6 +2362,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _scannerController.dispose();
+    _titleGlowController.dispose(); // Dispose แอนิเมชันชื่อบอท
     super.dispose();
   }
 
@@ -2533,34 +2565,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: kDarkCard.withOpacity(0.8),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: kGoldPrimary, width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.6),
-                            blurRadius: 10.0,
-                            spreadRadius: 1.0,
+                    const SizedBox(height: 20),
+                    
+                    // 1, 2 & 3: ลบกรอบทิ้ง, เพิ่มขนาดฟอนต์ และใส่เอฟเฟกต์เคลื่อนไหวเรืองแสงให้กับชื่อ GOLD PRO
+                    AnimatedBuilder(
+                      animation: _titleGlowController,
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: 1.0 + (_titleGlowController.value * 0.05), // ขยายเข้าออกเบาๆ
+                          child: Text(
+                            'GOLD PRO',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 28, // ขยายฟอนต์ให้ใหญ่ขึ้นจากเดิม
+                              fontWeight: FontWeight.w900,
+                              color: kGoldPrimary,
+                              letterSpacing: 3.0,
+                              shadows: [
+                                BoxShadow(
+                                  color: kGoldPrimary.withOpacity(0.4 + (_titleGlowController.value * 0.5)),
+                                  blurRadius: 10 + (_titleGlowController.value * 10),
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'GOLD PRO',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: kGoldPrimary,
-                            letterSpacing: 2.5,
-                          ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
+
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -2585,14 +2618,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           onPressed: _closeAllOrders,
                         ),
                         const SizedBox(width: 20),
+                        
+                        // 5: ปุ่ม STOP เปลี่ยนสีและเรืองแสงสีแดงเรืองแสงรอบกรอบวงกลมเมื่อบอททำงานอยู่ (isRunning == true)
                         _buildCircularButton(
                           label: isRunning ? 'STOP' : 'START',
                           icon: isRunning ? Icons.stop : Icons.play_arrow,
-                          borderColor: isRunning ? kGreenNeon : kGoldPrimary,
-                          glowColor: isRunning ? kGreenNeon : kGoldPrimary,
+                          borderColor: isRunning ? kRedNeon : kGoldPrimary, // เปลี่ยนขอบเป็นสีแดงเมื่อรันอยู่
+                          glowColor: isRunning ? kRedNeon : kGoldPrimary, // เรืองแสงสีแดงรอบวงกลม
                           onPressed: () => _toggleBotStatus(!isRunning),
                           isLarge: true,
                         ),
+                        
                         const SizedBox(width: 18),
                         _buildCircularButton(
                           label: 'STATS', 
@@ -2955,9 +2991,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     const Text('BID', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
                     const SizedBox(height: 6),
+                    // 4: เปลี่ยน Bid เป็นสีแดงนีออน (kRedNeon)
                     Text(
                       realTimeBid > 0 ? realTimeBid.toStringAsFixed(2) : '81390.48',
-                      style: const TextStyle(color: kGoldPrimary, fontSize: 18, fontFamily: 'monospace', fontWeight: FontWeight.w900),
+                      style: const TextStyle(color: kRedNeon, fontSize: 18, fontFamily: 'monospace', fontWeight: FontWeight.w900),
                     ),
                   ],
                 ),
@@ -2966,9 +3003,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     const Text('ASK', style: TextStyle(color: kGoldPrimary, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
                     const SizedBox(height: 6),
+                    // 4: เปลี่ยน Ask เป็นสีเขียวนีออน (kGreenNeon)
                     Text(
                       realTimeAsk > 0 ? realTimeAsk.toStringAsFixed(2) : '81395.48',
-                      style: const TextStyle(color: kGoldPrimary, fontSize: 18, fontFamily: 'monospace', fontWeight: FontWeight.w900),
+                      style: const TextStyle(color: kGreenNeon, fontSize: 18, fontFamily: 'monospace', fontWeight: FontWeight.w900),
                     ),
                   ],
                 ),
@@ -3003,19 +3041,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               border: Border.all(color: borderColor, width: 2.0),
               boxShadow: [
                 BoxShadow(
-                  color: (glowColor ?? borderColor).withOpacity(0.4),
-                  blurRadius: 10,
-                  spreadRadius: 1,
+                  color: (glowColor ?? borderColor).withOpacity(0.6),
+                  blurRadius: isLarge && isRunning ? 16 : 10, // เพิ่มรัศมีการเรืองแสงให้ปุ่ม Stop เมื่อทำงาน
+                  spreadRadius: isLarge && isRunning ? 3 : 1,
                 ),
               ],
             ),
-            child: Icon(icon, color: kGoldPrimary, size: isLarge ? 34 : 28),
+            // เปลี่ยนสีไอคอนข้างในปุ่ม Stop ให้เป็นสีแดงตามสถานะด้วยเพื่อให้เข้ากัน
+            child: Icon(icon, color: isLarge && isRunning ? kRedNeon : kGoldPrimary, size: isLarge ? 34 : 28),
           ),
           const SizedBox(height: 6),
           Text(
             label,
-            style: const TextStyle(
-              color: kGoldPrimary,
+            style: TextStyle(
+              color: isLarge && isRunning ? kRedNeon : kGoldPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 11,
               letterSpacing: 0.5,
@@ -3027,6 +3066,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 }
+
+
+
 
 // ==========================================
 // #8 โหมดรายงานออเดอร์ (OrdersScreen)
