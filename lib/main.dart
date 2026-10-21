@@ -2033,8 +2033,7 @@ overlayStarted = true;
     bool isTotalProfit,
   ) {
     final bool isServerActive = isConnected && isRunning;
-    final String baseImage = _showMorphImage ? _imageA : _imageB;
-    final String morphImage = _showMorphImage ? _imageB : _imageA;
+    final String scanImage = _showMorphImage ? _imageB : _imageA;
 
     return Container(
       width: double.infinity,
@@ -2065,62 +2064,53 @@ overlayStarted = true;
                       final double scanValue =
                           _scannerAnimation.value * 150;
 
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Opacity(
-                            opacity: 0.85,
-                            child: Image.asset(
-                              baseImage,
-                              fit: BoxFit.cover,
-                              alignment: Alignment.center,
-                              width: double.infinity,
-                              height: 150,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(color: Colors.black);
-                              },
-                            ),
-                          ),
-                          ClipRect(
-                            clipper: ScannerClipper(scanValue),
-                            child: Opacity(
-                              opacity: 0.9,
-                              child: Image.asset(
-                                morphImage,
-                                fit: BoxFit.cover,
-                                alignment: Alignment.center,
-                                width: double.infinity,
-                                height: 150,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(color: Colors.black);
-                                },
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: scanValue - 2,
-                            left: 0,
-                            right: 0,
-                            child: Container(
-                              height: 3,
-                              decoration: const BoxDecoration(
-                                color: kGoldPrimary,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: kGoldPrimary,
-                                    blurRadius: 8,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
+                      
+return Stack(
+  fit: StackFit.expand,
+  children: [
+    // แสดงภาพปัจจุบันเต็มกรอบ
+    Image.asset(
+      scanImage,
+      key: ValueKey(scanImage),
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: 150,
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('GOLD PRO image error: $error');
+        return const ColoredBox(
+          color: Colors.black,
+          child: Center(
+            child: Icon(
+              Icons.broken_image,
+              color: Colors.amber,
+            ),
+          ),
+        );
+      },
+    ),
+
+    // เส้นสแกนสีทอง
+    Positioned(
+      top: scanValue.clamp(0.0, 147.0),
+      left: 0,
+      right: 0,
+      child: Container(
+        height: 3,
+        decoration: const BoxDecoration(
+          color: kGoldPrimary,
+          boxShadow: [
+            BoxShadow(
+              color: kGoldPrimary,
+              blurRadius: 8,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+      ),
+    ),
+  ],
+);
+
               Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: Column(
