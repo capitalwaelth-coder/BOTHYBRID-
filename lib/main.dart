@@ -1339,98 +1339,99 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ==========================================
-  // เปิดบอลลูน GOLD PRO ลอยทับแอปอื่น
-  // ==========================================
-  Future<void> _startFloatingOverlay() async {
-    if (_isOverlayOpening || !mounted) return;
+ // ==========================================
+// เปิดบอลลูน GOLD PRO ลอยทับแอปอื่น
+// ==========================================
+Future<void> _startFloatingOverlay() async {
+if (_isOverlayOpening || !mounted) return;
 
-    setState(() {
-      _isOverlayOpening = true;
-    });
+setState(() {  
+  _isOverlayOpening = true;  
+});  
 
-    bool overlayStarted = false;
+bool overlayStarted = false;  
 
-    try {
-      bool granted =
-          await FlutterOverlayWindow.isPermissionGranted() ?? false;
+try {  
+  bool granted =  
+      await FlutterOverlayWindow.isPermissionGranted() ?? false;  
 
-      if (!granted) {
-        _waitingForOverlayPermission = true;
-        _overlayResumePending = false;
+  if (!granted) {  
+    _waitingForOverlayPermission = true;  
+    _overlayResumePending = false;  
 
-        await FlutterOverlayWindow.requestPermission();
+    await FlutterOverlayWindow.requestPermission();  
 
-        // ตรวจสอบสิทธิ์ใหม่หลังกลับจากหน้าตั้งค่า Android
-        granted =
-            await FlutterOverlayWindow.isPermissionGranted() ?? false;
-      }
+    // ตรวจสอบสิทธิ์ใหม่หลังกลับจากหน้าตั้งค่า Android  
+    granted =  
+        await FlutterOverlayWindow.isPermissionGranted() ?? false;  
+  }  
 
-      if (!mounted) return;
+  if (!mounted) return;  
 
-      if (!granted) {
-        _waitingForOverlayPermission = true;
+  if (!granted) {  
+    _waitingForOverlayPermission = true;  
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'กรุณาอนุญาต GOLD PRO ให้แสดงทับแอปอื่น',
-            ),
-          ),
-        );
-        return;
-      }
+    ScaffoldMessenger.of(context).showSnackBar(  
+      const SnackBar(  
+        content: Text(  
+          'กรุณาอนุญาต GOLD PRO ให้แสดงทับแอปอื่น',  
+        ),  
+      ),  
+    );  
+    return;  
+  }  
 
-      _waitingForOverlayPermission = false;
+  _waitingForOverlayPermission = false;  
 
-      await FlutterOverlayWindow.showOverlay(
-        height: 100,
-        width: 100,
-        alignment: OverlayAlignment.centerRight,
-        enableDrag: true,
-        overlayTitle: 'GOLD PRO',
-        overlayContent: 'Robot v.4',
-        visibility: NotificationVisibility.visibilityPublic,
-        positionGravity: PositionGravity.auto,
-        flag: OverlayFlag.defaultFlag,
-      );
+  await FlutterOverlayWindow.showOverlay(
 
-      overlayStarted = true;
-    } catch (e) {
-      debugPrint('GOLD PRO overlay error: $e');
+height: 100,
+width: 100,
+alignment: OverlayAlignment.centerRight,
+enableDrag: true,
+overlayTitle: 'GOLD PRO',
+overlayContent: 'GOLD PRO Floating Robot',
+visibility: NotificationVisibility.visibilityPublic,
+positionGravity: PositionGravity.auto,
+flag: OverlayFlag.defaultFlag,
+);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'เปิดบอลลูนไม่ได้ กรุณาตรวจสอบสิทธิ์แอป',
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isOverlayOpening = false;
-        });
+overlayStarted = true;  
+} catch (e) {  
+  debugPrint('GOLD PRO overlay error: $e');  
 
-        // ถ้ากลับจากหน้าสิทธิ์ระหว่างที่คำขอกำลังทำงาน
-        // ให้ตรวจสิทธิ์ซ้ำหลังปลดล็อกการเปิด Overlay
-        final shouldCheckAgain =
-            _overlayResumePending && _waitingForOverlayPermission;
+  if (mounted) {  
+    ScaffoldMessenger.of(context).showSnackBar(  
+      const SnackBar(  
+        content: Text(  
+          'เปิดบอลลูนไม่ได้ กรุณาตรวจสอบสิทธิ์แอป',  
+        ),  
+      ),  
+    );  
+  }  
+} finally {  
+  if (mounted) {  
+    setState(() {  
+      _isOverlayOpening = false;  
+    });  
 
-        _overlayResumePending = false;
+    // ถ้ากลับจากหน้าสิทธิ์ระหว่างที่คำขอกำลังทำงาน  
+    // ให้ตรวจสิทธิ์ซ้ำหลังปลดล็อกการเปิด Overlay  
+    final shouldCheckAgain =  
+        _overlayResumePending && _waitingForOverlayPermission;  
 
-        if (shouldCheckAgain && !overlayStarted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _checkOverlayPermissionAndOpen();
-            }
-          });
-        }
-      }
-    }
-  }
+    _overlayResumePending = false;  
+
+    if (shouldCheckAgain && !overlayStarted) {  
+      WidgetsBinding.instance.addPostFrameCallback((_) {  
+        if (mounted) {  
+          _checkOverlayPermissionAndOpen();  
+        }  
+      });  
+    }  
+  }  
+}
+}
 
   // ==========================================
   // ปุ่มย้อนกลับของ Android
@@ -5023,22 +5024,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 
 // ==========================================
-// #12 โหมดการสร้างบอลลูนทับแอพอื่น 
+// #12 GOLD PRO Floating Robot Bubble
+// วงกลมโรบอท + สถานะ Firebase + ลากย้ายได้
 // ==========================================
 
 @pragma("vm:entry-point")
-void overlayMain() {
+void overlayMain() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  bool firebaseReady = false;
+
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: const FirebaseOptions(
+          apiKey: "AIzaSyBnKyMazopUyD1k-kcIXo3bFedWfHXN0JA",
+          appId: "1:155532929563:android:49d8a1e0040dc87ce766be",
+          messagingSenderId: "155532929563",
+          projectId: "liquidity-b8739",
+          storageBucket: "liquidity-b8739.firebasestorage.app",
+          databaseURL:
+              "https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app",
+        ),
+      );
+    }
+    firebaseReady = true;
+  } catch (e) {
+    debugPrint("Overlay Firebase init error: $e");
+  }
+
   runApp(
-    const MaterialApp(
+    MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: GoldProFloatingBubble(),
+      home: GoldProFloatingBubble(
+        firebaseReady: firebaseReady,
+      ),
     ),
   );
 }
 
 class GoldProFloatingBubble extends StatefulWidget {
-  const GoldProFloatingBubble({super.key});
+  final bool firebaseReady;
+
+  const GoldProFloatingBubble({
+    super.key,
+    required this.firebaseReady,
+  });
 
   @override
   State<GoldProFloatingBubble> createState() =>
@@ -5047,88 +5078,178 @@ class GoldProFloatingBubble extends StatefulWidget {
 
 class _GoldProFloatingBubbleState
     extends State<GoldProFloatingBubble> {
-  bool expanded = false;
+  bool _connected = false;
+  bool _showInfo = false;
+
+  StreamSubscription<DatabaseEvent>? _connectionSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.firebaseReady) {
+      _listenFirebaseConnection();
+    }
+  }
+
+  void _listenFirebaseConnection() {
+    try {
+      final database = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL:
+            "https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app",
+      );
+
+      _connectionSubscription =
+          database.ref(".info/connected").onValue.listen(
+        (event) {
+          if (!mounted) return;
+
+          setState(() {
+            _connected = event.snapshot.value == true;
+          });
+        },
+        onError: (Object error) {
+          if (!mounted) return;
+
+          setState(() {
+            _connected = false;
+          });
+        },
+      );
+    } catch (e) {
+      debugPrint("Overlay connection error: $e");
+      _connected = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _connectionSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final statusColor = _connected
+        ? const Color(0xFF00E676)
+        : const Color(0xFFFF1744);
+
     return Material(
       color: Colors.transparent,
       child: Align(
         alignment: Alignment.center,
         child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
             setState(() {
-              expanded = !expanded;
+              _showInfo = !_showInfo;
             });
           },
-          child: Container(
-            width: expanded ? 190 : 76,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF161616),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: const Color(0xFFFFD700),
-                width: 2,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x66FFD700),
-                  blurRadius: 12,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-            child: expanded
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.smart_toy,
-                        color: Color(0xFFFFD700),
-                        size: 32,
+          child: SizedBox(
+            width: 96,
+            height: 96,
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                // วงกลมสีดำ ขอบทอง
+                Container(
+                  width: 76,
+                  height: 76,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF111111),
+                    border: Border.all(
+                      color: const Color(0xFFFFD700),
+                      width: 2.5,
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x66FFD700),
+                        blurRadius: 12,
+                        spreadRadius: 1,
                       ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'GOLD PRO',
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      "assets/images/1.jpg",
+                      width: 76,
+                      height: 76,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(
+                          child: Icon(
+                            Icons.smart_toy,
+                            color: Color(0xFFFFD700),
+                            size: 42,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+
+                // จุดสถานะสีเขียว / สีแดง
+                Positioned(
+                  right: 3,
+                  bottom: 7,
+                  child: Container(
+                    width: 17,
+                    height: 17,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: statusColor,
+                      border: Border.all(
+                        color: const Color(0xFF111111),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: statusColor.withOpacity(0.65),
+                          blurRadius: 7,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ข้อมูลสถานะแสดงเมื่อแตะบอลลูน
+                if (_showInfo)
+                  Positioned(
+                    top: 82,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF111111),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFFFFD700),
+                        ),
+                      ),
+                      child: Text(
+                        _connected
+                            ? "SERVER CONNECTED"
+                            : "SERVER DISCONNECTED",
+                        maxLines: 1,
                         style: TextStyle(
-                          color: Color(0xFFFFD700),
+                          color: statusColor,
+                          fontSize: 9,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'FLOATING CONTROL',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      OutlinedButton(
-                        onPressed: () async {
-                          await FlutterOverlayWindow.closeOverlay();
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFFFD700),
-                          side: const BorderSide(
-                            color: Color(0xFFFFD700),
-                          ),
-                        ),
-                        child: const Text('ปิดบอลลูน'),
-                      ),
-                    ],
-                  )
-                : const Icon(
-                    Icons.smart_toy,
-                    color: Color(0xFFFFD700),
-                    size: 42,
+                    ),
                   ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
-
