@@ -370,7 +370,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                       ),
                       const SizedBox(height: 6),
                       const Text(
-                        'ROBOT',
+                        ' ROBOT ALGO TRADING',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 16,
@@ -753,7 +753,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'ROBOT TRADE',
+                      ' ROBOT ALGO TRADING',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.white70,
@@ -2801,6 +2801,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         );
                       },
                     ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'ROBOT ALGO TRADING',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white70,
+                        letterSpacing: 3.0,
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -3267,8 +3278,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 }
-
-
 
 
 
