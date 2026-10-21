@@ -1,3 +1,4 @@
+
 name: goldpro
 
 description: "GOLD PRO"
@@ -20,6 +21,8 @@ dependencies:
 
   shared_preferences: ^2.5.3
   shared_preferences_android: ">=2.4.28 <2.5.0"
+
+  flutter_overlay_window: ^0.5.0
 
 dev_dependencies:
   flutter_test:
