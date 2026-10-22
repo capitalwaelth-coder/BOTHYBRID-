@@ -970,8 +970,11 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
   }
 }
 
+
+
+
 // ==========================================
-// #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen) - Single Smart Floating Bubble
+// #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen) - System Overlay Complete
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -1035,7 +1038,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   @override
   void initState() {
     super.initState();
-    _initSystemOverlay(); // <--- เปิดบอลลูนลอยอัจฉริยะนอกแอป
+    _initSystemOverlay(); // เปิดระบบบอลลูนนอกแอป
 
     _loadSavedLogin().then((_) {
       if (!mounted) return;
@@ -1057,19 +1060,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     });
   }
 
-  // 🌟 ฟังก์ชันจัดการเปิดบอลลูนตัวเดียวครบวงจร
+  // 🌟 ฟังก์ชันเปิดบอลลูนนอกแอป และดักฟังคำสั่งพับแอป/เปิดกล่อง Logs
   Future<void> _initSystemOverlay() async {
     if (_isStartingOverlay) return;
     _isStartingOverlay = true;
 
     try {
       await _overlaySubscription?.cancel();
+      // ใช้ overlayListener ตามเวอร์ชันจริงของแพ็กเกจ
       _overlaySubscription = FlutterOverlayWindow.overlayListener.listen((event) async {
         if (event == 'open_app') {
-          // คำสั่งที่ 1: เมื่อกดที่ตัวบอลลูนหลักด้านนอก ให้พับแอปหลักลงเบื้องหลัง
+          // กดหุ่นยนต์ -> สั่งพับแอปหลักลงเบื้องหลังทันที
           SystemNavigator.pop(animated: true);
         } else if (event == 'toggle_logs') {
-          // คำสั่งที่ 2: เมื่อกดปุ่มขยาย/ย่อในบอลลูน ให้เปิด-ปิดกล่อง Logs ในแอป
+          // กดปุ่มเมนูบนบอลลูน -> สลับเปิด/ปิดกล่อง Status & Logs ในแอป
           if (mounted) {
             setState(() {
               _isLargeLogsModalOpen = !_isLargeLogsModalOpen;
@@ -1520,7 +1524,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 ),
               ),
             ),
-            // 🌟 กล่อง Status & Logs ภายในแอป ที่กดเปิด-ปิดได้จากปุ่มที่บอลลูนนอกแอป
+            // 🌟 กล่อง Modal Logs เด้งแสดงเมื่อกดสั่งจากปุ่มบนบอลลูนนอกแอป
             if (_isLargeLogsModalOpen)
               Positioned(
                 left: _modalOffset.dx,
@@ -2103,6 +2107,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
 
 
 
