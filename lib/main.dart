@@ -2120,8 +2120,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
 
 
-
-
 // ==========================================
 // 🌟 HomeScreen (GOLD PRO)
 // ==========================================
@@ -2958,7 +2956,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 }
 
 // ==========================================
-// 🌟 TradingCalendarDialog (7 วันต่อสัปดาห์ รวมเสาร์-อาทิตย์)
+// 🌟 TradingCalendarDialog (ระบบ Date Parser ที่ตรงตามจริง)
 // ==========================================
 class TradingCalendarDialog extends StatefulWidget {
   final List<Map<dynamic, dynamic>> historyTrades;
@@ -2969,7 +2967,6 @@ class TradingCalendarDialog extends StatefulWidget {
 }
 
 class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
-  // 0: Week, 1: Month, 2: Year
   int selectedTimeframe = 1; 
   DateTime currentDate = DateTime.now();
   double monthlyGoal = 2000.0;
@@ -3044,23 +3041,46 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 
+  // แก้ไขระบบการแกะวันที่จาก Firebase ให้รองรับทุกรูปแบบ
   DateTime? _parseTradeDate(dynamic rawTime) {
     if (rawTime == null) return null;
-    if (rawTime is int) return DateTime.fromMillisecondsSinceEpoch(rawTime);
+    if (rawTime is int) {
+      int ms = rawTime < 10000000000 ? rawTime * 1000 : rawTime;
+      return DateTime.fromMillisecondsSinceEpoch(ms).toLocal();
+    }
     if (rawTime is String) {
       String clean = rawTime.trim();
+      if (clean.isEmpty) return null;
+
+      // ลองดึงแบบ ISO Direct
+      DateTime? parsed = DateTime.tryParse(clean);
+      if (parsed != null) return parsed.toLocal();
+
+      // แกะสตริงรูปแบบ วัน.เดือน.ปี เวลา (เช่น 21.10.2026 19:24:14)
       try {
-        List<String> parts = clean.split(' ')[0].replaceAll('/', '.').replaceAll('-', '.').split('.');
-        if (parts.length == 3) {
-          int d = int.parse(parts[0]);
-          int m = int.parse(parts[1]);
-          int y = int.parse(parts[2]);
+        List<String> dateTimeParts = clean.split(' ');
+        List<String> dateParts = dateTimeParts[0].replaceAll('/', '.').replaceAll('-', '.').split('.');
+
+        if (dateParts.length == 3) {
+          int d = int.parse(dateParts[0]);
+          int m = int.parse(dateParts[1]);
+          int y = int.parse(dateParts[2]);
           if (y < 100) y += 2000;
-          return DateTime(y, m, d);
+
+          int hour = 0, minute = 0, second = 0;
+          if (dateTimeParts.length > 1) {
+            List<String> timeParts = dateTimeParts[1].split(':');
+            if (timeParts.length >= 2) {
+              hour = int.tryParse(timeParts[0]) ?? 0;
+              minute = int.tryParse(timeParts[1]) ?? 0;
+              if (timeParts.length >= 3) {
+                second = int.tryParse(timeParts[2]) ?? 0;
+              }
+            }
+          }
+          return DateTime(y, m, d, hour, minute, second);
         }
-      } catch (_) {
-        return DateTime.tryParse(clean);
-      }
+      } catch (_) {}
     }
     return null;
   }
@@ -3074,13 +3094,15 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
 
     for (var trade in widget.historyTrades) {
       double profit = double.tryParse(trade['profit']?.toString() ?? '0.0') ?? 0.0;
-      DateTime? tradeDate = _parseTradeDate(trade['close_time'] ?? trade['timestamp'] ?? trade['time']);
+      DateTime? tradeDate = _parseTradeDate(
+        trade['close_time'] ?? trade['timestamp'] ?? trade['time'] ?? trade['open_time']
+      );
 
       if (tradeDate == null) continue;
 
       if (selectedTimeframe == 0) {
         DateTime startOfWeek = _getStartOfWeek(currentDate);
-        DateTime endOfWeek = startOfWeek.add(const Duration(days: 6, hours: 23, minutes: 59));
+        DateTime endOfWeek = startOfWeek.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
         if (tradeDate.isAfter(startOfWeek.subtract(const Duration(seconds: 1))) && 
             tradeDate.isBefore(endOfWeek)) {
           String key = '${tradeDate.day}';
@@ -3118,7 +3140,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
   String _getHeaderTitle() {
     if (selectedTimeframe == 0) {
       DateTime start = _getStartOfWeek(currentDate);
-      DateTime end = start.add(const Duration(days: 6)); // จันทร์ - อาทิตย์ (7 วัน)
+      DateTime end = start.add(const Duration(days: 6));
       return '${start.day} ${_getMonthName(start.month, true)} - ${end.day} ${_getMonthName(end.month, true)} ${currentDate.year}';
     } else if (selectedTimeframe == 1) {
       return '${_getMonthName(currentDate.month, false)} ${currentDate.year}';
@@ -3228,11 +3250,10 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
               ),
               const SizedBox(height: 16),
 
-              // หัวตารางครอบคลุมทั้ง 7 วัน (MON - SUN)
               if (selectedTimeframe != 2) ...[
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: const ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+                  children: const [ 'SUN','MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
                       .map((day) => Expanded(
                             child: Center(
                               child: Text(
@@ -3367,9 +3388,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 
-  // Grid แสดงผลแบบ 7 วันครบทั้งสัปดาห์
   Widget _buildDynamicGrid(Map<String, double> dataMap) {
-    // 1. โหมดสัปดาห์ (Week - 7 วัน)
     if (selectedTimeframe == 0) {
       DateTime start = _getStartOfWeek(currentDate);
       List<DateTime> weekDays = List.generate(7, (i) => start.add(Duration(days: i)));
@@ -3391,21 +3410,16 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
         },
       );
     } 
-    // 2. โหมดเดือน (Month - ครบ 1-31 วัน รวมเสาร์-อาทิตย์)
     else if (selectedTimeframe == 1) {
       DateTime firstDayOfMonth = DateTime(currentDate.year, currentDate.month, 1);
       int daysInMonth = DateTime(currentDate.year, currentDate.month + 1, 0).day;
-      
-      // หาว่าวันที่ 1 ตรงกับวันอะไร (1=Mon, 2=Tue ... 7=Sun)
       int firstWeekday = firstDayOfMonth.weekday; 
 
       List<int?> gridItems = [];
-      // เติมช่องว่างเปล่าก่อนถึงวันที่ 1
       for (int i = 1; i < firstWeekday; i++) {
         gridItems.add(null);
       }
 
-      // ใส่วันที่ 1 ถึง 31 ครบทุกวันไม่มีเว้น
       for (int day = 1; day <= daysInMonth; day++) {
         gridItems.add(day);
       }
@@ -3414,7 +3428,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 7, // 7 คอลัมน์ต่อสัปดาห์
+          crossAxisCount: 7,
           childAspectRatio: 0.8,
           crossAxisSpacing: 4,
           mainAxisSpacing: 4,
@@ -3430,7 +3444,6 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
         },
       );
     } 
-    // 3. โหมดปี (Year)
     else {
       return GridView.builder(
         shrinkWrap: true,
