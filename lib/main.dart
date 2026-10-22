@@ -3253,7 +3253,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
               if (selectedTimeframe != 2) ...[
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: const [ 'SUN','MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+                  children: const [ 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
                       .map((day) => Expanded(
                             child: Center(
                               child: Text(
