@@ -32,67 +32,105 @@ void overlayMain() {
   );
 }
 
-class FloatingRobotOverlay extends StatelessWidget {
+class FloatingRobotOverlay extends StatefulWidget {
   const FloatingRobotOverlay({super.key});
+
+  @override
+  State<FloatingRobotOverlay> createState() => _FloatingRobotOverlayState();
+}
+
+class _FloatingRobotOverlayState extends State<FloatingRobotOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _bounceController = AnimationController(
+    duration: const Duration(seconds: 2),
+    vsync: this,
+  )..repeat(reverse: true);
+
+  late final Animation<double> _bounceAnimation = Tween<double>(
+    begin: 0.0,
+    end: -10.0, // ระยะทางที่บอลลูนจะเด้งขึ้นลง (พิกเซล)
+  ).animate(CurvedAnimation(
+    parent: _bounceController,
+    curve: Curves.easeInOut,
+  ));
+
+  @override
+  void dispose() {
+    _bounceController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
-      child: GestureDetector(
-        onTap: () {
-          // กดที่ตัวบอลลูนเพื่อสั่งพับแอปหลักลงเบื้องหลัง
-          FlutterOverlayWindow.shareData("open_app");
-        },
-        child: Container(
-          width: 70,
-          height: 70,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: kDarkCard,
-            border: Border.all(color: kGoldPrimary, width: 2.5),
-            boxShadow: [
-              BoxShadow(
-                color: kGreenNeon.withOpacity(0.7),
-                blurRadius: 8,
-                spreadRadius: 2,
+      color: Colors.transparent, // ตัดพื้นหลังสีเขียว/ฟ้าออกให้โปร่งใสสนิท
+      child: Center(
+        child: AnimatedBuilder(
+          animation: _bounceAnimation,
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(0, _bounceAnimation.value),
+              child: child,
+            );
+          },
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              // กดที่ตัวบอลลูนเพื่อพับแอปหลักลงเบื้องหลัง
+              FlutterOverlayWindow.shareData("open_app");
+            },
+            child: Container(
+              width: 95,
+              height: 95,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: kDarkCard,
+                border: Border.all(color: kGoldPrimary, width: 3.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: kGreenNeon.withOpacity(0.8),
+                    blurRadius: 12,
+                    spreadRadius: 3,
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: ClipOval(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.asset(
-                  'assets/images/7.png',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(Icons.smart_toy, color: kGoldPrimary, size: 32);
-                  },
-                ),
-                // เพิ่มปุ่มเมนูด้านบนเล็กๆ ให้มองเห็นและกดสลับเปิด-ปิด Logs ได้ง่ายขึ้น
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: GestureDetector(
-                    onTap: () {
-                      FlutterOverlayWindow.shareData("toggle_logs");
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: const BoxDecoration(
-                        color: kGoldPrimary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.menu,
-                        size: 10,
-                        color: Colors.black,
+              child: ClipOval(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      'assets/images/7.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(Icons.smart_toy, color: kGoldPrimary, size: 40);
+                      },
+                    ),
+                    // ปุ่มเมนูด้านบน สำหรับกดสลับเปิด-ปิด Status & Logs
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          FlutterOverlayWindow.shareData("toggle_logs");
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: kGoldPrimary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.menu,
+                            size: 14,
+                            color: Colors.black,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -100,6 +138,7 @@ class FloatingRobotOverlay extends StatelessWidget {
     );
   }
 }
+
 
 
 
@@ -1115,16 +1154,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
       final active = await FlutterOverlayWindow.isActive();
       if (!active) {
-        await FlutterOverlayWindow.showOverlay(
-        height: 100,
-        width: 100,
-        alignment: OverlayAlignment.centerRight,
-        enableDrag: true,
-        flag: OverlayFlag.defaultFlag,
-        visibility: NotificationVisibility.visibilityPublic,
-        positionGravity: PositionGravity.none,
-        );
-      }
+      await FlutterOverlayWindow.showOverlay(
+      height: 210,
+      width: 210,
+      alignment: OverlayAlignment.centerRight,
+      enableDrag: true,
+      flag: OverlayFlag.defaultFlag,
+      visibility: NotificationVisibility.visibilityPublic,
+      positionGravity: PositionGravity.none,
+      );    
+     }
     } catch (e) {
       debugPrint('GOLD PRO overlay error: $e');
     } finally {
