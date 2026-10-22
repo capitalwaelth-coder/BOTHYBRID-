@@ -1688,7 +1688,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
 
 // ==========================================
-// 🌟 HomeScreen (GOLD PRO) - โค้ดฉบับสมบูรณ์
+// 🌟 HomeScreen (GOLD PRO) - โค้ดฉบับสมบูรณ์ (ไม่ซ้ำซ้อน)
 // ==========================================
 class HomeScreen extends StatefulWidget {
   final String accountLogin;
@@ -2523,7 +2523,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 }
 
 // ==========================================
-// 🌟 TradingCalendarDialog (ระบบ Date Parser ที่ตรงตามจริง)
+// 🌟 TradingCalendarDialog (ระบบปฏิทินบันทึกผลกำไร)
 // ==========================================
 class TradingCalendarDialog extends StatefulWidget {
   final List<Map<dynamic, dynamic>> historyTrades;
@@ -3073,6 +3073,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 }
+
 
 
 
