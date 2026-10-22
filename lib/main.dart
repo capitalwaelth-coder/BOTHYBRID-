@@ -1070,38 +1070,60 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     });
   }
 
-  // 🌟 ฟังก์ชันจัดการสิทธิ์ Overlay และรับคำสั่งสั่งพับแอปเมื่อกดบอลลูน
-  Future<void> _initOverlayPermissionAndListener() async {
-    try {
-      bool? isGranted = await FlutterOverlayWindow.isPermissionGranted();
-      if (isGranted == false) {
-        await FlutterOverlayWindow.requestPermission();
-      } else if (isGranted == true) {
-        if (!await FlutterOverlayWindow.isActive()) {
-          await FlutterOverlayWindow.showOverlay(
-            height: 70,
-            width: 70,
-            alignment: OverlayAlignment.centerRight,
-            flag: OverlayFlag.defaultFlag,
-            visibility: NotificationVisibility.visibilityPublic,
-            positionGravity: PositionGravity.none,
-          );
-        }
-      }
+  // เปิดบอลลูนลอยทับแอปอื่น และรับคำสั่งจากบอลลูน
+  StreamSubscription? _overlaySubscription;
+  bool _isStartingOverlay = false;
 
-      // 🌟 รับคำสั่งจากบอลลูนเพื่อสั่งพับแอปหลักลงเบื้องหลังทันที
-      FlutterOverlayWindow.dataListener.listen((event) {
-        if (event == "open_app") {
-          SystemNavigator.pop(animated: true); // สั่งพับหน้าจอแอปนี้ลงทันที
+  Future<void> _initOverlayPermissionAndListener() async {
+    if (_isStartingOverlay) return;
+    _isStartingOverlay = true;
+
+    try {
+      // ลงทะเบียนรับคำสั่งจากหน้าต่างบอลลูนนอกแอป
+      await _overlaySubscription?.cancel();
+      _overlaySubscription = FlutterOverlayWindow.dataListener.listen((event) async {
+        if (event == 'open_app') {
+          // สั่งพับแอปหลักลงเบื้องหลังทันที
+          SystemNavigator.pop(animated: true);
         }
       });
-    } catch (e) {
-      debugPrint("Overlay init error: $e");
+
+      // ตรวจสอบสิทธิ์แสดงทับแอปอื่น
+      bool granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
+      if (!granted) {
+        await FlutterOverlayWindow.requestPermission();
+        granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
+      }
+
+      if (!granted) {
+        debugPrint('GOLD PRO: overlay permission not granted');
+        return;
+      }
+
+      // เปิดหน้าต่างลอย หากยังไม่มีหน้าต่างทำงาน
+      final active = await FlutterOverlayWindow.isActive();
+      if (!active) {
+        await FlutterOverlayWindow.showOverlay(
+          height: 70,
+          width: 70,
+          alignment: OverlayAlignment.centerRight,
+          enableDrag: true,
+          flag: OverlayFlag.defaultFlag,
+          visibility: NotificationVisibility.visibilityPublic,
+          positionGravity: PositionGravity.none,
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('GOLD PRO overlay error: $e');
+      debugPrint('$stackTrace');
+    } finally {
+      _isStartingOverlay = false;
     }
   }
 
   @override
   void dispose() {
+    _overlaySubscription?.cancel();
     _imageTimer?.cancel();
     _bounceController.dispose();
     _scannerController.dispose();
@@ -2211,6 +2233,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
 
 
 // ==========================================
