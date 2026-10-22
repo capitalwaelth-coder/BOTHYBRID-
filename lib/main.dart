@@ -39,66 +39,68 @@ class FloatingRobotOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // กดที่ตัวหุ่นยนต์หลัก เพื่อสั่งพับแอปหลักลงเบื้องหลัง
-          GestureDetector(
-            onTap: () {
-              FlutterOverlayWindow.shareData("open_app");
-            },
-            child: Container(
-              width: 65,
-              height: 65,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: kDarkCard,
-                border: Border.all(color: kGoldPrimary, width: 2.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: kGreenNeon.withOpacity(0.6),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                  ),
-                ],
+      child: GestureDetector(
+        onTap: () {
+          // กดที่ตัวบอลลูนเพื่อสั่งพับแอปหลักลงเบื้องหลัง
+          FlutterOverlayWindow.shareData("open_app");
+        },
+        child: Container(
+          width: 70,
+          height: 70,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: kDarkCard,
+            border: Border.all(color: kGoldPrimary, width: 2.5),
+            boxShadow: [
+              BoxShadow(
+                color: kGreenNeon.withOpacity(0.7),
+                blurRadius: 8,
+                spreadRadius: 2,
               ),
-              child: ClipOval(
-                child: Image.asset(
+            ],
+          ),
+          child: ClipOval(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset(
                   'assets/images/7.png',
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.smart_toy, color: kGoldPrimary),
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(Icons.smart_toy, color: kGoldPrimary, size: 32);
+                  },
                 ),
-              ),
+                // เพิ่มปุ่มเมนูด้านบนเล็กๆ ให้มองเห็นและกดสลับเปิด-ปิด Logs ได้ง่ายขึ้น
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: GestureDetector(
+                    onTap: () {
+                      FlutterOverlayWindow.shareData("toggle_logs");
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        color: kGoldPrimary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.menu,
+                        size: 10,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          // ปุ่มเมนูด้านบน สำหรับสลับเปิด-ปิดหน้าต่าง Status & Logs ในแอป
-          Positioned(
-            top: 0,
-            child: GestureDetector(
-              onTap: () {
-                FlutterOverlayWindow.shareData("toggle_logs");
-              },
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: kGoldPrimary,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.black, width: 1.5),
-                ),
-                child: const Icon(
-                  Icons.menu,
-                  size: 12,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
+
 
 
 // ==========================================
@@ -1114,13 +1116,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       final active = await FlutterOverlayWindow.isActive();
       if (!active) {
         await FlutterOverlayWindow.showOverlay(
-          height: 80,
-          width: 80,
-          alignment: OverlayAlignment.centerRight,
-          enableDrag: true,
-          flag: OverlayFlag.defaultFlag,
-          visibility: NotificationVisibility.visibilityPublic,
-          positionGravity: PositionGravity.none,
+        height: 100,
+        width: 100,
+        alignment: OverlayAlignment.centerRight,
+        enableDrag: true,
+        flag: OverlayFlag.defaultFlag,
+        visibility: NotificationVisibility.visibilityPublic,
+        positionGravity: PositionGravity.none,
         );
       }
     } catch (e) {
