@@ -1081,12 +1081,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     try {
       // ลงทะเบียนรับคำสั่งจากหน้าต่างบอลลูนนอกแอป
       await _overlaySubscription?.cancel();
-      _overlaySubscription = FlutterOverlayWindow.dataListener.listen((event) async {
+      _overlaySubscription = FlutterOverlayWindow.overlayListener.listen((event) async {
         if (event == 'open_app') {
           // สั่งพับแอปหลักลงเบื้องหลังทันที
           SystemNavigator.pop(animated: true);
         }
       });
+
 
       // ตรวจสอบสิทธิ์แสดงทับแอปอื่น
       bool granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
