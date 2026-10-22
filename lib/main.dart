@@ -1155,8 +1155,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       final active = await FlutterOverlayWindow.isActive();
       if (!active) {
       await FlutterOverlayWindow.showOverlay(
-      height: 210,
-      width: 210,
+      height: 500,
+      width: 500,
       alignment: OverlayAlignment.centerRight,
       enableDrag: true,
       flag: OverlayFlag.defaultFlag,
