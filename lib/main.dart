@@ -2515,40 +2515,56 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 20),
                     _buildBidAskBoxContent(context),
                     const SizedBox(height: 16),
-                    // 🌟 เพิ่มปุ่มรูปภาพ 7.jpg ในกรอบสีขาวหน้า Home สำหรับเปิด-ปิด Trading Journal
+                    
+                    // 🌟 ปุ่ม Trading Journal พร้อมรูป 8.jpg และไฟนีออนเรืองแสง พร้อมชื่อกำกับด้านล่าง
                     Center(
-                      child: GestureDetector(
-                        onTap: () => _showTradingCalendarDialog(context),
-                        child: Container(
-                          width: 65,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: kGoldPrimary, width: 1.5),
-                            boxShadow: [
-                              BoxShadow(
-                                color: kGoldPrimary.withOpacity(0.3),
-                                blurRadius: 8,
-                                spreadRadius: 1,
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8.5),
-                            child: Image.asset(
-                              'assets/images/7.jpg',
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: kDarkCard,
-                                  child: const Center(
-                                    child: Icon(Icons.star, color: kGoldPrimary, size: 20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: () => _showTradingCalendarDialog(context),
+                            child: Container(
+                              width: 65,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: kGoldPrimary, width: 1.8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: kGoldPrimary.withOpacity(0.6),
+                                    blurRadius: 12,
+                                    spreadRadius: 2,
                                   ),
-                                );
-                              },
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8.5),
+                                child: Image.asset(
+                                  'assets/images/8.png',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: kDarkCard,
+                                      child: const Center(
+                                        child: Icon(Icons.smart_toy, color: kGoldPrimary, size: 20),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 5),
+                          const Text(
+                            'TRADING JOURNAL',
+                            style: TextStyle(
+                              color: kGoldPrimary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 40),
