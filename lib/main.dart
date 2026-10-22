@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
 // ค่าสีหลักสำหรับธีม Luxury Gold & Dark Metallic
 const Color kGoldPrimary = Color(0xFFFFD700); // สีทองหลัก
@@ -17,154 +16,6 @@ const Color kDarkBg = Color(0xFF0D0D0D);      // พื้นหลังดำ�
 const Color kDarkCard = Color(0xFF161616);    // การ์ดดำเข้ม
 const Color kRedNeon = Color(0xFFFF1744);     // สีแดง SELL / Loss / Stop
 const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Profit / Start
-
-// ==========================================
-// 🌟 ENTRY POINT สำหรับบอลลูนที่ลอยนอกแอป (System Overlay)
-// ==========================================
-@pragma("vm:entry-point")
-void overlayMain() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(
-    const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: FloatingRobotOverlay(),
-    ),
-  );
-}
-
-class FloatingRobotOverlay extends StatefulWidget {
-  const FloatingRobotOverlay({super.key});
-
-  @override
-  State<FloatingRobotOverlay> createState() => _FloatingRobotOverlayState();
-}
-
-class _FloatingRobotOverlayState extends State<FloatingRobotOverlay>
-    with TickerProviderStateMixin {
-  // แอนิเมชันเด้งขึ้นลง
-  late final AnimationController _bounceController = AnimationController(
-    duration: const Duration(seconds: 2),
-    vsync: this,
-  )..repeat(reverse: true);
-
-  late final Animation<double> _bounceAnimation = Tween<double>(
-    begin: 0.0,
-    end: -10.0,
-  ).animate(CurvedAnimation(
-    parent: _bounceController,
-    curve: Curves.easeInOut,
-  ));
-
-  // แอนิเมชันไฟเรืองแสงรอบวงกลม
-  late final AnimationController _glowController = AnimationController(
-    duration: const Duration(seconds: 2),
-    vsync: this,
-  )..repeat(reverse: true);
-
-  bool _isOnline = true;
-
-  @override
-  void initState() {
-    super.initState();
-    FlutterOverlayWindow.overlayListener.listen((event) {
-      if (event == 'status_online') {
-        setState(() => _isOnline = true);
-      } else if (event == 'status_offline') {
-        setState(() => _isOnline = false);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _bounceController.dispose();
-    _glowController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: Center(
-        child: AnimatedBuilder(
-          animation: _bounceAnimation,
-          builder: (context, child) {
-            return Transform.translate(
-              offset: Offset(0, _bounceAnimation.value),
-              child: child,
-            );
-          },
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              // กดบอลลูนเพื่อเปิดแอป / พับแอป
-              FlutterOverlayWindow.shareData("open_app");
-            },
-            child: AnimatedBuilder(
-              animation: _glowController,
-              builder: (context, child) {
-                return Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: kDarkCard,
-                    border: Border.all(color: kGoldPrimary, width: 3.0),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (_isOnline ? kGreenNeon : kRedNeon)
-                            .withOpacity(0.6 + (_glowController.value * 0.4)),
-                        blurRadius: 12 + (_glowController.value * 6),
-                        spreadRadius: 3,
-                      ),
-                    ],
-                  ),
-                  child: child,
-                );
-              },
-              child: ClipOval(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.asset(
-                      'assets/images/7.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.smart_toy, color: kGoldPrimary, size: 40);
-                      },
-                    ),
-                    // จุดสถานะออนไลน์ (เขียว) / ออฟไลน์ (แดง) เชื่อมโยงระบบ
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _isOnline ? kGreenNeon : kRedNeon,
-                          border: Border.all(color: Colors.black, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (_isOnline ? kGreenNeon : kRedNeon).withOpacity(0.9),
-                              blurRadius: 6,
-                              spreadRadius: 1,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // ==========================================
 // #2 โหมดเมนหลัก
@@ -193,6 +44,7 @@ void main() async {
   runApp(const LiquiditySweepApp());
 }
 
+// Widget ช่วยทำเอฟเฟกต์พิมพ์ดีดข้อความ
 class TypewriterText extends StatefulWidget {
   final String text;
   final TextStyle style;
@@ -279,9 +131,11 @@ class LiquiditySweepApp extends StatelessWidget {
   Future<bool> _checkLoginSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+
       final login = prefs.getString('mt5_login') ??
           prefs.getString('saved_mt5_login') ??
           '';
+
       return login.trim().isNotEmpty;
     } catch (e) {
       debugPrint('Check login session error: $e');
@@ -315,9 +169,11 @@ class LiquiditySweepApp extends StatelessWidget {
               ),
             );
           }
+
           if (snapshot.data == true) {
             return const PinAuthWrapper();
           }
+
           return const MT5LoginWrapper();
         },
       ),
@@ -354,6 +210,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
 
   void _submitMT5Login() async {
     ScaffoldMessenger.of(context).clearSnackBars();
+
     String login = _loginController.text.trim();
     String password = _passwordController.text.trim();
     String server = _serverController.text.trim().isEmpty ? 'ICMarketsSC-Demo' : _serverController.text.trim();
@@ -369,7 +226,9 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
       return;
     }
 
-    setState(() { _isLoading = true; });
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       FirebaseApp app;
@@ -403,13 +262,16 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
         await prefs.setString('mt5_server', server);
 
         if (!mounted) return;
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const PinAuthWrapper()),
         );
       } else {
         if (!mounted) return;
-        setState(() { _isLoading = false; });
+        setState(() {
+          _isLoading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('ไม่พบหมายเลขบัญชีนี้ในระบบ Firebase'),
@@ -420,7 +282,9 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() { _isLoading = false; });
+      setState(() {
+        _isLoading = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('เกิดข้อผิดพลาด: $e'),
@@ -546,7 +410,9 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                               color: kGoldPrimary,
                             ),
                             onPressed: () {
-                              setState(() { _obscurePassword = !_obscurePassword; });
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
                             },
                           ),
                         ),
@@ -642,7 +508,9 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
     try {
       final prefs = await SharedPreferences.getInstance();
       if (!mounted) return;
+
       final pin = prefs.getString('saved_user_pin');
+
       setState(() {
         hasStoredPin = pin != null && pin.isNotEmpty;
         isLoading = false;
@@ -650,7 +518,17 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
     } catch (e) {
       debugPrint('Check PIN error: $e');
       if (!mounted) return;
-      setState(() { isLoading = false; });
+
+      setState(() {
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('อ่านข้อมูล PIN ไม่สำเร็จ กรุณาปิดแล้วเปิดแอปใหม่'),
+          backgroundColor: kRedNeon,
+        ),
+      );
     }
   }
 
@@ -660,6 +538,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
       final saved = await prefs.setString('saved_user_pin', pin);
       return saved && prefs.getString('saved_user_pin') == pin;
     } catch (e) {
+      debugPrint('Save PIN error: $e');
       return false;
     }
   }
@@ -668,36 +547,64 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final storedPin = prefs.getString('saved_user_pin');
+
       if (!mounted) return;
+
       if (storedPin == pin && storedPin != null) {
         setState(() {
           isAuthorized = true;
           currentPinInput = '';
         });
       } else {
-        setState(() { currentPinInput = ''; });
+        setState(() {
+          currentPinInput = '';
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง'), backgroundColor: kRedNeon),
+          const SnackBar(
+            content: Text('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง'),
+            backgroundColor: kRedNeon,
+          ),
         );
       }
     } catch (e) {
+      debugPrint('Verify PIN error: $e');
       if (!mounted) return;
-      setState(() { currentPinInput = ''; });
+
+      setState(() {
+        currentPinInput = '';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ตรวจสอบ PIN ไม่สำเร็จ กรุณาลองใหม่'),
+          backgroundColor: kRedNeon,
+        ),
+      );
     }
   }
 
   Future<void> _onNumberTap(String number) async {
-    if (isLoading || _isProcessing || currentPinInput.length >= 6) return;
-    setState(() { currentPinInput += number; });
+    if (isLoading || _isProcessing || currentPinInput.length >= 6) {
+      return;
+    }
+
+    setState(() {
+      currentPinInput += number;
+    });
+
     if (currentPinInput.length != 6) return;
 
     _isProcessing = true;
+
     try {
       final enteredPin = currentPinInput;
+
       if (hasStoredPin) {
         await _verifyPin(enteredPin);
         return;
       }
+
       if (!isConfirming) {
         setState(() {
           firstEnteredPin = enteredPin;
@@ -706,20 +613,27 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
         });
         return;
       }
+
       if (firstEnteredPin != enteredPin) {
         setState(() {
           currentPinInput = '';
           firstEnteredPin = '';
           isConfirming = false;
         });
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('รหัส PIN ไม่ตรงกัน กรุณาตั้งค่าใหม่อีกครั้ง'), backgroundColor: kRedNeon),
+          const SnackBar(
+            content: Text('รหัส PIN ไม่ตรงกัน กรุณาตั้งค่าใหม่อีกครั้ง'),
+            backgroundColor: kRedNeon,
+          ),
         );
         return;
       }
 
       final saved = await _saveNewPin(enteredPin);
+
       if (!mounted) return;
+
       if (saved) {
         setState(() {
           hasStoredPin = true;
@@ -728,6 +642,26 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
           firstEnteredPin = '';
           isConfirming = false;
         });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('บันทึก PIN สำเร็จ'),
+            backgroundColor: kGreenNeon,
+          ),
+        );
+      } else {
+        setState(() {
+          currentPinInput = '';
+          firstEnteredPin = '';
+          isConfirming = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('บันทึก PIN ไม่สำเร็จ กรุณาตั้งค่าใหม่'),
+            backgroundColor: kRedNeon,
+          ),
+        );
       }
     } finally {
       _isProcessing = false;
@@ -736,6 +670,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 
   void _onDeleteTap() {
     if (isLoading || _isProcessing || currentPinInput.isEmpty) return;
+
     setState(() {
       currentPinInput = currentPinInput.substring(0, currentPinInput.length - 1);
     });
@@ -746,11 +681,24 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
     if (isLoading) {
       return const Scaffold(
         backgroundColor: kDarkBg,
-        body: Center(child: CircularProgressIndicator(color: kGoldPrimary)),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: kGoldPrimary,
+          ),
+        ),
       );
     }
+
     if (isAuthorized) {
       return const MainNavigationScreen();
+    }
+
+    String titleText = 'กรุณากรอก PIN เพื่อเข้าใช้งานระบบ';
+
+    if (!hasStoredPin) {
+      titleText = isConfirming
+          ? 'ยืนยันรหัส PIN 6 หลักอีกครั้ง'
+          : 'ตั้งค่ารหัส PIN 6 หลักความปลอดภัย';
     }
 
     return Scaffold(
@@ -769,7 +717,10 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.black.withOpacity(0.3), Colors.black.withOpacity(0.75)],
+                colors: [
+                  Colors.black.withOpacity(0.3),
+                  Colors.black.withOpacity(0.75),
+                ],
               ),
             ),
           ),
@@ -784,6 +735,12 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: kGoldPrimary, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: kGoldPrimary.withOpacity(0.3),
+                            blurRadius: 12,
+                          ),
+                        ],
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(14),
@@ -794,13 +751,46 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                             width: 120,
                             height: 120,
                             fit: BoxFit.cover,
+                            errorBuilder: (ctx, err, stack) => const Icon(
+                              Icons.smart_toy,
+                              color: kGoldPrimary,
+                              size: 80,
+                            ),
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text('GOLD PRO', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: kGoldPrimary)),
+                    const Text(
+                      'GOLD PRO',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: kGoldPrimary,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      ' ROBOT ALGO TRADING',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white70,
+                        letterSpacing: 4,
+                      ),
+                    ),
                     const SizedBox(height: 20),
+                    Text(
+                      titleText,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(6, (index) {
@@ -811,14 +801,23 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                           height: 16,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: filled ? kGoldPrimary : Colors.transparent,
-                            border: Border.all(color: kGoldPrimary, width: 2),
+                            color: filled
+                                ? kGoldPrimary
+                                : Colors.transparent,
+                            border: Border.all(
+                              color: kGoldPrimary,
+                              width: 2,
+                            ),
                           ),
                         );
                       }),
                     ),
                     const SizedBox(height: 24),
-                    for (final row in [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']])
+                    for (final row in [
+                      ['1', '2', '3'],
+                      ['4', '5', '6'],
+                      ['7', '8', '9'],
+                    ])
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 5),
                         child: Row(
@@ -835,6 +834,15 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                           _buildPinButton('0'),
                           _buildPinButton('del'),
                         ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Powered By Algohost',
+                      style: TextStyle(
+                        color: kGoldPrimary,
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
                   ],
@@ -855,7 +863,16 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: kDarkCard.withOpacity(0.75),
-        border: Border.all(color: kGoldPrimary, width: 1.5),
+        border: Border.all(
+          color: kGoldPrimary,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kGoldPrimary.withOpacity(0.15),
+            blurRadius: 6,
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -870,8 +887,19 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
           customBorder: const CircleBorder(),
           child: Center(
             child: val == 'del'
-                ? const Icon(Icons.backspace_outlined, color: kGoldPrimary, size: 20)
-                : Text(val, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                ? const Icon(
+                    Icons.backspace_outlined,
+                    color: kGoldPrimary,
+                    size: 20,
+                  )
+                : Text(
+                    val,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ),
       ),
@@ -887,10 +915,12 @@ class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  State<MainNavigationScreen> createState() =>
+      _MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> with TickerProviderStateMixin {
+class _MainNavigationScreenState extends State<MainNavigationScreen>
+    with TickerProviderStateMixin {
   int _currentIndex = 2;
   String currentLogin = "235305975";
   int unreadAlertsCount = 0;
@@ -900,8 +930,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
   DatabaseReference? _logsRef;
   DatabaseReference? _ordersRef;
 
+  Offset _robotBubbleOffset = const Offset(320, 600);
   Offset _modalOffset = const Offset(16, 80);
+
   bool _isLiveStatusVisible = true;
+  bool _isRobotBubblePressed = false;
   bool _isLargeLogsModalOpen = false;
   bool isRunning = false;
   bool isConnected = false;
@@ -913,43 +946,49 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
   List<Map<String, dynamic>> _botLogs = [];
   List<Map<dynamic, dynamic>> activeOrders = [];
 
-  final List<String> _images = ['assets/images/2.png', 'assets/images/4.png', 'assets/images/6.png'];
+  final List<String> _images = [
+    'assets/images/2.png',
+    'assets/images/4.png',
+    'assets/images/6.png',
+  ];
   int _imageIndex = 0; 
   Timer? _imageTimer; 
 
-  late final AnimationController _scannerController = AnimationController(
+  late final AnimationController _bounceController =
+      AnimationController(
+    duration: const Duration(seconds: 1),
+    vsync: this,
+  )..repeat(reverse: true);
+
+  late final Animation<double> _bounceAnimation =
+      Tween<double>(begin: 0.0, end: -10.0).animate(
+    CurvedAnimation(
+      parent: _bounceController,
+      curve: Curves.easeInOut,
+    ),
+  );
+
+  late final AnimationController _scannerController =
+      AnimationController(
     duration: const Duration(seconds: 3),
     vsync: this,
   )..repeat(reverse: true);
 
-  // แอนิเมชันเด้งขึ้นเด้งลงสำหรับกล่อง Logs
-  late final AnimationController _modalBounceController = AnimationController(
-    duration: const Duration(seconds: 2),
-    vsync: this,
-  )..repeat(reverse: true);
-
-  late final Animation<double> _modalBounceAnimation = Tween<double>(
-    begin: 0.0,
-    end: -6.0,
-  ).animate(CurvedAnimation(
-    parent: _modalBounceController,
-    curve: Curves.easeInOut,
-  ));
-
-  late final Animation<double> _scannerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-    CurvedAnimation(parent: _scannerController, curve: Curves.easeInOut),
+  late final Animation<double> _scannerAnimation =
+      Tween<double>(begin: 0.0, end: 1.0).animate(
+    CurvedAnimation(
+      parent: _scannerController,
+      curve: Curves.easeInOut,
+    ),
   );
-
-  StreamSubscription? _overlaySubscription;
-  bool _isStartingOverlay = false;
 
   @override
   void initState() {
     super.initState();
-    _initSystemOverlay();
 
     _loadSavedLogin().then((_) {
       if (!mounted) return;
+
       _listenToActiveAccount();
       _listenToAlertsCount();
       _initFirebaseAndListen();
@@ -967,60 +1006,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
     });
   }
 
-  Future<void> _initSystemOverlay() async {
-    if (_isStartingOverlay) return;
-    _isStartingOverlay = true;
-
-    try {
-      await _overlaySubscription?.cancel();
-      _overlaySubscription = FlutterOverlayWindow.overlayListener.listen((event) async {
-        if (event == 'open_app') {
-          // กดบอลลูนนอกแอปเพื่อพับแอปหลักลงเบื้องหลังทันที
-          SystemNavigator.pop(animated: true);
-        }
-      });
-
-      bool granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
-      if (!granted) {
-        await FlutterOverlayWindow.requestPermission();
-        granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
-      }
-
-      if (!granted) return;
-
-      final active = await FlutterOverlayWindow.isActive();
-      if (!active) {
-        await FlutterOverlayWindow.showOverlay(
-          height: 110,
-          width: 110,
-          alignment: OverlayAlignment.centerRight,
-          enableDrag: true, // ลากเคลื่อนไหวอิสระบนจอมือถือ
-          flag: OverlayFlag.defaultFlag,
-          visibility: NotificationVisibility.visibilityPublic,
-          positionGravity: PositionGravity.none,
-        );    
-      }
-    } catch (e) {
-      debugPrint('GOLD PRO overlay error: $e');
-    } finally {
-      _isStartingOverlay = false;
-    }
-  }
-
   @override
   void dispose() {
-    _overlaySubscription?.cancel();
     _imageTimer?.cancel();
+    _bounceController.dispose();
     _scannerController.dispose();
-    _modalBounceController.dispose();
     super.dispose();
   }
 
   Future<void> _loadSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('mt5_login');
+
     if (saved != null && saved.isNotEmpty && mounted) {
-      setState(() { currentLogin = saved; });
+      setState(() {
+        currentLogin = saved;
+      });
     }
   }
 
@@ -1028,12 +1029,21 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
     try {
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
+
       database.ref('status/login').onValue.listen((event) {
         final val = event.snapshot.value?.toString();
-        if (val != null && val.isNotEmpty && mounted && val != currentLogin) {
-          setState(() { currentLogin = val; });
+
+        if (val != null &&
+            val.isNotEmpty &&
+            mounted &&
+            val != currentLogin) {
+          setState(() {
+            currentLogin = val;
+          });
+
           _listenToAlertsCount();
           _initFirebaseAndListen();
           _listenToLogs();
@@ -1049,15 +1059,32 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
     try {
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
+
       _alertsRef = database.ref('accounts/$currentLogin/alerts');
+
       _alertsRef?.onValue.listen((DatabaseEvent event) {
         final data = event.snapshot.value;
+
         if (data != null && mounted) {
-          int total = data is Map ? data.length : (data is List ? data.where((e) => e != null).length : 0);
+          int total = 0;
+
+          if (data is Map) {
+            total = data.length;
+          } else if (data is List) {
+            total = data.where((e) => e != null).length;
+          }
+
           setState(() {
-            if (_currentIndex != 4) unreadAlertsCount = total;
+            if (_currentIndex != 4) {
+              unreadAlertsCount = total;
+            }
+          });
+        } else if (data == null && mounted) {
+          setState(() {
+            unreadAlertsCount = 0;
           });
         }
       });
@@ -1070,23 +1097,29 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
     try {
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
+
       _dbRef = database.ref('accounts/$currentLogin/status');
+
       _dbRef?.onValue.listen((DatabaseEvent event) {
         final rawData = event.snapshot.value;
+
         if (rawData is Map && mounted) {
           final data = Map<dynamic, dynamic>.from(rawData);
+
           setState(() {
             isRunning = data['is_running'] == true;
-            profit = (data['profit'] is num) ? data['profit'].toDouble() : 0.0;
+
+            final rawProfit = data['profit'];
+            profit = rawProfit is num
+                ? rawProfit.toDouble()
+                : double.tryParse(rawProfit?.toString() ?? '0') ?? 0.0;
+
             symbol = data['symbol']?.toString() ?? 'BTCUSD';
             timeframe = data['timeframe']?.toString() ?? 'M1';
           });
-
-          // ส่งสถานะออนไลน์/ออฟไลน์ ไปอัปเดตจุดสีบนบอลลูนนอกแอป
-          bool onlineStatus = (isConnected && isRunning);
-          FlutterOverlayWindow.shareData(onlineStatus ? "status_online" : "status_offline");
         }
       });
     } catch (e) {
@@ -1098,14 +1131,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
     try {
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
+
       database.ref('.info/connected').onValue.listen((event) {
-        final connected = event.snapshot.value as bool? ?? false;
+        final connected =
+            event.snapshot.value as bool? ?? false;
+
         if (mounted) {
-          setState(() { isConnected = connected; });
-          bool onlineStatus = (isConnected && isRunning);
-          FlutterOverlayWindow.shareData(onlineStatus ? "status_online" : "status_offline");
+          setState(() {
+            isConnected = connected;
+          });
         }
       });
     } catch (e) {
@@ -1117,22 +1154,61 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
     try {
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
+
       _logsRef = database.ref('accounts/$currentLogin/logs');
+
       _logsRef?.onValue.listen((DatabaseEvent event) {
         final data = event.snapshot.value;
+
         if (!mounted) return;
+
         List<Map<String, dynamic>> tempLogs = [];
+
         if (data is Map) {
-          final sortedEntries = data.entries.toList()..sort((a, b) => b.key.toString().compareTo(a.key.toString()));
+          final sortedEntries = data.entries.toList()
+            ..sort(
+              (a, b) => b.key.toString().compareTo(
+                    a.key.toString(),
+                  ),
+            );
+
           for (final entry in sortedEntries) {
             if (entry.value != null) {
-              tempLogs.add({'key': entry.key.toString(), 'message': entry.value.toString()});
+              final rawMsg = entry.value.toString();
+              final cleanMsg = rawMsg.replaceAll(
+                RegExp(r'command\s*', caseSensitive: false),
+                '',
+              );
+
+              tempLogs.add({
+                'key': entry.key.toString(),
+                'message': cleanMsg,
+              });
+            }
+          }
+        } else if (data is List) {
+          for (int i = data.length - 1; i >= 0; i--) {
+            if (data[i] != null) {
+              final rawMsg = data[i].toString();
+              final cleanMsg = rawMsg.replaceAll(
+                RegExp(r'command\s*', caseSensitive: false),
+                '',
+              );
+
+              tempLogs.add({
+                'key': i.toString(),
+                'message': cleanMsg,
+              });
             }
           }
         }
-        setState(() { _botLogs = tempLogs; });
+
+        setState(() {
+          _botLogs = tempLogs;
+        });
       });
     } catch (e) {
       debugPrint("Logs listen error: $e");
@@ -1143,17 +1219,36 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
     try {
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
+
       _ordersRef = database.ref('accounts/$currentLogin/orders');
+
       _ordersRef?.onValue.listen((DatabaseEvent event) {
         final data = event.snapshot.value;
+
         if (!mounted) return;
+
         List<Map<dynamic, dynamic>> newOrders = [];
+
         if (data is Map) {
-          data.forEach((k, v) { if (v is Map) newOrders.add(Map<dynamic, dynamic>.from(v)); });
+          data.forEach((key, value) {
+            if (value is Map) {
+              newOrders.add(Map<dynamic, dynamic>.from(value));
+            }
+          });
+        } else if (data is List) {
+          for (final item in data) {
+            if (item is Map) {
+              newOrders.add(Map<dynamic, dynamic>.from(item));
+            }
+          }
         }
-        setState(() { activeOrders = newOrders; });
+
+        setState(() {
+          activeOrders = newOrders;
+        });
       });
     } catch (e) {
       debugPrint("Orders listen error: $e");
@@ -1161,25 +1256,46 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
   }
 
   void _clearLogItem(String key) async {
-    if (_logsRef != null) await _logsRef!.child(key).remove();
+    try {
+      if (_logsRef != null) {
+        await _logsRef!.child(key).remove();
+      }
+    } catch (e) {
+      debugPrint("Clear log item error: $e");
+    }
   }
 
   void _clearAllLogs() async {
-    if (_logsRef != null) {
-      await _logsRef!.remove();
-      setState(() { _botLogs.clear(); });
+    try {
+      if (_logsRef != null) {
+        await _logsRef!.remove();
+
+        if (mounted) {
+          setState(() {
+            _botLogs.clear();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Clear all logs error: $e");
     }
   }
 
   Future<bool> _handleBackButton() async {
     if (_isLargeLogsModalOpen) {
-      setState(() { _isLargeLogsModalOpen = false; });
+      setState(() {
+        _isLargeLogsModalOpen = false;
+      });
       return false;
     }
+
     if (_currentIndex != 2) {
-      setState(() { _currentIndex = 2; });
+      setState(() {
+        _currentIndex = 2;
+      });
       return false;
     }
+
     return true;
   }
 
@@ -1190,11 +1306,40 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
       OrdersScreen(accountLogin: currentLogin),
       HomeScreen(accountLogin: currentLogin),
       HistoryScreen(accountLogin: currentLogin),
-      AlertsScreen(accountLogin: currentLogin, onAlertsRead: () { setState(() { unreadAlertsCount = 0; }); }),
+      AlertsScreen(
+        accountLogin: currentLogin,
+        onAlertsRead: () {
+          if (!mounted) return;
+
+          setState(() {
+            unreadAlertsCount = 0;
+          });
+        },
+      ),
     ];
 
-    final double totalOrdersProfit = activeOrders.fold(0.0, (sum, item) => sum + (double.tryParse(item['profit']?.toString() ?? '0.0') ?? 0.0));
-    final double totalLots = activeOrders.fold(0.0, (sum, item) => sum + (double.tryParse(item['lot']?.toString() ?? '0.0') ?? 0.0));
+    final double totalOrdersProfit = activeOrders.fold(
+      0.0,
+      (sum, item) {
+        return sum +
+            (double.tryParse(
+                  item['profit']?.toString() ?? '0.0',
+                ) ??
+                0.0);
+      },
+    );
+
+    final double totalLots = activeOrders.fold(
+      0.0,
+      (sum, item) {
+        return sum +
+            (double.tryParse(
+                  item['lot']?.toString() ?? '0.0',
+                ) ??
+                0.0);
+      },
+    );
+
     final bool isTotalProfit = totalOrdersProfit >= 0;
 
     return WillPopScope(
@@ -1208,30 +1353,55 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
               'assets/images/8.png',
               fit: BoxFit.cover,
               opacity: const AlwaysStoppedAnimation(0.25),
-              errorBuilder: (context, error, stackTrace) => Container(color: kDarkBg),
+              errorBuilder: (context, error, stackTrace) {
+                return Container(color: kDarkBg);
+              },
             ),
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.black.withOpacity(0.35), Colors.black.withOpacity(0.75)],
+                  colors: [
+                    Colors.black.withOpacity(0.35),
+                    Colors.black.withOpacity(0.75),
+                  ],
                 ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.only(bottom: 65.0),
-              child: IndexedStack(index: _currentIndex, children: pages),
+              child: IndexedStack(
+                index: _currentIndex,
+                children: pages,
+              ),
             ),
             Positioned(
-              left: 0, right: 0, bottom: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
               child: SafeArea(
                 top: false,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: kDarkCard.withOpacity(0.8),
-                    border: Border(top: BorderSide(color: kGoldPrimary.withOpacity(0.5), width: 1.5)),
+                    border: Border(
+                      top: BorderSide(
+                        color: kGoldPrimary.withOpacity(0.5),
+                        width: 1.5,
+                      ),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.8),
+                        blurRadius: 10,
+                        offset: const Offset(0, -5),
+                      ),
+                    ],
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -1240,160 +1410,408 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
                       _buildCustomNavItem(1, Icons.list_alt, 'Orders'),
                       _buildCustomNavItem(2, Icons.home_filled, 'Home'),
                       _buildCustomNavItem(3, Icons.history, 'History'),
-                      _buildCustomNavItem(4, Icons.notifications_active, 'Alerts', badgeCount: unreadAlertsCount),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // 🌟 1. สวิตช์เปิด/ปิดกล่อง Status & Logs ตรงมุมขวาล่าง (ตำแหน่งตามรูปภาพประกอบ)
-            Positioned(
-              right: 20,
-              bottom: 85,
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isLargeLogsModalOpen = !_isLargeLogsModalOpen;
-                  });
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: 52,
-                  height: 30,
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    color: _isLargeLogsModalOpen ? kGoldPrimary : kDarkCard,
-                    border: Border.all(color: kGoldPrimary, width: 2),
-                    boxShadow: [
-                      BoxShadow(color: kGoldPrimary.withOpacity(0.4), blurRadius: 8),
-                    ],
-                  ),
-                  child: AnimatedAlign(
-                    duration: const Duration(milliseconds: 250),
-                    alignment: _isLargeLogsModalOpen ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black),
-                      child: Icon(
-                        _isLargeLogsModalOpen ? Icons.terminal : Icons.power_settings_new,
-                        size: 12,
-                        color: kGoldPrimary,
+                      _buildCustomNavItem(
+                        4,
+                        Icons.notifications_active,
+                        'Alerts',
+                        badgeCount: unreadAlertsCount,
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),
             ),
-
-            // 🌟 2. กล่อง Status & Logs (ใส่รูป 8.jpg, เด้งขึ้นเด้งลง, ลากเลื่อนขยับได้อิสระ)
             if (_isLargeLogsModalOpen)
               Positioned(
                 left: _modalOffset.dx,
                 top: _modalOffset.dy,
                 child: GestureDetector(
                   onPanUpdate: (details) {
-                    setState(() { _modalOffset += details.delta; }); // ลากขยับได้อิสระ
+                    setState(() {
+                      _modalOffset += details.delta;
+                    });
                   },
-                  child: AnimatedBuilder(
-                    animation: _modalBounceAnimation, // แอนิเมชันเด้งขึ้นเด้งลง
-                    builder: (context, child) {
-                      return Transform.translate(
-                        offset: Offset(0, _modalBounceAnimation.value),
-                        child: child,
-                      );
-                    },
-                    child: Container(
-                      width: MediaQuery.of(context).size.width * 0.92,
-                      height: MediaQuery.of(context).size.height * 0.72,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: kGoldPrimary, width: 2.0),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.8), blurRadius: 20)],
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.92,
+                    height: MediaQuery.of(context).size.height * 0.72,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: kGoldPrimary,
+                        width: 2.0,
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: Stack(
-                          children: [
-                            // พื้นหลังรูป 8.jpg ตามต้องการ
-                            Image.asset(
-                              'assets/images/8.jpg',
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              errorBuilder: (ctx, err, stack) => Container(color: kDarkCard),
-                            ),
-                            Container(color: Colors.black.withOpacity(0.8)), // กรองแสงให้อ่านตัวหนังสือชัดเจน
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Row(
-                                        children: [
-                                          Icon(Icons.terminal, color: kGoldPrimary, size: 18),
-                                          SizedBox(width: 8),
-                                          Text('STATUS & LOGS', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: kGoldPrimary, letterSpacing: 1)),
-                                        ],
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                                        onPressed: () { setState(() { _isLargeLogsModalOpen = false; }); },
-                                      ),
-                                    ],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.8),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                      color: kDarkCard.withOpacity(0.85),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14.0,
+                            vertical: 10.0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(
+                                    Icons.terminal,
+                                    color: kGoldPrimary,
+                                    size: 18,
                                   ),
-                                ),
-                                const Divider(color: kGoldPrimary, height: 1, thickness: 1.5),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12.0),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        _buildStatusReportBox(symbol, timeframe, totalOrdersProfit, activeOrders.length, totalLots, isTotalProfit),
-                                        const SizedBox(height: 12),
-                                        const Text('ACTIVITY LOGS', style: TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
-                                        const SizedBox(height: 8),
-                                        Expanded(
-                                          child: ListView.builder(
-                                            itemCount: _botLogs.length,
-                                            itemBuilder: (context, index) {
-                                              final log = _botLogs[index];
-                                              return Padding(
-                                                padding: const EdgeInsets.only(bottom: 8.0),
-                                                child: Text(
-                                                  "> ${log['message']}",
-                                                  style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontSize: 13, fontWeight: FontWeight.bold),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ],
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'STATUS & LOGS',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      color: kGoldPrimary,
+                                      letterSpacing: 1,
                                     ),
                                   ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: Icon(
+                                      _isLiveStatusVisible
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                      color: _isLiveStatusVisible
+                                          ? kGreenNeon
+                                          : Colors.grey,
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _isLiveStatusVisible =
+                                            !_isLiveStatusVisible;
+                                      });
+                                    },
+                                    tooltip: _isLiveStatusVisible
+                                        ? 'Hide Live Status'
+                                        : 'Show Live Status',
+                                    constraints: const BoxConstraints(),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                    ),
+                                  ),
+                                  if (_botLogs.isNotEmpty)
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete_sweep,
+                                        color: kRedNeon,
+                                        size: 20,
+                                      ),
+                                      onPressed: _clearAllLogs,
+                                      tooltip: 'Clear All Logs',
+                                      constraints: const BoxConstraints(),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                      ),
+                                    ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _isLargeLogsModalOpen = false;
+                                      });
+                                    },
+                                    constraints: const BoxConstraints(),
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(
+                          color: kGoldPrimary,
+                          height: 1,
+                          thickness: 1.5,
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (_isLiveStatusVisible) ...[
+                                  _buildStatusReportBox(
+                                    symbol,
+                                    timeframe,
+                                    totalOrdersProfit,
+                                    activeOrders.length,
+                                    totalLots,
+                                    isTotalProfit,
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+                                const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.show_chart,
+                                      color: kGoldPrimary,
+                                      size: 16,
+                                    ),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'ACTIVITY LOGS',
+                                      style: TextStyle(
+                                        color: kGoldPrimary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                                const SizedBox(height: 8),
+                                if (_botLogs.isEmpty)
+                                  const Expanded(
+                                    child: Center(
+                                      child: Text(
+                                        'No log records...',
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontFamily: 'monospace',
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Expanded(
+                                    child: ListView.builder(
+                                      itemCount: _botLogs.length,
+                                      itemBuilder: (context, index) {
+                                        final log = _botLogs[index];
+                                        final bool isLatest = index == 0;
+
+                                        return Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 8.0,
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Expanded(
+                                                child: isLatest
+                                                    ? Row(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          const Text(
+                                                            '➔ ',
+                                                            style: TextStyle(
+                                                              color: kGreenNeon,
+                                                              fontSize: 13,
+                                                              fontWeight:
+                                                                  FontWeight.bold,
+                                                            ),
+                                                          ),
+                                                          Expanded(
+                                                            child: TypewriterText(
+                                                              text:
+                                                                  '${log['message']}',
+                                                              speed:
+                                                                  const Duration(
+                                                                milliseconds: 65,
+                                                              ),
+                                                              style:
+                                                                  const TextStyle(
+                                                                color: kGreenNeon,
+                                                                fontFamily:
+                                                                    'monospace',
+                                                                fontSize: 13,
+                                                                fontWeight:
+                                                                    FontWeight.bold,
+                                                                height: 1.4,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      )
+                                                    : Text(
+                                                        "> ${log['message']}",
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontFamily: 'monospace',
+                                                          fontSize: 13,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          height: 1.4,
+                                                        ),
+                                                      ),
+                                              ),
+                                              GestureDetector(
+                                                onTap: () =>
+                                                    _clearLogItem(
+                                                  log['key'].toString(),
+                                                ),
+                                                child: const Padding(
+                                                  padding: EdgeInsets.only(
+                                                    left: 8.0,
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.delete_outline,
+                                                    color: kRedNeon,
+                                                    size: 15,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ),
               ),
+            Positioned(
+              left: _robotBubbleOffset.dx,
+              top: _robotBubbleOffset.dy,
+              child: AnimatedBuilder(
+                animation: _bounceAnimation,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Offset(0, _bounceAnimation.value),
+                    child: child,
+                  );
+                },
+                child: Draggable(
+                  feedback: Material(
+                    color: Colors.transparent,
+                    child: _buildRobotBubbleWidget(),
+                  ),
+                  childWhenDragging: const SizedBox.shrink(),
+                  onDragEnd: (details) {
+                    setState(() {
+                      _robotBubbleOffset = details.offset;
+                    });
+                  },
+                  child: GestureDetector(
+                    onTapDown: (_) {
+                      setState(() {
+                        _isRobotBubblePressed = true;
+                      });
+                    },
+                    onTapUp: (_) {
+                      setState(() {
+                        _isRobotBubblePressed = false;
+                        _isLargeLogsModalOpen = !_isLargeLogsModalOpen;
+                      });
+                    },
+                    onTapCancel: () {
+                      setState(() {
+                        _isRobotBubblePressed = false;
+                      });
+                    },
+                    child: AnimatedScale(
+                      scale: _isRobotBubblePressed ? 0.85 : 1.0,
+                      duration: const Duration(milliseconds: 100),
+                      child: _buildRobotBubbleWidget(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusReportBox(String symbol, String tf, double totalOrdersProfit, int orderCount, double totalLots, bool isTotalProfit) {
+  Widget _buildRobotBubbleWidget() {
+    final bool isServerActive = isConnected && isRunning;
+
+    return Container(
+      width: 58,
+      height: 58,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: kDarkCard,
+        border: Border.all(
+          color: kGoldPrimary,
+          width: 2.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isServerActive ? kGreenNeon : kRedNeon)
+                .withOpacity(0.6),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          ClipOval(
+            child: Opacity(
+              opacity: 0.9,
+              child: Image.asset(
+                'assets/images/7.png',
+                fit: BoxFit.cover,
+                width: 54,
+                height: 54,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(Icons.smart_toy, color: kGoldPrimary);
+                },
+              ),
+            ),
+          ),
+          Positioned(
+            right: -2,
+            top: -2,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: isServerActive ? kGreenNeon : kRedNeon,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.black,
+                  width: 2,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusReportBox(
+    String symbol,
+    String tf,
+    double totalOrdersProfit,
+    int orderCount,
+    double totalLots,
+    bool isTotalProfit,
+  ) {
     final bool isServerActive = isConnected && isRunning;
     final String scanImage = _images[_imageIndex];
 
@@ -1402,47 +1820,198 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
       decoration: BoxDecoration(
         color: kDarkCard.withOpacity(0.9),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kGoldPrimary, width: 2.0),
+        border: Border.all(
+          color: kGoldPrimary,
+          width: 2.0,
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            child: Container(
-              height: 120,
-              width: double.infinity,
-              color: Colors.black,
-              child: Image.asset(scanImage, fit: BoxFit.cover, errorBuilder: (ctx, err, stack) => Container(color: Colors.black)),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
+                child: Container(
+                  height: 150,
+                  width: double.infinity,
+                  color: Colors.black,
+                  child: AnimatedBuilder(
+                    animation: _scannerAnimation,
+                    builder: (context, child) {
+                      final double scanValue =
+                          _scannerAnimation.value * 150;
+
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 800),
+                            child: Image.asset(
+                              scanImage,
+                              key: ValueKey<String>(scanImage),
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: 150,
+                              errorBuilder: (context, error, stackTrace) {
+                                debugPrint('GOLD PRO image error: $error');
+                                return const ColoredBox(
+                                  color: Colors.black,
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.broken_image,
+                                      color: Colors.amber,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          Positioned(
+                            top: scanValue.clamp(0.0, 147.0),
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              height: 3,
+                              decoration: const BoxDecoration(
+                                color: kGoldPrimary,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: kGoldPrimary,
+                                    blurRadius: 8,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 8, height: 8,
-                      decoration: BoxDecoration(color: isServerActive ? kGreenNeon : kRedNeon, shape: BoxShape.circle),
+                    const Text(
+                      'LIVE STATUS',
+                      style: TextStyle(
+                        color: kGoldPrimary,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                        letterSpacing: 1.2,
+                      ),
                     ),
-                    const SizedBox(width: 6),
-                    Text(isServerActive ? 'EA SERVER ONLINE & RUNNING' : 'EA SERVER OFFLINE / STOPPED',
-                        style: TextStyle(color: isServerActive ? kGreenNeon : kRedNeon, fontSize: 10, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: isServerActive ? kGreenNeon : kRedNeon,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: (isServerActive
+                                        ? kGreenNeon
+                                        : kRedNeon)
+                                    .withOpacity(0.8),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            isServerActive
+                                ? 'EA SERVER ONLINE & RUNNING'
+                                : 'EA SERVER OFFLINE / STOPPED',
+                            style: TextStyle(
+                              color:
+                                  isServerActive ? kGreenNeon : kRedNeon,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Divider(
+                      color: Colors.white24,
+                      height: 6,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Active Orders: $orderCount',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Lots: ${totalLots.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 10,
+                          ),
+                        ),
+                        Flexible(
+                          child: Text(
+                            'P/L: ${isTotalProfit ? "+" : ""}\$${totalOrdersProfit.toStringAsFixed(2)}',
+                            textAlign: TextAlign.end,
+                            style: TextStyle(
+                              color: isTotalProfit
+                                  ? kGreenNeon
+                                  : kRedNeon,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Active Orders: $orderCount', style: const TextStyle(color: Colors.white70, fontSize: 10)),
-                    Text('Lots: ${totalLots.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70, fontSize: 10)),
-                    Text('P/L: ${isTotalProfit ? "+" : ""}\$${totalOrdersProfit.toStringAsFixed(2)}',
-                        style: TextStyle(color: isTotalProfit ? kGreenNeon : kRedNeon, fontSize: 10, fontWeight: FontWeight.bold)),
-                  ],
+              ),
+            ],
+          ),
+          Positioned(
+            right: 8,
+            top: 8,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isLiveStatusVisible = false;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: kGoldPrimary,
+                    width: 1.5,
+                  ),
                 ),
-              ],
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
             ),
           ),
         ],
@@ -1450,17 +2019,100 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
     );
   }
 
-  Widget _buildCustomNavItem(int index, IconData icon, String label, {int badgeCount = 0}) {
+  Widget _buildCustomNavItem(
+    int index,
+    IconData icon,
+    String label, {
+    int badgeCount = 0,
+  }) {
     final bool isSelected = _currentIndex == index;
+
     return GestureDetector(
-      onTap: () { setState(() { _currentIndex = index; if (index == 4) unreadAlertsCount = 0; }); },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: isSelected ? kGoldPrimary : Colors.white70, size: 22),
-          const SizedBox(height: 2),
-          Text(label, style: TextStyle(color: isSelected ? kGoldPrimary : Colors.white70, fontSize: 10, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-        ],
+      onTap: () {
+        setState(() {
+          _currentIndex = index;
+
+          if (index == 4) {
+            unreadAlertsCount = 0;
+          }
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 8,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? kDarkCard.withOpacity(0.85)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isSelected ? kGoldPrimary : Colors.transparent,
+            width: isSelected ? 1.5 : 0,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: kGoldPrimary.withOpacity(0.2),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : [],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? kGoldPrimary : Colors.white70,
+                  size: 22,
+                ),
+                if (badgeCount > 0)
+                  Positioned(
+                    right: -6,
+                    top: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: kGoldPrimary,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$badgeCount',
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? kGoldPrimary : Colors.white70,
+                fontSize: 10,
+                fontWeight:
+                    isSelected ? FontWeight.bold : FontWeight.normal,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1468,9 +2120,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Ticker
 
 
 
-
 // ==========================================
-// 🌟 HomeScreen (GOLD PRO) - โค้ดฉบับสมบูรณ์ (ไม่ซ้ำซ้อน)
+// 🌟 HomeScreen (GOLD PRO) - โค้ดฉบับสมบูรณ์
 // ==========================================
 class HomeScreen extends StatefulWidget {
   final String accountLogin;
@@ -1863,6 +2514,43 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 20),
                     _buildBidAskBoxContent(context),
+                    const SizedBox(height: 16),
+                    // 🌟 เพิ่มปุ่มรูปภาพ 7.jpg ในกรอบสีขาวหน้า Home สำหรับเปิด-ปิด Trading Journal
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => _showTradingCalendarDialog(context),
+                        child: Container(
+                          width: 65,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: kGoldPrimary, width: 1.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: kGoldPrimary.withOpacity(0.3),
+                                blurRadius: 8,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8.5),
+                            child: Image.asset(
+                              'assets/images/7.jpg',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: kDarkCard,
+                                  child: const Center(
+                                    child: Icon(Icons.star, color: kGoldPrimary, size: 20),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -1920,32 +2608,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   ),
                                 ],
                               ),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    icon: const Icon(
-                                      Icons.star, 
-                                      color: Colors.white, 
-                                      size: 20,
-                                    ),
-                                    tooltip: 'Trading Journal',
-                                    onPressed: () => _showTradingCalendarDialog(context),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  IconButton(
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                                    onPressed: () {
-                                      setState(() {
-                                        _isChartModalOpen = false;
-                                      });
-                                    },
-                                  ),
-                                ],
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                onPressed: () {
+                                  setState(() {
+                                    _isChartModalOpen = false;
+                                  });
+                                },
                               ),
                             ],
                           ),
@@ -2855,6 +3526,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 }
+
 
 
 
