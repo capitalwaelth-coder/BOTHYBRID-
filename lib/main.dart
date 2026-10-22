@@ -971,7 +971,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 // ==========================================
-// #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
+// #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen) - Single Smart Floating Bubble
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -993,11 +993,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   DatabaseReference? _logsRef;
   DatabaseReference? _ordersRef;
 
-  Offset _robotBubbleOffset = const Offset(320, 600);
   Offset _modalOffset = const Offset(16, 80);
 
   bool _isLiveStatusVisible = true;
-  bool _isRobotBubblePressed = false;
   bool _isLargeLogsModalOpen = false;
   bool isRunning = false;
   bool isConnected = false;
@@ -1017,20 +1015,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   int _imageIndex = 0; 
   Timer? _imageTimer; 
 
-  late final AnimationController _bounceController =
-      AnimationController(
-    duration: const Duration(seconds: 1),
-    vsync: this,
-  )..repeat(reverse: true);
-
-  late final Animation<double> _bounceAnimation =
-      Tween<double>(begin: 0.0, end: -10.0).animate(
-    CurvedAnimation(
-      parent: _bounceController,
-      curve: Curves.easeInOut,
-    ),
-  );
-
   late final AnimationController _scannerController =
       AnimationController(
     duration: const Duration(seconds: 3),
@@ -1045,10 +1029,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     ),
   );
 
+  StreamSubscription? _overlaySubscription;
+  bool _isStartingOverlay = false;
+
   @override
   void initState() {
     super.initState();
-    _initOverlayPermissionAndListener(); // <--- ขอสิทธิ์และขอฟังการกดพับแอป
+    _initSystemOverlay(); // <--- เปิดบอลลูนลอยอัจฉริยะนอกแอป
 
     _loadSavedLogin().then((_) {
       if (!mounted) return;
@@ -1070,43 +1057,40 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     });
   }
 
-  // เปิดบอลลูนลอยทับแอปอื่น และรับคำสั่งจากบอลลูน
-  StreamSubscription? _overlaySubscription;
-  bool _isStartingOverlay = false;
-
-  Future<void> _initOverlayPermissionAndListener() async {
+  // 🌟 ฟังก์ชันจัดการเปิดบอลลูนตัวเดียวครบวงจร
+  Future<void> _initSystemOverlay() async {
     if (_isStartingOverlay) return;
     _isStartingOverlay = true;
 
     try {
-      // ลงทะเบียนรับคำสั่งจากหน้าต่างบอลลูนนอกแอป
       await _overlaySubscription?.cancel();
       _overlaySubscription = FlutterOverlayWindow.overlayListener.listen((event) async {
         if (event == 'open_app') {
-          // สั่งพับแอปหลักลงเบื้องหลังทันที
+          // คำสั่งที่ 1: เมื่อกดที่ตัวบอลลูนหลักด้านนอก ให้พับแอปหลักลงเบื้องหลัง
           SystemNavigator.pop(animated: true);
+        } else if (event == 'toggle_logs') {
+          // คำสั่งที่ 2: เมื่อกดปุ่มขยาย/ย่อในบอลลูน ให้เปิด-ปิดกล่อง Logs ในแอป
+          if (mounted) {
+            setState(() {
+              _isLargeLogsModalOpen = !_isLargeLogsModalOpen;
+            });
+          }
         }
       });
 
-
-      // ตรวจสอบสิทธิ์แสดงทับแอปอื่น
       bool granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
       if (!granted) {
         await FlutterOverlayWindow.requestPermission();
         granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
       }
 
-      if (!granted) {
-        debugPrint('GOLD PRO: overlay permission not granted');
-        return;
-      }
+      if (!granted) return;
 
-      // เปิดหน้าต่างลอย หากยังไม่มีหน้าต่างทำงาน
       final active = await FlutterOverlayWindow.isActive();
       if (!active) {
         await FlutterOverlayWindow.showOverlay(
-          height: 70,
-          width: 70,
+          height: 80,
+          width: 80,
           alignment: OverlayAlignment.centerRight,
           enableDrag: true,
           flag: OverlayFlag.defaultFlag,
@@ -1114,9 +1098,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           positionGravity: PositionGravity.none,
         );
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint('GOLD PRO overlay error: $e');
-      debugPrint('$stackTrace');
     } finally {
       _isStartingOverlay = false;
     }
@@ -1126,7 +1109,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   void dispose() {
     _overlaySubscription?.cancel();
     _imageTimer?.cancel();
-    _bounceController.dispose();
     _scannerController.dispose();
     super.dispose();
   }
@@ -1538,6 +1520,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 ),
               ),
             ),
+            // 🌟 กล่อง Status & Logs ภายในแอป ที่กดเปิด-ปิดได้จากปุ่มที่บอลลูนนอกแอป
             if (_isLargeLogsModalOpen)
               Positioned(
                 left: _modalOffset.dx,
@@ -1614,9 +1597,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                             !_isLiveStatusVisible;
                                       });
                                     },
-                                    tooltip: _isLiveStatusVisible
-                                        ? 'Hide Live Status'
-                                        : 'Show Live Status',
                                     constraints: const BoxConstraints(),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 6,
@@ -1630,7 +1610,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                         size: 20,
                                       ),
                                       onPressed: _clearAllLogs,
-                                      tooltip: 'Clear All Logs',
                                       constraints: const BoxConstraints(),
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 6,
@@ -1806,117 +1785,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   ),
                 ),
               ),
-            Positioned(
-              left: _robotBubbleOffset.dx,
-              top: _robotBubbleOffset.dy,
-              child: AnimatedBuilder(
-                animation: _bounceAnimation,
-                builder: (context, child) {
-                  return Transform.translate(
-                    offset: Offset(0, _bounceAnimation.value),
-                    child: child,
-                  );
-                },
-                child: Draggable(
-                  feedback: Material(
-                    color: Colors.transparent,
-                    child: _buildRobotBubbleWidget(),
-                  ),
-                  childWhenDragging: const SizedBox.shrink(),
-                  onDragEnd: (details) {
-                    setState(() {
-                      _robotBubbleOffset = details.offset;
-                    });
-                  },
-                  child: GestureDetector(
-                    onTapDown: (_) {
-                      setState(() {
-                        _isRobotBubblePressed = true;
-                      });
-                    },
-                    onTapUp: (_) {
-                      setState(() {
-                        _isRobotBubblePressed = false;
-                        _isLargeLogsModalOpen = !_isLargeLogsModalOpen;
-                      });
-                    },
-                    onTapCancel: () {
-                      setState(() {
-                        _isRobotBubblePressed = false;
-                      });
-                    },
-                    child: AnimatedScale(
-                      scale: _isRobotBubblePressed ? 0.85 : 1.0,
-                      duration: const Duration(milliseconds: 100),
-                      child: _buildRobotBubbleWidget(),
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildRobotBubbleWidget() {
-    final bool isServerActive = isConnected && isRunning;
-
-    return Container(
-      width: 58,
-      height: 58,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: kDarkCard,
-        border: Border.all(
-          color: kGoldPrimary,
-          width: 2.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (isServerActive ? kGreenNeon : kRedNeon)
-                .withOpacity(0.6),
-            blurRadius: 10,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          ClipOval(
-            child: Opacity(
-              opacity: 0.9,
-              child: Image.asset(
-                'assets/images/7.png',
-                fit: BoxFit.cover,
-                width: 54,
-                height: 54,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(Icons.smart_toy, color: kGoldPrimary);
-                },
-              ),
-            ),
-          ),
-          Positioned(
-            right: -2,
-            top: -2,
-            child: Container(
-              width: 14,
-              height: 14,
-              decoration: BoxDecoration(
-                color: isServerActive ? kGreenNeon : kRedNeon,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.black,
-                  width: 2,
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1973,7 +1843,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                               width: double.infinity,
                               height: 150,
                               errorBuilder: (context, error, stackTrace) {
-                                debugPrint('GOLD PRO image error: $error');
                                 return const ColoredBox(
                                   color: Colors.black,
                                   child: Center(
@@ -2234,6 +2103,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
 
 
 
