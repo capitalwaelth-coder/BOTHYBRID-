@@ -175,7 +175,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
           if (_isExpanded)
             Center(
               child: SizedBox(
-                width: 310,
+                width: 500,
                 child: Container(
                   decoration: BoxDecoration(
                     color: const Color(0xFF161616).withOpacity(0.95),
@@ -195,7 +195,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                         child: Stack(
                           children: [
                             Container(
-                              height: 120,
+                              height: 500,
                               width: double.infinity,
                               color: Colors.black,
                               child: AnimatedBuilder(
