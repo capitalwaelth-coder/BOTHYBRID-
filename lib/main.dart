@@ -2012,10 +2012,10 @@ Future<void> _sendOverlayData() async {
                       });
                     },
                     onTapUp: (_) {
-                      setState(() {
-                        _isRobotBubblePressed = false;
-                        _isLargeLogsModalOpen = !_isLargeLogsModalOpen;
-                      });
+                    setState(() {
+                     _isRobotBubblePressed = false;
+                     });
+                     _startFloatingOverlay();
                     },
                     onTapCancel: () {
                       setState(() {
