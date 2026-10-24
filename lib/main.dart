@@ -1428,8 +1428,7 @@ class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  State<MainNavigationScreen> createState() =>
-      _MainNavigationScreenState();
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen>
@@ -1456,7 +1455,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   int _imageIndex = 0;
   Timer? _imageTimer;
-    final List<String> _images = [
+  final List<String> _images = [
     'assets/images/2.png',
     'assets/images/4.png',
     'assets/images/6.png',
@@ -1469,22 +1468,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   StreamSubscription<dynamic>? _overlayCommandSubscription;
 
-  late final AnimationController _bounceController =
-      AnimationController(
+  late final AnimationController _bounceController = AnimationController(
     duration: const Duration(milliseconds: 1200),
     vsync: this,
   )..repeat(reverse: true);
 
-  late final Animation<double> _bounceAnimation =
-      Tween<double>(begin: 0, end: 6).animate(
+  late final Animation<double> _bounceAnimation = Tween<double>(
+    begin: 0,
+    end: 6,
+  ).animate(
     CurvedAnimation(
       parent: _bounceController,
       curve: Curves.easeInOut,
     ),
   );
 
-  late final AnimationController _scannerController =
-      AnimationController(
+  late final AnimationController _scannerController = AnimationController(
     duration: const Duration(seconds: 2),
     vsync: this,
   )..repeat(reverse: true);
@@ -1494,7 +1493,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     super.initState();
 
     _listenToOverlayCommands();
-    
+
     _loadSavedLogin().then((_) {
       if (!mounted) return;
 
@@ -1527,20 +1526,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         0.0,
         (sum, item) =>
             sum +
-            (double.tryParse(
-                  item['profit']?.toString() ?? '0',
-                ) ??
-                0.0),
+            (double.tryParse(item['profit']?.toString() ?? '0') ?? 0.0),
       );
 
       final totalLots = activeOrders.fold<double>(
         0.0,
         (sum, item) =>
             sum +
-            (double.tryParse(
-                  item['lot']?.toString() ?? '0',
-                ) ??
-                0.0),
+            (double.tryParse(item['lot']?.toString() ?? '0') ?? 0.0),
       );
 
       await FlutterOverlayWindow.shareData({
@@ -1572,17 +1565,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   // ==========================================
   Future<void> _startFloatingOverlay() async {
     try {
-      bool granted =
-          await FlutterOverlayWindow.isPermissionGranted() ?? false;
+      bool granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
 
       if (!granted) {
-        final result =
-            await FlutterOverlayWindow.requestPermission();
-
+        final result = await FlutterOverlayWindow.requestPermission();
         if (result != true) return;
-
-        granted =
-            await FlutterOverlayWindow.isPermissionGranted() ?? false;
+        granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
       }
 
       if (!granted) return;
@@ -1603,10 +1591,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         );
       }
 
-      await Future.delayed(
-        const Duration(milliseconds: 400),
-      );
-
+      await Future.delayed(const Duration(milliseconds: 400));
       await _sendOverlayData();
     } catch (e) {
       debugPrint('Error starting overlay: $e');
@@ -1685,10 +1670,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       database.ref('status/login').onValue.listen((event) {
         final val = event.snapshot.value?.toString();
 
-        if (val != null &&
-            val.isNotEmpty &&
-            mounted &&
-            val != currentLogin) {
+        if (val != null && val.isNotEmpty && mounted && val != currentLogin) {
           setState(() {
             currentLogin = val;
           });
@@ -1765,10 +1747,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             final rawProfit = data['profit'];
             profit = rawProfit is num
                 ? rawProfit.toDouble()
-                : double.tryParse(
-                      rawProfit?.toString() ?? '0',
-                    ) ??
-                    0.0;
+                : double.tryParse(rawProfit?.toString() ?? '0') ?? 0.0;
 
             symbol = data['symbol']?.toString() ?? 'BTCUSD';
             timeframe = data['timeframe']?.toString() ?? 'M1';
@@ -1791,8 +1770,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       );
 
       database.ref('.info/connected').onValue.listen((event) {
-        final connected =
-            event.snapshot.value as bool? ?? false;
+        final connected = event.snapshot.value as bool? ?? false;
 
         if (mounted) {
           setState(() {
@@ -1826,11 +1804,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
         if (data is Map) {
           final sortedEntries = data.entries.toList()
-            ..sort(
-              (a, b) => b.key.toString().compareTo(
-                    a.key.toString(),
-                  ),
-            );
+            ..sort((a, b) => b.key.toString().compareTo(a.key.toString()));
 
           for (final entry in sortedEntries) {
             if (entry.value != null) {
@@ -1894,17 +1868,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         if (data is Map) {
           data.forEach((key, value) {
             if (value is Map) {
-              newOrders.add(
-                Map<dynamic, dynamic>.from(value),
-              );
+              newOrders.add(Map<dynamic, dynamic>.from(value));
             }
           });
         } else if (data is List) {
           for (final item in data) {
             if (item is Map) {
-              newOrders.add(
-                Map<dynamic, dynamic>.from(item),
-              );
+              newOrders.add(Map<dynamic, dynamic>.from(item));
             }
           }
         }
@@ -1989,10 +1959,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       0.0,
       (sum, item) {
         return sum +
-            (double.tryParse(
-                  item['profit']?.toString() ?? '0.0',
-                ) ??
-                0.0);
+            (double.tryParse(item['profit']?.toString() ?? '0.0') ?? 0.0);
       },
     );
 
@@ -2000,10 +1967,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       0.0,
       (sum, item) {
         return sum +
-            (double.tryParse(
-                  item['lot']?.toString() ?? '0.0',
-                ) ??
-                0.0);
+            (double.tryParse(item['lot']?.toString() ?? '0.0') ?? 0.0);
       },
     );
 
@@ -2127,8 +2091,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                             vertical: 10.0,
                           ),
                           child: Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Row(
                                 children: [
@@ -2168,8 +2131,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                       });
                                       _sendOverlayData();
                                     },
-                                    constraints:
-                                        const BoxConstraints(),
+                                    constraints: const BoxConstraints(),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 6,
                                     ),
@@ -2182,8 +2144,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                         size: 20,
                                       ),
                                       onPressed: _clearAllLogs,
-                                      constraints:
-                                          const BoxConstraints(),
+                                      constraints: const BoxConstraints(),
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 6,
                                       ),
@@ -2199,8 +2160,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                         _isLargeLogsModalOpen = false;
                                       });
                                     },
-                                    constraints:
-                                        const BoxConstraints(),
+                                    constraints: const BoxConstraints(),
                                     padding: EdgeInsets.zero,
                                   ),
                                 ],
@@ -2217,8 +2177,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                           child: Padding(
                             padding: const EdgeInsets.all(12.0),
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 if (_isLiveStatusVisible) ...[
                                   _buildStatusReportBox(
@@ -2269,12 +2228,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                       itemCount: _botLogs.length,
                                       itemBuilder: (context, index) {
                                         final log = _botLogs[index];
-                                        final bool isLatest =
-                                            index == 0;
+                                        final bool isLatest = index == 0;
 
                                         return Padding(
-                                          padding:
-                                              const EdgeInsets.only(
+                                          padding: const EdgeInsets.only(
                                             bottom: 8.0,
                                           ),
                                           child: Row(
@@ -2290,10 +2247,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                                         children: [
                                                           const Text(
                                                             '➔ ',
-                                                            style:
-                                                                TextStyle(
-                                                              color:
-                                                                  kGreenNeon,
+                                                            style: TextStyle(
+                                                              color: kGreenNeon,
                                                               fontSize: 13,
                                                               fontWeight:
                                                                   FontWeight
@@ -2328,10 +2283,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                                       )
                                                     : Text(
                                                         "> ${log['message']}",
-                                                        style:
-                                                            const TextStyle(
-                                                          color:
-                                                              Colors.white,
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
                                                           fontFamily:
                                                               'monospace',
                                                           fontSize: 13,
@@ -2342,13 +2295,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                                       ),
                                               ),
                                               GestureDetector(
-                                                onTap: () =>
-                                                    _clearLogItem(
+                                                onTap: () => _clearLogItem(
                                                   log['key'].toString(),
                                                 ),
                                                 child: const Padding(
-                                                  padding:
-                                                      EdgeInsets.only(
+                                                  padding: EdgeInsets.only(
                                                     left: 8.0,
                                                   ),
                                                   child: Icon(
@@ -2385,42 +2336,38 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     child: child,
                   );
                 },
-                child: Listener(
-                  onPointerMove: (pointerEvent) {
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onPanUpdate: (details) {
                     setState(() {
                       _robotBubbleOffset = Offset(
-                        (_robotBubbleOffset.dx +
-                                pointerEvent.delta.dx)
+                        (_robotBubbleOffset.dx + details.delta.dx)
                             .clamp(0.0, screenSize.width - 60),
-                        (_robotBubbleOffset.dy +
-                                pointerEvent.delta.dy)
+                        (_robotBubbleOffset.dy + details.delta.dy)
                             .clamp(40.0, screenSize.height - 120),
                       );
                     });
                   },
-                  child: GestureDetector(
-                    onTapDown: (_) {
-                      setState(() {
-                        _isRobotBubblePressed = true;
-                      });
-                    },
-                    onTapUp: (_) {
+                  onTapDown: (_) {
                     setState(() {
-                    _isRobotBubblePressed = false;
+                      _isRobotBubblePressed = true;
                     });
-                    _startFloatingOverlay();
-                    },
-                    onTapCancel: () {
-                      setState(() {
-                        _isRobotBubblePressed = false;
-                      });
-                    },
-                    child: AnimatedScale(
-                      scale: _isRobotBubblePressed ? 0.85 : 1.0,
-                      duration:
-                          const Duration(milliseconds: 100),
-                      child: _buildRobotBubbleWidget(),
-                    ),
+                  },
+                  onTapCancel: () {
+                    setState(() {
+                      _isRobotBubblePressed = false;
+                    });
+                  },
+                  onTap: () async {
+                    setState(() {
+                      _isRobotBubblePressed = false;
+                    });
+                    await _startFloatingOverlay();
+                  },
+                  child: AnimatedScale(
+                    scale: _isRobotBubblePressed ? 0.85 : 1.0,
+                    duration: const Duration(milliseconds: 100),
+                    child: _buildRobotBubbleWidget(),
                   ),
                 ),
               ),
@@ -2446,8 +2393,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: (isServerActive ? kGreenNeon : kRedNeon)
-                .withOpacity(0.6),
+            color: (isServerActive ? kGreenNeon : kRedNeon).withOpacity(0.6),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -2532,23 +2478,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   child: AnimatedBuilder(
                     animation: _scannerController,
                     builder: (context, child) {
-                      final double scanValue =
-                          _scannerController.value * 150;
+                      final double scanValue = _scannerController.value * 150;
 
                       return Stack(
                         fit: StackFit.expand,
                         children: [
                           AnimatedSwitcher(
-                            duration:
-                                const Duration(milliseconds: 800),
+                            duration: const Duration(milliseconds: 800),
                             child: Image.asset(
                               scanImage,
                               key: ValueKey<String>(scanImage),
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: 150,
-                              errorBuilder:
-                                  (context, error, stackTrace) {
+                              errorBuilder: (context, error, stackTrace) {
                                 return const ColoredBox(
                                   color: Colors.black,
                                   child: Center(
@@ -2606,15 +2549,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                           width: 8,
                           height: 8,
                           decoration: BoxDecoration(
-                            color: isServerActive
-                                ? kGreenNeon
-                                : kRedNeon,
+                            color: isServerActive ? kGreenNeon : kRedNeon,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: (isServerActive
-                                        ? kGreenNeon
-                                        : kRedNeon)
+                                color: (isServerActive ? kGreenNeon : kRedNeon)
                                     .withOpacity(0.8),
                                 blurRadius: 4,
                               ),
@@ -2628,9 +2567,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                 ? 'EA SERVER ONLINE & RUNNING'
                                 : 'EA SERVER OFFLINE / STOPPED',
                             style: TextStyle(
-                              color: isServerActive
-                                  ? kGreenNeon
-                                  : kRedNeon,
+                              color: isServerActive ? kGreenNeon : kRedNeon,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.8,
@@ -2645,8 +2582,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                       height: 6,
                     ),
                     Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'Active Orders: $orderCount',
@@ -2668,9 +2604,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                             'P/L: ${isTotalProfit ? "+" : ""}\$${totalOrdersProfit.toStringAsFixed(2)}',
                             textAlign: TextAlign.end,
                             style: TextStyle(
-                              color: isTotalProfit
-                                  ? kGreenNeon
-                                  : kRedNeon,
+                              color: isTotalProfit ? kGreenNeon : kRedNeon,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -2741,14 +2675,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: isSelected
-              ? kDarkCard.withOpacity(0.85)
-              : Colors.transparent,
+          color: isSelected ? kDarkCard.withOpacity(0.85) : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected
-                ? kGoldPrimary
-                : Colors.transparent,
+            color: isSelected ? kGoldPrimary : Colors.transparent,
             width: isSelected ? 1.5 : 0,
           ),
           boxShadow: isSelected
@@ -2769,9 +2699,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               children: [
                 Icon(
                   icon,
-                  color: isSelected
-                      ? kGoldPrimary
-                      : Colors.white70,
+                  color: isSelected ? kGoldPrimary : Colors.white70,
                   size: 22,
                 ),
                 if (badgeCount > 0)
@@ -2805,13 +2733,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             Text(
               label,
               style: TextStyle(
-                color: isSelected
-                    ? kGoldPrimary
-                    : Colors.white70,
+                color: isSelected ? kGoldPrimary : Colors.white70,
                 fontSize: 10,
-                fontWeight: isSelected
-                    ? FontWeight.bold
-                    : FontWeight.normal,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontFamily: 'monospace',
               ),
             ),
@@ -2821,6 +2745,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
+
 
 // ==========================================
 // #7 HomeScreen
