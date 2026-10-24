@@ -105,63 +105,70 @@ class _FloatingRobotOverlayState extends State<FloatingRobotOverlay> {
     final totalLots = _number(_data['totalLots']);
     final totalProfit = _number(_data['ordersProfit']);
 
-    // หากยังไม่ขยาย ให้แสดงเป็นบอลลูนกลมลอยทับหน้าจอ
+    // หากยังไม่ขยาย ให้แสดงเป็นบอลลูนกลมที่สามารถลากขยับได้
     if (!_expanded) {
       return Material(
         color: Colors.transparent,
-        child: Align(
-          alignment: Alignment.topRight,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 100, right: 10),
-            child: GestureDetector(
-              onTap: _togglePanel,
-              child: Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: kDarkCard,
-                  border: Border.all(color: kGoldPrimary, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (active ? kGreenNeon : kRedNeon).withOpacity(0.8),
-                      blurRadius: 12,
-                    ),
-                  ],
-                ),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    ClipOval(
-                      child: Image.asset(
-                        'assets/images/7.png',
-                        width: 56,
-                        height: 56,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.smart_toy,
-                          color: kGoldPrimary,
-                          size: 32,
+        child: SizedBox.expand(
+          child: Stack(
+            children: [
+              Positioned(
+                left: MediaQuery.of(context).size.width - 90,
+                top: 150,
+                child: GestureDetector(
+                  onPanUpdate: (details) async {
+                    await FlutterOverlayWindow.moveOverlay(details.delta);
+                  },
+                  onTap: _togglePanel,
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: kDarkCard,
+                      border: Border.all(color: kGoldPrimary, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (active ? kGreenNeon : kRedNeon).withOpacity(0.8),
+                          blurRadius: 12,
                         ),
-                      ),
+                      ],
                     ),
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: active ? kGreenNeon : kRedNeon,
-                          border: Border.all(color: Colors.black, width: 2),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        ClipOval(
+                          child: Image.asset(
+                            'assets/images/7.png',
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.smart_toy,
+                              color: kGoldPrimary,
+                              size: 32,
+                            ),
+                          ),
                         ),
-                      ),
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: active ? kGreenNeon : kRedNeon,
+                              border: Border.all(color: Colors.black, width: 2),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       );
@@ -344,9 +351,6 @@ void main() async {
 
   runApp(const LiquiditySweepApp());
 }
-
-// (โค้ดส่วนที่เหลือของแอปพลิเคชันหลักยังคงใช้งานตามปกติเหมือนเดิมครับ)
-
 
 // Widget ช่วยทำเอฟเฟกต์พิมพ์ดีดข้อความ
 class TypewriterText extends StatefulWidget {
@@ -671,7 +675,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                       ),
                       const SizedBox(height: 6),
                       const Text(
-                        ' ROBOT ALGO TRADING',
+                        'ROBOT ALGO TRADING',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 16,
@@ -1077,7 +1081,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      ' ROBOT ALGO TRADING',
+                      'ROBOT ALGO TRADING',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.white70,
@@ -1212,7 +1216,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 // ==========================================
-// #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen) - ปรับปรุงบอลลูนลอยทับแอพอื่นได้อิสระ
+// #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -1228,9 +1232,47 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   
   int _currentIndex = 2;
   String currentLogin = "235305975";
-  // ... (ตัวแปรอื่นๆ)
+  
+  bool isRunning = false;
+  double profit = 0.0;
+  String symbol = "XAUUSD";
+  String timeframe = "M1";
+  bool isConnected = false;
+  int unreadAlertsCount = 0;
 
-  // 📍 นำ initState() มาวางไว้ตรงนี้ (ให้อยู่ใต้คลาส _MainNavigationScreenState โดยตรง)
+  List<Map<dynamic, dynamic>> activeOrders = [];
+  List<Map<String, dynamic>> _botLogs = [];
+
+  bool _isLargeLogsModalOpen = false;
+  bool _isLiveStatusVisible = true;
+  Offset _modalOffset = const Offset(15, 80);
+
+  Offset _robotBubbleOffset = const Offset(320, 150);
+  bool _isRobotBubblePressed = false;
+
+  int _imageIndex = 0;
+  Timer? _imageTimer;
+  final List<String> _images = ['assets/images/5.png', 'assets/images/8.png'];
+
+  DatabaseReference? _dbRef;
+  DatabaseReference? _alertsRef;
+  DatabaseReference? _logsRef;
+  DatabaseReference? _ordersRef;
+
+  late final AnimationController _bounceController = AnimationController(
+    duration: const Duration(milliseconds: 1200),
+    vsync: this,
+  )..repeat(reverse: true);
+
+  late final Animation<double> _bounceAnimation = Tween<double>(begin: 0, end: 6).animate(
+    CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut),
+  );
+
+  late final AnimationController _scannerController = AnimationController(
+    duration: const Duration(seconds: 2),
+    vsync: this,
+  )..repeat(reverse: true);
+
   @override
   void initState() {
     super.initState();
@@ -1257,7 +1299,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     });
   }
 
-  // ... (ฟังก์ชัน _startFloatingOverlay และฟังก์ชันอื่นๆ ต่อด้านล่างนี้)
   Future<void> _startFloatingOverlay() async {
     try {
       bool? isGranted = await FlutterOverlayWindow.isPermissionGranted();
@@ -1277,7 +1318,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       debugPrint("Error starting overlay: $e");
     }
   }
-
 
   @override
   void dispose() {
@@ -1696,7 +1736,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               ),
             ),
             
-            // 🌟 กล่อง Log & Status ขนาดใหญ่ที่สามารถลากย้ายตำแหน่งได้
             if (_isLargeLogsModalOpen)
               Positioned(
                 left: _modalOffset.dx,
@@ -1962,7 +2001,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 ),
               ),
 
-            // 🌟 บอลลูน (Robot Bubble) ที่สามารถลากไปวางทับหน้าจอได้อิสระทุกจุด
             Positioned(
               left: _robotBubbleOffset.dx,
               top: _robotBubbleOffset.dy,
@@ -1977,7 +2015,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 child: Listener(
                   onPointerMove: (pointerEvent) {
                     setState(() {
-                      // อัปเดตตำแหน่งบอลลูนตามการลากนิ้วแบบ Real-time ทั่วทั้งหน้าจอ
                       _robotBubbleOffset = Offset(
                         (_robotBubbleOffset.dx + pointerEvent.delta.dx)
                             .clamp(0.0, screenSize.width - 60),
@@ -1995,7 +2032,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     onTapUp: (_) {
                       setState(() {
                         _isRobotBubblePressed = false;
-                        // คลิกเพื่อเปิด-ปิด กล่อง Log ตามคอนเซ็ปต์เดิม
                         _isLargeLogsModalOpen = !_isLargeLogsModalOpen;
                       });
                     },
@@ -2115,10 +2151,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   width: double.infinity,
                   color: Colors.black,
                   child: AnimatedBuilder(
-                    animation: _scannerAnimation,
+                    animation: _scannerController,
                     builder: (context, child) {
                       final double scanValue =
-                          _scannerAnimation.value * 150;
+                          _scannerController.value * 150;
 
                       return Stack(
                         fit: StackFit.expand,
@@ -2393,12 +2429,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 }
 
-
-
-
 // ==========================================
-// 🌟 HomeScreen (GOLD PRO) - โค้ดฉบับสมบูรณ์
+// #7 HomeScreen
 // ==========================================
+
 class HomeScreen extends StatefulWidget {
   final String accountLogin;
   const HomeScreen({super.key, required this.accountLogin});
@@ -2792,7 +2826,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     _buildBidAskBoxContent(context),
                     const SizedBox(height: 16),
                     
-                    // 🌟 ปุ่ม Trading Journal พร้อมรูป 8.jpg และไฟนีออนเรืองแสง พร้อมชื่อกำกับด้านล่าง
                     Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -3268,7 +3301,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 }
 
 // ==========================================
-// 🌟 TradingCalendarDialog (ระบบปฏิทินบันทึกผลกำไร)
+// #8 TradingCalendarDialog
 // ==========================================
 class TradingCalendarDialog extends StatefulWidget {
   final List<Map<dynamic, dynamic>> historyTrades;
@@ -3819,12 +3852,8 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
   }
 }
 
-
-
-
-
 // ==========================================
-// #8 โหมดรายงานออเดอร์ (OrdersScreen)
+// #9 OrdersScreen
 // ==========================================
 
 class OrdersScreen extends StatefulWidget {
@@ -4248,7 +4277,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
 }
 
 // ==========================================
-// #9 โหมดการบันทึกประจำวัน (HistoryScreen)
+// #10 HistoryScreen
 // ==========================================
 
 class HistoryScreen extends StatefulWidget {
@@ -4637,7 +4666,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 }
 
 // ==========================================
-// #10 โหมดการแจ้งเตือนข้อความ (AlertsScreen)
+// #11 AlertsScreen
 // ==========================================
 
 class AlertsScreen extends StatefulWidget {
@@ -4897,7 +4926,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
 }
 
 // ==========================================
-// #11 โหมดการตั้งค่าพารามิเตอร์ (SettingsScreen) - Full Version
+// #12 SettingsScreen
 // ==========================================
 
 class SettingsScreen extends StatefulWidget {
