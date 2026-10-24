@@ -1,5 +1,5 @@
 // ==========================================
-// #1 โหมดการเชื่อมต่อเซิร์ฟเวอร์ & ธีมสี
+// #1 โหมดการเชื่อมต่อเซิร์ฟเวอร์ & ธีมสี & ระบบ Overlay
 // ==========================================
 
 import 'dart:async';  
@@ -18,11 +18,9 @@ const Color kDarkCard = Color(0xFF161616);    // การ์ดดำเข้�
 const Color kRedNeon = Color(0xFFFF1744);     // สีแดง SELL / Loss / Stop
 const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Profit / Start
 
-
-
- // ==========================================
- // #1.1 GOLD PRO OVERLAY - หน้าต่างเดิมนอกแอป
- // ==========================================
+// ==========================================
+// #1.1 GOLD PRO OVERLAY - หน้าต่างลอยนอกแอป (ทับแอปอื่นได้จริง)
+// ==========================================
 
 @pragma('vm:entry-point')
 void overlayMain() {
@@ -40,8 +38,7 @@ class FloatingRobotOverlay extends StatefulWidget {
   const FloatingRobotOverlay({super.key});
 
   @override
-  State<FloatingRobotOverlay> createState() =>
-      _FloatingRobotOverlayState();
+  State<FloatingRobotOverlay> createState() => _FloatingRobotOverlayState();
 }
 
 class _FloatingRobotOverlayState extends State<FloatingRobotOverlay> {
@@ -54,11 +51,8 @@ class _FloatingRobotOverlayState extends State<FloatingRobotOverlay> {
   @override
   void initState() {
     super.initState();
-
-    _subscription =
-        FlutterOverlayWindow.overlayListener.listen((event) {
+    _subscription = FlutterOverlayWindow.overlayListener.listen((event) {
       if (!mounted || event is! Map) return;
-
       setState(() {
         _data = Map<String, dynamic>.from(event);
       });
@@ -69,6 +63,7 @@ class _FloatingRobotOverlayState extends State<FloatingRobotOverlay> {
     final next = !_expanded;
 
     try {
+      // ขยายหรือย่อขนาดหน้าต่าง Overlay เมื่อกดที่บอลลูน
       await FlutterOverlayWindow.resizeOverlay(
         next ? 360 : 80,
         next ? 700 : 80,
@@ -110,63 +105,61 @@ class _FloatingRobotOverlayState extends State<FloatingRobotOverlay> {
     final totalLots = _number(_data['totalLots']);
     final totalProfit = _number(_data['ordersProfit']);
 
+    // หากยังไม่ขยาย ให้แสดงเป็นบอลลูนกลมลอยทับหน้าจอ
     if (!_expanded) {
       return Material(
         color: Colors.transparent,
-        child: Center(
-          child: GestureDetector(
-            onTap: _togglePanel,
-            child: Container(
-              width: 68,
-              height: 68,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: kDarkCard,
-                border: Border.all(
-                  color: kGoldPrimary,
-                  width: 2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: (active ? kGreenNeon : kRedNeon)
-                        .withOpacity(0.8),
-                    blurRadius: 14,
-                  ),
-                ],
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  ClipOval(
-                    child: Image.asset(
-                      'assets/images/7.png',
-                      width: 64,
-                      height: 64,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.smart_toy,
-                        color: kGoldPrimary,
-                        size: 38,
-                      ),
+        child: Align(
+          alignment: Alignment.topRight,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 100, right: 10),
+            child: GestureDetector(
+              onTap: _togglePanel,
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: kDarkCard,
+                  border: Border.all(color: kGoldPrimary, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (active ? kGreenNeon : kRedNeon).withOpacity(0.8),
+                      blurRadius: 12,
                     ),
-                  ),
-                  Positioned(
-                    right: -1,
-                    top: -1,
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: active ? kGreenNeon : kRedNeon,
-                        border: Border.all(
-                          color: Colors.black,
-                          width: 2,
+                  ],
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    ClipOval(
+                      child: Image.asset(
+                        'assets/images/7.png',
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.smart_toy,
+                          color: kGoldPrimary,
+                          size: 32,
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: active ? kGreenNeon : kRedNeon,
+                          border: Border.all(color: Colors.black, width: 2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -174,281 +167,144 @@ class _FloatingRobotOverlayState extends State<FloatingRobotOverlay> {
       );
     }
 
+    // เมื่อขยาย จะแสดงกล่อง Status & Logs นอกแอป
     return Material(
       color: Colors.transparent,
       child: Container(
-        margin: const EdgeInsets.all(5),
+        margin: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: kDarkBg.withOpacity(0.97),
-          border: Border.all(
-            color: kGoldPrimary,
-            width: 2,
-          ),
+          border: Border.all(color: kGoldPrimary, width: 2),
           borderRadius: BorderRadius.circular(18),
         ),
         child: Column(
           children: [
-            // หัวกล่อง STATUS & LOGS
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 8,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.terminal,
-                    color: kGoldPrimary,
-                    size: 20,
-                  ),
+                  const Icon(Icons.terminal, color: kGoldPrimary, size: 20),
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
-                      'STATUS & LOGS',
+                      'STATUS & LOGS (OVERLAY)',
                       style: TextStyle(
                         color: kGoldPrimary,
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w900,
                         fontStyle: FontStyle.italic,
-                        letterSpacing: 1,
                       ),
                     ),
                   ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
-                    onPressed: () {
-                      setState(() => _showStatus = !_showStatus);
-                    },
+                    onPressed: () => setState(() => _showStatus = !_showStatus),
                     icon: Icon(
-                      _showStatus
-                          ? Icons.visibility
-                          : Icons.visibility_off,
+                      _showStatus ? Icons.visibility : Icons.visibility_off,
                       color: kGreenNeon,
-                      size: 21,
+                      size: 20,
                     ),
                   ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     onPressed: _togglePanel,
-                    icon: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 23,
-                    ),
+                    icon: const Icon(Icons.close, color: Colors.white, size: 22),
                   ),
                 ],
               ),
             ),
-
-            const Divider(
-              color: kGoldPrimary,
-              height: 1,
-              thickness: 1.5,
-            ),
-
+            const Divider(color: kGoldPrimary, height: 1, thickness: 1.5),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(10),
                 children: [
                   if (_showStatus) ...[
-                    // LIVE STATUS เดิมในรูปแบบการ์ดทอง
                     Container(
                       decoration: BoxDecoration(
                         color: kDarkCard,
-                        border: Border.all(
-                          color: kGoldPrimary,
-                          width: 2,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: kGoldPrimary, width: 1.5),
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(13),
-                            ),
-                            child: SizedBox(
-                              height: 150,
-                              width: double.infinity,
-                              child: Image.asset(
-                                'assets/images/2.png',
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
-                                    const Center(
-                                  child: Icon(
-                                    Icons.smart_toy,
-                                    color: kGoldPrimary,
-                                    size: 65,
-                                  ),
-                                ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'LIVE STATUS',
+                              style: TextStyle(
+                                color: kGoldPrimary,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 12,
                               ),
                             ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                            const SizedBox(height: 6),
+                            Row(
                               children: [
-                                const Text(
-                                  'LIVE STATUS',
-                                  style: TextStyle(
-                                    color: kGoldPrimary,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.3,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.circle,
-                                      size: 12,
-                                      color: active
-                                          ? kGreenNeon
-                                          : kRedNeon,
-                                    ),
-                                    const SizedBox(width: 7),
-                                    Expanded(
-                                      child: Text(
-                                        active
-                                            ? 'EA SERVER ONLINE & RUNNING'
-                                            : 'EA SERVER OFFLINE / STOPPED',
-                                        style: TextStyle(
-                                          color: active
-                                              ? kGreenNeon
-                                              : kRedNeon,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
+                                Icon(Icons.circle, size: 10, color: active ? kGreenNeon : kRedNeon),
+                                const SizedBox(width: 6),
                                 Text(
-                                  'Symbol: ${_data['symbol'] ?? 'XAUUSD'}'
-                                  '   TF: ${_data['timeframe'] ?? 'M1'}',
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 11,
+                                  active ? 'EA SERVER ONLINE & RUNNING' : 'EA SERVER OFFLINE / STOPPED',
+                                  style: TextStyle(
+                                    color: active ? kGreenNeon : kRedNeon,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                ),
-                                const Divider(color: Colors.white24),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        'Active Orders: $orderCount',
-                                        style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      'Lots: ${totalLots.toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 10,
-                                      ),
-                                    ),
-                                    Flexible(
-                                      child: Text(
-                                        'P/L: ${totalProfit >= 0 ? '+' : ''}\$${totalProfit.toStringAsFixed(2)}',
-                                        textAlign: TextAlign.end,
-                                        style: TextStyle(
-                                          color: totalProfit >= 0
-                                              ? kGreenNeon
-                                              : kRedNeon,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                  ],
-
-                  // ACTIVITY LOGS
-                  const Row(
-                    children: [
-                      Icon(
-                        Icons.show_chart,
-                        color: kGoldPrimary,
-                        size: 18,
-                      ),
-                      SizedBox(width: 7),
-                      Text(
-                        'ACTIVITY LOGS',
-                        style: TextStyle(
-                          color: kGoldPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  if (logs.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Text(
-                        'No log records...',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    )
-                  else
-                    ...logs.map((log) {
-                      final message =
-                          log['message']?.toString() ?? '';
-                      final isLatest = logs.first == log;
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${isLatest ? '➔ ' : '> '}$message',
-                                style: TextStyle(
-                                  color: isLatest
-                                      ? kGreenNeon
-                                      : Colors.white,
-                                  fontSize: 12,
-                                  fontFamily: 'monospace',
-                                  fontWeight: FontWeight.bold,
-                                  height: 1.45,
-                                ),
-                              ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Symbol: ${_data['symbol'] ?? 'XAUUSD'} | TF: ${_data['timeframe'] ?? 'M1'}',
+                              style: const TextStyle(color: Colors.white70, fontSize: 10),
                             ),
-                            // คงปุ่มลบไว้ แต่การลบจริงต้องเชื่อม
-                            // กับ Firebase หรือคำสั่งจากแอปหลัก
-                            const Padding(
-                              padding: EdgeInsets.only(left: 5),
-                              child: Icon(
-                                Icons.delete_outline,
-                                color: kRedNeon,
-                                size: 17,
-                              ),
+                            const Divider(color: Colors.white24, height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Orders: $orderCount', style: const TextStyle(color: Colors.white70, fontSize: 10)),
+                                Text('Lots: ${totalLots.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70, fontSize: 10)),
+                                Text(
+                                  'P/L: ${totalProfit >= 0 ? '+' : ''}\$${totalProfit.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    color: totalProfit >= 0 ? kGreenNeon : kRedNeon,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  const Text(
+                    'ACTIVITY LOGS',
+                    style: TextStyle(
+                      color: kGoldPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (logs.isEmpty)
+                    const Text('No log records...', style: TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace'))
+                  else
+                    ...logs.map((log) {
+                      final message = log['message']?.toString() ?? '';
+                      final isLatest = logs.first == log;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          '${isLatest ? '➔ ' : '> '}$message',
+                          style: TextStyle(
+                            color: isLatest ? kGreenNeon : Colors.white,
+                            fontSize: 11,
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       );
                     }),
@@ -462,10 +318,8 @@ class _FloatingRobotOverlayState extends State<FloatingRobotOverlay> {
   }
 }
 
-
-
 // ==========================================
-// #2 โหมดเมนหลัก
+// #2 โหมดเมนหลักของแอป
 // ==========================================
 
 void main() async {
@@ -490,6 +344,9 @@ void main() async {
 
   runApp(const LiquiditySweepApp());
 }
+
+// (โค้ดส่วนที่เหลือของแอปพลิเคชันหลักยังคงใช้งานตามปกติเหมือนเดิมครับ)
+
 
 // Widget ช่วยทำเอฟเฟกต์พิมพ์ดีดข้อความ
 class TypewriterText extends StatefulWidget {
@@ -1453,6 +1310,51 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       }
     });
   }
+
+
+@override
+void initState() {
+  super.initState();
+
+  // 🌟 เรียกใช้คำสั่งสั่งเปิดบอลลูนลอยทันทีเมื่อเข้าหน้า Dashboard
+  _startFloatingOverlay();
+
+  _loadSavedLogin().then((_) {
+    if (!mounted) return;
+    _listenToActiveAccount();
+    _listenToAlertsCount();
+    _initFirebaseAndListen();
+    _listenToLogs();
+    _listenToConnectionStatus();
+    _listenToOrdersForDialog();
+  });
+}
+
+// ฟังก์ชันสั่งเปิดบอลลูนลอยอัตโนมัติ
+Future<void> _startFloatingOverlay() async {
+  try {
+    // 1. เช็คสิทธิ์การแสดงทับแอปอื่น
+    bool? isGranted = await FlutterOverlayWindow.isPermissionGranted();
+    
+    if (isGranted == false) {
+      // ถ้ายังไม่ได้สิทธิ์ ให้เด้งไปหน้าตั้งค่าของ Android เพื่อกดอนุญาตก่อนครั้งแรก
+      await FlutterOverlayWindow.requestPermission();
+    } else {
+      // 2. ถ้าได้สิทธิ์แล้ว สั่งเปิดบอลลูนลอยขึ้นมาบนหน้าจอทันที!
+      await FlutterOverlayWindow.showOverlay(
+        height: 80,
+        width: 80,
+        alignment: OverlayAlignment.topRight,
+        flag: OverlayFlag.defaultFlag,
+        visibility: NotificationVisibility.visibilityPublic,
+        positionGravity: PositionGravity.none,
+      );
+    }
+  } catch (e) {
+    debugPrint("Error starting overlay: $e");
+  }
+}
+
 
   @override
   void dispose() {
