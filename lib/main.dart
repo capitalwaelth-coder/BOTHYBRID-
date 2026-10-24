@@ -23,10 +23,6 @@ const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Pro
 // #1.1 โหมดการเชื่อม ระบบ Overlay
 // ==========================================
 
-// ==========================================
-// #1.1 โหมดการเชื่อม ระบบ Overlay
-// ==========================================
-
 @pragma("vm:entry-point")
 void overlayMain() {
   runApp(
@@ -48,7 +44,7 @@ class FullOverlayContent extends StatefulWidget {
 }
 
 class _FullOverlayContentState extends State<FullOverlayContent> with TickerProviderStateMixin {
-  bool _isExpanded = false;
+  bool _isExpanded = false; // ค่าเริ่มต้นให้เป็นบอลลูนกลมๆ ก่อน หรือเปิดขึ้นมาตามต้องการ
   String currentLogin = "235305975";
   bool isRunning = false;
   bool isConnected = false;
@@ -85,7 +81,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
       }
     });
 
-    // รับข้อมูล Real-time จากแอปหลัก
+    // รับข้อมูล Real-time จากแอปหลัก หรือคำสั่งควบคุมภายนอก
     FlutterOverlayWindow.overlayListener.listen((event) {
       if (event is Map) {
         final data = Map<String, dynamic>.from(event);
@@ -99,6 +95,13 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
               _botLogs = List<Map<String, dynamic>>.from(data['logs']);
             }
           });
+        } else if (data['type'] == 'command') {
+          // รองรับคำสั่งเปิด-ปิดจากภายนอกแอป
+          if (data['command'] == 'toggle_overlay') {
+            setState(() {
+              _isExpanded = !_isExpanded;
+            });
+          }
         }
       }
     });
@@ -160,7 +163,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
 
   @override
   Widget build(BuildContext context) {
-    // ข้อความ Log ล่าสุดสำหรับแสดงแจ้งเตือนระบบ
     final String latestLogMessage = _botLogs.isNotEmpty 
         ? _botLogs.last['message'].toString() 
         : ((isConnected && isRunning) ? 'EA SERVER ONLINE & RUNNING' : 'EA SERVER OFFLINE / STOPPED');
@@ -187,7 +189,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ส่วนกล่องรูปภาพสแกนสามเกลอ
+                      // ส่วนกล่องรูปภาพสแกนสามเกลอ พร้อมปุ่มปิด(ย่อกลับเป็นบอลลูน) และปุ่มถังขยะ
                       ClipRRect(
                         borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                         child: Stack(
@@ -229,10 +231,10 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                                 },
                               ),
                             ),
-                            // ปุ่มถังขยะสำหรับล้าง Log มุมขวาบนของรูป
+                            // ปุ่มถังขยะสำหรับล้าง Log มุมขวาบน
                             Positioned(
                               top: 6,
-                              right: 6,
+                              right: 36,
                               child: GestureDetector(
                                 onTap: _clearAllLogs,
                                 child: Container(
@@ -245,6 +247,43 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                                   child: const Icon(
                                     Icons.delete_sweep,
                                     color: Color(0xFFFF1744),
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // ปุ่มกากบาท (X) เพื่อกดพับเก็บกลับเป็นบอลลูนกลมๆ จากข้างใน
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: GestureDetector(
+                                onTap: () async {
+                                  setState(() {
+                                    _isExpanded = false;
+                                  });
+                                  // ปรับขนาดหน้าต่าง Overlay ให้กลับมาเป็นขนาดบอลลูนเล็กๆ
+                                  await FlutterOverlayWindow.showOverlay(
+                                    height: 70,
+                                    width: 70,
+                                    enableDrag: true,
+                                    overlayTitle: 'GOLD PRO',
+                                    overlayContent: 'BUBBLE',
+                                    alignment: OverlayAlignment.topRight,
+                                    flag: OverlayFlag.defaultFlag,
+                                    visibility: NotificationVisibility.visibilityPublic,
+                                    positionGravity: PositionGravity.none,
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.7),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 1.5),
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
                                     size: 16,
                                   ),
                                 ),
@@ -300,14 +339,14 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
               ),
             )
           else
-            // ตัวบอลลูนกลมๆ เมื่อพับเก็บ
+            // ตัวบอลลูนกลมๆ เมื่อกดแล้วจะขยายหน้าต่างขึ้นมา
             GestureDetector(
               onTap: () async {
                 setState(() {
                   _isExpanded = true;
                 });
                 await FlutterOverlayWindow.showOverlay(
-                  height: 190, // ปรับลดความสูงให้พอดีกับเนื้อหาใหม่ที่ไม่มี Symbol/TF
+                  height: 190,
                   width: 310,
                   enableDrag: true,
                   overlayTitle: 'GOLD PRO',
