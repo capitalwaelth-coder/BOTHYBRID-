@@ -6060,34 +6060,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-}  void _initFirebaseForOverlay() async {
-    try {
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
-      }
-
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-      );
-
-      _logsRef = database.ref('accounts/$currentLogin/logs');
-      _logsRef?.onValue.listen((event) {
-        final data = event.snapshot.value;
-        if (!mounted) return;
-        List<Map<String, dynamic>> tempLogs = [];
-        if (data is Map) {
-          data.forEach((key, value) {
-            if (value != null) {
-              tempLogs.add({'key': key.toString(), 'message': value.toString()});
-            }
-          });
-        }
-        setState(() {
-          _botLogs = tempLogs;
-        });
-      });
-    } catch (e) {
-      debugPrint("Overlay Firebase init error: $e");
-    }
-  }
+}  
