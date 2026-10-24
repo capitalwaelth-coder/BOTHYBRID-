@@ -44,44 +44,20 @@ class FullOverlayContent extends StatefulWidget {
 }
 
 class _FullOverlayContentState extends State<FullOverlayContent> with TickerProviderStateMixin {
-  bool _isExpanded = false; // ค่าเริ่มต้นให้เป็นบอลลูนกลมๆ ก่อน หรือเปิดขึ้นมาตามต้องการ
+  bool _isExpanded = false;
   String currentLogin = "235305975";
   bool isRunning = false;
   bool isConnected = false;
   
   List<Map<String, dynamic>> _botLogs = [];
-
-  final List<String> _images = [
-    'assets/images/2.png',
-    'assets/images/4.png',
-    'assets/images/6.png',
-  ];
-  int _imageIndex = 0; 
-  Timer? _imageTimer; 
-
   DatabaseReference? _logsRef;
-
-  // ตัวควบคุมเอฟเฟกต์สแกนภาพ
-  late final AnimationController _scannerController = AnimationController(
-    duration: const Duration(seconds: 2),
-    vsync: this,
-  )..repeat(reverse: true);
 
   @override
   void initState() {
     super.initState();
     _initFirebaseForOverlay();
 
-    // ตัวเปลี่ยนรูปภาพอัตโนมัติทุก 3 วินาที
-    _imageTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (mounted) {
-        setState(() {
-          _imageIndex = (_imageIndex + 1) % _images.length;
-        });
-      }
-    });
-
-    // รับข้อมูล Real-time จากแอปหลัก หรือคำสั่งควบคุมภายนอก
+    // รับข้อมูล Real-time จากแอปหลัก
     FlutterOverlayWindow.overlayListener.listen((event) {
       if (event is Map) {
         final data = Map<String, dynamic>.from(event);
@@ -95,13 +71,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
               _botLogs = List<Map<String, dynamic>>.from(data['logs']);
             }
           });
-        } else if (data['type'] == 'command') {
-          // รองรับคำสั่งเปิด-ปิดจากภายนอกแอป
-          if (data['command'] == 'toggle_overlay') {
-            setState(() {
-              _isExpanded = !_isExpanded;
-            });
-          }
         }
       }
     });
@@ -111,8 +80,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
 
   @override
   void dispose() {
-    _imageTimer?.cancel();
-    _scannerController.dispose();
     super.dispose();
   }
 
@@ -148,6 +115,14 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
     }
   }
 
+  void _clearLogItem(String key) async {
+    try {
+      if (_logsRef != null) await _logsRef!.child(key).remove();
+    } catch (e) {
+      debugPrint("Overlay clear log error: $e");
+    }
+  }
+
   void _clearAllLogs() async {
     try {
       if (_logsRef != null) {
@@ -163,9 +138,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
 
   @override
   Widget build(BuildContext context) {
-    final String latestLogMessage = _botLogs.isNotEmpty 
-        ? _botLogs.last['message'].toString() 
-        : ((isConnected && isRunning) ? 'EA SERVER ONLINE & RUNNING' : 'EA SERVER OFFLINE / STOPPED');
+    final bool isServerActive = isConnected && isRunning;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -175,93 +148,107 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
           if (_isExpanded)
             Center(
               child: SizedBox(
-                width: 500,
+                width: 330,
+                height: 420, // ปรับความสูงให้พอดีกับดีไซน์ใหม่ตามเรฟ
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF161616).withOpacity(0.95),
-                    borderRadius: BorderRadius.circular(14),
+                    color: const Color(0xFF121212),
+                    borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: const Color(0xFFFFD700), width: 2.0),
                     boxShadow: const [
-                      BoxShadow(color: Colors.black87, blurRadius: 15, spreadRadius: 2),
+                      BoxShadow(color: Colors.black87, blurRadius: 20, spreadRadius: 3),
                     ],
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ส่วนกล่องรูปภาพสแกนสามเกลอ พร้อมปุ่มปิด(ย่อกลับเป็นบอลลูน) และปุ่มถังขยะ
-                      ClipRRect(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                        child: Stack(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ส่วนบน: รูปภาพพื้นหลัง (6.png) พร้อมชื่อบอทและสถานะทับอยู่ด้านใน
+                        Stack(
                           children: [
-                            Container(
-                              height: 500,
+                            SizedBox(
+                              height: 220,
                               width: double.infinity,
-                              color: Colors.black,
-                              child: AnimatedBuilder(
-                                animation: _scannerController,
-                                builder: (context, child) {
-                                  final double scanValue = _scannerController.value * 120;
-                                  final String scanImage = _images[_imageIndex];
-
-                                  return Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      Image.asset(
-                                        scanImage,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => const ColoredBox(color: Colors.black),
-                                      ),
-                                      Positioned(
-                                        top: scanValue.clamp(0.0, 117.0),
-                                        left: 0,
-                                        right: 0,
-                                        child: Container(
-                                          height: 3,
-                                          decoration: const BoxDecoration(
-                                            color: Color(0xFFFFD700),
-                                            boxShadow: [
-                                              BoxShadow(color: Color(0xFFFFD700), blurRadius: 8, spreadRadius: 2),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
+                              child: Image.asset(
+                                'assets/images/6.png',
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => const ColoredBox(color: Colors.black),
                               ),
                             ),
-                            // ปุ่มถังขยะสำหรับล้าง Log มุมขวาบน
-                            Positioned(
-                              top: 6,
-                              right: 36,
-                              child: GestureDetector(
-                                onTap: _clearAllLogs,
-                                child: Container(
-                                  padding: const EdgeInsets.all(5),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.7),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: const Color(0xFFFF1744), width: 1.5),
-                                  ),
-                                  child: const Icon(
-                                    Icons.delete_sweep,
-                                    color: Color(0xFFFF1744),
-                                    size: 16,
+                            // ไล่ระดับสีด้านล่างรูปภาพเพื่อให้ตัวหนังสือเด่นชัดขึ้น
+                            Positioned.fill(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withOpacity(0.8),
+                                    ],
                                   ),
                                 ),
                               ),
                             ),
-                            // ปุ่มกากบาท (X) เพื่อกดพับเก็บกลับเป็นบอลลูนกลมๆ จากข้างใน
+                            // ชื่อบอทและสถานะทับบนรูปภาพ
                             Positioned(
-                              top: 6,
-                              right: 6,
+                              left: 14,
+                              bottom: 12,
+                              right: 14,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'GOLD PRO',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          color: isServerActive ? const Color(0xFF00E676) : const Color(0xFFFF1744),
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: (isServerActive ? const Color(0xFF00E676) : const Color(0xFFFF1744)).withOpacity(0.8),
+                                              blurRadius: 6,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        isServerActive ? 'SERVER CONNECTED' : 'SERVER OFFLINE',
+                                        style: TextStyle(
+                                          color: isServerActive ? const Color(0xFF00E676) : const Color(0xFFFF1744),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1.0,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // ปุ่มกากบาท (X) มุมขวาบน สำหรับปิด/ย่อหน้าต่าง
+                            Positioned(
+                              top: 10,
+                              right: 10,
                               child: GestureDetector(
                                 onTap: () async {
                                   setState(() {
                                     _isExpanded = false;
                                   });
-                                  // ปรับขนาดหน้าต่าง Overlay ให้กลับมาเป็นขนาดบอลลูนเล็กๆ
                                   await FlutterOverlayWindow.showOverlay(
                                     height: 70,
                                     width: 70,
@@ -275,11 +262,11 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                                   );
                                 },
                                 child: Container(
-                                  padding: const EdgeInsets.all(5),
+                                  padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.7),
+                                    color: Colors.black.withOpacity(0.6),
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 1.5),
+                                    border: Border.all(color: Colors.white24, width: 1),
                                   ),
                                   child: const Icon(
                                     Icons.close,
@@ -289,65 +276,93 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-
-                      // ส่วนแสดงข้อความแจ้งเตือนระบบ
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'LIVE STATUS',
-                              style: TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.2),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 7,
-                                  height: 7,
+                            // ปุ่มถังขยะล้าง Log อยู่ถัดจากปุ่มปิด
+                            Positioned(
+                              top: 10,
+                              right: 44,
+                              child: GestureDetector(
+                                onTap: _clearAllLogs,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: (isConnected && isRunning) ? const Color(0xFF00E676) : const Color(0xFFFF1744),
+                                    color: Colors.black.withOpacity(0.6),
                                     shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white24, width: 1),
+                                  ),
+                                  child: const Icon(
+                                    Icons.delete_sweep,
+                                    color: Color(0xFFFF1744),
+                                    size: 16,
                                   ),
                                 ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    latestLogMessage,
-                                    style: const TextStyle(
-                                      color: Color(0xFF00E676),
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'monospace',
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+
+                        // ส่วนล่าง: กล่อง Log สีเข้มตามสไตล์ในรูปตัวอย่าง[span_2](start_span)[span_2](end_span)[span_3](start_span)[span_3](end_span)
+                        Expanded(
+                          child: Container(
+                            width: double.infinity,
+                            color: const Color(0xFF1A1F29),
+                            padding: const EdgeInsets.all(12.0),
+                            child: _botLogs.isEmpty
+                                ? const Center(
+                                    child: Text(
+                                      'No log records...',
+                                      style: TextStyle(color: Colors.grey, fontFamily: 'monospace', fontSize: 11),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    itemCount: _botLogs.length,
+                                    itemBuilder: (context, index) {
+                                      final log = _botLogs[index];
+                                      return Padding(
+                                        padding: const EdgeInsets.only(bottom: 6.0),
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                "> ${log['message']}",
+                                                style: const TextStyle(
+                                                  color: Colors.white70,
+                                                  fontFamily: 'monospace',
+                                                  fontSize: 11,
+                                                  height: 1.3,
+                                                ),
+                                              ),
+                                            ),
+                                            GestureDetector(
+                                              onTap: () => _clearLogItem(log['key'].toString()),
+                                              child: const Padding(
+                                                padding: EdgeInsets.only(left: 6.0),
+                                                child: Icon(Icons.delete_outline, color: Color(0xFFFF1744), size: 14),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             )
           else
-            // ตัวบอลลูนกลมๆ เมื่อกดแล้วจะขยายหน้าต่างขึ้นมา
+            // ตัวบอลลูนกลมๆ นอกแอป
             GestureDetector(
               onTap: () async {
                 setState(() {
                   _isExpanded = true;
                 });
                 await FlutterOverlayWindow.showOverlay(
-                  height: 190,
-                  width: 310,
+                  height: 440,
+                  width: 330,
                   enableDrag: true,
                   overlayTitle: 'GOLD PRO',
                   overlayContent: 'LOGS',
@@ -356,6 +371,9 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                   visibility: NotificationVisibility.visibilityPublic,
                   positionGravity: PositionGravity.none,
                 );
+              },
+              onLongPress: () async {
+                await FlutterOverlayWindow.closeOverlay();
               },
               child: Container(
                 width: 58,
@@ -366,7 +384,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                   border: Border.all(color: const Color(0xFFFFD700), width: 2.0),
                   boxShadow: [
                     BoxShadow(
-                      color: (isConnected && isRunning ? const Color(0xFF00E676) : const Color(0xFFFF1744)).withOpacity(0.8),
+                      color: (isServerActive ? const Color(0xFF00E676) : const Color(0xFFFF1744)).withOpacity(0.8),
                       blurRadius: 10,
                       spreadRadius: 2,
                     ),
@@ -1306,21 +1324,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   List<Map<dynamic, dynamic>> activeOrders = [];
   List<Map<String, dynamic>> _botLogs = [];
 
-  bool _isLargeLogsModalOpen = false;
-  bool _isLiveStatusVisible = true;
-  Offset _modalOffset = const Offset(15, 80);
-
-  Offset _robotBubbleOffset = const Offset(320, 150);
-  bool _isRobotBubblePressed = false;
-
-  int _imageIndex = 0;
-  Timer? _imageTimer;
-  final List<String> _images = [
-    'assets/images/2.png',
-    'assets/images/4.png',
-    'assets/images/6.png',
-  ];
-
   DatabaseReference? _dbRef;
   DatabaseReference? _alertsRef;
   DatabaseReference? _logsRef;
@@ -1328,31 +1331,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   StreamSubscription<dynamic>? _overlayCommandSubscription;
 
-  late final AnimationController _bounceController = AnimationController(
-    duration: const Duration(milliseconds: 1200),
-    vsync: this,
-  )..repeat(reverse: true);
-
-  late final Animation<double> _bounceAnimation = Tween<double>(
-    begin: 0,
-    end: 6,
-  ).animate(
-    CurvedAnimation(
-      parent: _bounceController,
-      curve: Curves.easeInOut,
-    ),
-  );
-
-  late final AnimationController _scannerController = AnimationController(
-    duration: const Duration(seconds: 2),
-    vsync: this,
-  )..repeat(reverse: true);
-
   @override
   void initState() {
     super.initState();
-
-    _listenToOverlayCommands();
 
     _loadSavedLogin().then((_) {
       if (!mounted) return;
@@ -1364,21 +1345,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       _listenToConnectionStatus();
       _listenToOrdersForDialog();
     });
-
-    _imageTimer = Timer.periodic(
-      const Duration(seconds: 3),
-      (timer) {
-        if (!mounted) return;
-
-        setState(() {
-          _imageIndex = (_imageIndex + 1) % _images.length;
-        });
-      },
-    );
   }
 
   // ==========================================
-  // ส่งข้อมูลสถานะจาก Main Screen ไปยัง Overlay
+  // ส่งข้อมูลสถานะจาก Main Screen ไปยัง Overlay นอกแอป
   // ==========================================
   Future<void> _sendOverlayData() async {
     try {
@@ -1407,7 +1377,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         'ordersCount': activeOrders.length,
         'ordersProfit': ordersProfit,
         'totalLots': totalLots,
-        'showStatus': _isLiveStatusVisible,
         'logs': _botLogs.take(100).map((log) {
           return {
             'key': log['key']?.toString() ?? '',
@@ -1420,87 +1389,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ==========================================
-  // เปิดบอลลูนลอยทับแอปอื่น (ปรับขนาดกว้างยาวเต็มจอสำหรับแสดงกล่อง 620x340)
-  // ==========================================
-  
-Future<void> _startFloatingOverlay() async {
-  try {
-    bool granted =
-        await FlutterOverlayWindow.isPermissionGranted() ?? false;
-
-    if (!granted) {
-      final result = await FlutterOverlayWindow.requestPermission();
-      if (result != true) return;
-
-      granted =
-          await FlutterOverlayWindow.isPermissionGranted() ?? false;
-    }
-
-    if (!granted) return;
-
-    final active = await FlutterOverlayWindow.isActive();
-
-    if (!active) {
-      await FlutterOverlayWindow.showOverlay(
-        height: 620,
-        width: 340,
-        enableDrag: true,
-        overlayTitle: 'GOLD PRO',
-        overlayContent: 'STATUS & LOGS',
-        alignment: OverlayAlignment.topRight,
-        flag: OverlayFlag.defaultFlag,
-        visibility: NotificationVisibility.visibilityPublic,
-        positionGravity: PositionGravity.none,
-      );
-    }
-
-    await Future.delayed(const Duration(milliseconds: 700));
-
-    await _sendOverlayData();
-  } catch (e) {
-    debugPrint('Error starting overlay: $e');
-  }
-}
-
-
-  // ==========================================
-  // รับคำสั่งจาก Overlay
-  // ==========================================
-  void _listenToOverlayCommands() {
-    _overlayCommandSubscription?.cancel();
-
-    _overlayCommandSubscription =
-        FlutterOverlayWindow.overlayListener.listen((event) {
-      if (!mounted) return;
-
-      if (event is Map) {
-        final data = Map<String, dynamic>.from(event);
-        if (data['type'] == 'command') {
-          final command = data['command']?.toString() ?? '';
-          if (command == 'toggle_floating_log') {
-            setState(() {
-              _isLargeLogsModalOpen = !_isLargeLogsModalOpen;
-            });
-            return;
-          }
-        }
-      }
-
-      if (event is String && event == 'toggle_logs') {
-        setState(() {
-          _isLargeLogsModalOpen = !_isLargeLogsModalOpen;
-        });
-      }
-    });
-  }
-
   @override
   void dispose() {
-    _imageTimer?.cancel();
     _overlayCommandSubscription?.cancel();
-    _bounceController.dispose();
-    _scannerController.dispose();
     super.dispose();
   }
 
@@ -1738,40 +1629,7 @@ Future<void> _startFloatingOverlay() async {
     }
   }
 
-  void _clearLogItem(String key) async {
-    try {
-      if (_logsRef != null) {
-        await _logsRef!.child(key).remove();
-      }
-    } catch (e) {
-      debugPrint("Clear log item error: $e");
-    }
-  }
-
-  void _clearAllLogs() async {
-    try {
-      if (_logsRef != null) {
-        await _logsRef!.remove();
-        if (mounted) {
-          setState(() {
-            _botLogs.clear();
-          });
-        }
-        _sendOverlayData();
-      }
-    } catch (e) {
-      debugPrint("Clear all logs error: $e");
-    }
-  }
-
   Future<bool> _handleBackButton() async {
-    if (_isLargeLogsModalOpen) {
-      setState(() {
-        _isLargeLogsModalOpen = false;
-      });
-      return false;
-    }
-
     if (_currentIndex != 2) {
       setState(() {
         _currentIndex = 2;
@@ -1799,21 +1657,6 @@ Future<void> _startFloatingOverlay() async {
         },
       ),
     ];
-
-    final double totalOrdersProfit = activeOrders.fold(
-      0.0,
-      (sum, item) =>
-          sum + (double.tryParse(item['profit']?.toString() ?? '0.0') ?? 0.0),
-    );
-
-    final double totalLots = activeOrders.fold(
-      0.0,
-      (sum, item) =>
-          sum + (double.tryParse(item['lot']?.toString() ?? '0.0') ?? 0.0),
-    );
-
-    final bool isTotalProfit = totalOrdersProfit >= 0;
-    final screenSize = MediaQuery.of(context).size;
 
     return WillPopScope(
       onWillPop: _handleBackButton,
@@ -1894,603 +1737,8 @@ Future<void> _startFloatingOverlay() async {
                 ),
               ),
             ),
-
-            if (_isLargeLogsModalOpen)
-              Positioned(
-                left: _modalOffset.dx,
-                top: _modalOffset.dy,
-                child: GestureDetector(
-                  onPanUpdate: (details) {
-                    setState(() {
-                      _modalOffset = Offset(
-                        _modalOffset.dx.clamp(0.0, screenSize.width - 50),
-                        _modalOffset.dy.clamp(0.0, screenSize.height - 50),
-                      );
-                    });
-                  },
-                  child: Container(
-                    width: screenSize.width * 0.92,
-                    height: screenSize.height * 0.72,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: kGoldPrimary,
-                        width: 2.0,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.8),
-                          blurRadius: 20,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                      color: kDarkCard.withOpacity(0.92),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14.0,
-                            vertical: 10.0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Row(
-                                children: [
-                                  Icon(
-                                    Icons.terminal,
-                                    color: kGoldPrimary,
-                                    size: 18,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'STATUS & LOGS',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w900,
-                                      color: kGoldPrimary,
-                                      letterSpacing: 1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: Icon(
-                                      _isLiveStatusVisible
-                                          ? Icons.visibility
-                                          : Icons.visibility_off,
-                                      color: _isLiveStatusVisible
-                                          ? kGreenNeon
-                                          : Colors.grey,
-                                      size: 20,
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        _isLiveStatusVisible =
-                                            !_isLiveStatusVisible;
-                                      });
-                                      _sendOverlayData();
-                                    },
-                                    constraints: const BoxConstraints(),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                    ),
-                                  ),
-                                  if (_botLogs.isNotEmpty)
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete_sweep,
-                                        color: kRedNeon,
-                                        size: 20,
-                                      ),
-                                      onPressed: _clearAllLogs,
-                                      constraints: const BoxConstraints(),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                      ),
-                                    ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        _isLargeLogsModalOpen = false;
-                                      });
-                                    },
-                                    constraints: const BoxConstraints(),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Divider(
-                          color: kGoldPrimary,
-                          height: 1,
-                          thickness: 1.5,
-                        ),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (_isLiveStatusVisible) ...[
-                                  _buildStatusReportBox(
-                                    symbol,
-                                    timeframe,
-                                    totalOrdersProfit,
-                                    activeOrders.length,
-                                    totalLots,
-                                    isTotalProfit,
-                                  ),
-                                  const SizedBox(height: 12),
-                                ],
-                                const Row(
-                                  children: [
-                                    Icon(
-                                      Icons.show_chart,
-                                      color: kGoldPrimary,
-                                      size: 16,
-                                    ),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      'ACTIVITY LOGS',
-                                      style: TextStyle(
-                                        color: kGoldPrimary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        letterSpacing: 1,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                if (_botLogs.isEmpty)
-                                  const Expanded(
-                                    child: Center(
-                                      child: Text(
-                                        'No log records...',
-                                        style: TextStyle(
-                                          color: Colors.grey,
-                                          fontFamily: 'monospace',
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  Expanded(
-                                    child: ListView.builder(
-                                      itemCount: _botLogs.length,
-                                      itemBuilder: (context, index) {
-                                        final log = _botLogs[index];
-                                        final bool isLatest = index == 0;
-
-                                        return Padding(
-                                          padding: const EdgeInsets.only(
-                                            bottom: 8.0,
-                                          ),
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Expanded(
-                                                child: isLatest
-                                                    ? Row(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          const Text(
-                                                            '➔ ',
-                                                            style: TextStyle(
-                                                              color: kGreenNeon,
-                                                              fontSize: 13,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                            ),
-                                                          ),
-                                                          Expanded(
-                                                            child:
-                                                                TypewriterText(
-                                                              text:
-                                                                  '${log['message']}',
-                                                              speed:
-                                                                  const Duration(
-                                                                milliseconds:
-                                                                    65,
-                                                              ),
-                                                              style:
-                                                                  const TextStyle(
-                                                                color:
-                                                                    kGreenNeon,
-                                                                fontFamily:
-                                                                    'monospace',
-                                                                fontSize: 13,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                height: 1.4,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      )
-                                                    : Text(
-                                                        "> ${log['message']}",
-                                                        style: const TextStyle(
-                                                          color: Colors.white,
-                                                          fontFamily:
-                                                              'monospace',
-                                                          fontSize: 13,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          height: 1.4,
-                                                        ),
-                                                      ),
-                                              ),
-                                              GestureDetector(
-                                                onTap: () => _clearLogItem(
-                                                  log['key'].toString(),
-                                                ),
-                                                child: const Padding(
-                                                  padding: EdgeInsets.only(
-                                                    left: 8.0,
-                                                  ),
-                                                  child: Icon(
-                                                    Icons.delete_outline,
-                                                    color: kRedNeon,
-                                                    size: 15,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-            // บอลลูนลอยหน้า Home (ลากขยับได้อิสระจนถึงขอบจอด้านล่างสุด)
-            Positioned(
-              left: _robotBubbleOffset.dx,
-              top: _robotBubbleOffset.dy,
-              child: AnimatedBuilder(
-                animation: _bounceAnimation,
-                builder: (context, child) {
-                  return Transform.translate(
-                    offset: Offset(0, _bounceAnimation.value),
-                    child: child,
-                  );
-                },
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onPanUpdate: (details) {
-                    setState(() {
-                      _robotBubbleOffset = Offset(
-                        (_robotBubbleOffset.dx + details.delta.dx)
-                            .clamp(0.0, screenSize.width - 60),
-                        (_robotBubbleOffset.dy + details.delta.dy)
-                            .clamp(0.0, screenSize.height - 60),
-                      );
-                    });
-                  },
-                  onTapDown: (_) {
-                    setState(() {
-                      _isRobotBubblePressed = true;
-                    });
-                  },
-                  onTapCancel: () {
-                    setState(() {
-                      _isRobotBubblePressed = false;
-                    });
-                  },
-                  onTap: () async {
-                    setState(() {
-                      _isRobotBubblePressed = false;
-                    });
-                    await _startFloatingOverlay();
-                  },
-                  child: AnimatedScale(
-                    scale: _isRobotBubblePressed ? 0.85 : 1.0,
-                    duration: const Duration(milliseconds: 100),
-                    child: _buildRobotBubbleWidget(),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildRobotBubbleWidget() {
-    final bool isServerActive = isConnected && isRunning;
-
-    return Container(
-      width: 58,
-      height: 58,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: kDarkCard,
-        border: Border.all(
-          color: kGoldPrimary,
-          width: 2.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (isServerActive ? kGreenNeon : kRedNeon).withOpacity(0.6),
-            blurRadius: 10,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          ClipOval(
-            child: Opacity(
-              opacity: 0.9,
-              child: Image.asset(
-                'assets/images/7.png',
-                fit: BoxFit.cover,
-                width: 54,
-                height: 54,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(
-                    Icons.smart_toy,
-                    color: kGoldPrimary,
-                  );
-                },
-              ),
-            ),
-          ),
-          Positioned(
-            right: -2,
-            top: -2,
-            child: Container(
-              width: 14,
-              height: 14,
-              decoration: BoxDecoration(
-                color: isServerActive ? kGreenNeon : kRedNeon,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.black,
-                  width: 2,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusReportBox(
-    String symbol,
-    String tf,
-    double totalOrdersProfit,
-    int orderCount,
-    double totalLots,
-    bool isTotalProfit,
-  ) {
-    final bool isServerActive = isConnected && isRunning;
-    final String scanImage = _images[_imageIndex];
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: kDarkCard.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: kGoldPrimary,
-          width: 2.0,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
-                ),
-                child: Container(
-                  height: 150,
-                  width: double.infinity,
-                  color: Colors.black,
-                  child: AnimatedBuilder(
-                    animation: _scannerController,
-                    builder: (context, child) {
-                      final double scanValue = _scannerController.value * 150;
-
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 800),
-                            child: Image.asset(
-                              scanImage,
-                              key: ValueKey<String>(scanImage),
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: 150,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const ColoredBox(
-                                  color: Colors.black,
-                                  child: Center(
-                                    child: Icon(
-                                      Icons.broken_image,
-                                      color: Colors.amber,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          Positioned(
-                            top: scanValue.clamp(0.0, 147.0),
-                            left: 0,
-                            right: 0,
-                            child: Container(
-                              height: 3,
-                              decoration: const BoxDecoration(
-                                color: kGoldPrimary,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: kGoldPrimary,
-                                    blurRadius: 8,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'LIVE STATUS',
-                      style: TextStyle(
-                        color: kGoldPrimary,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: isServerActive ? kGreenNeon : kRedNeon,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: (isServerActive ? kGreenNeon : kRedNeon)
-                                    .withOpacity(0.8),
-                                blurRadius: 4,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            isServerActive
-                                ? 'EA SERVER ONLINE & RUNNING'
-                                : 'EA SERVER OFFLINE / STOPPED',
-                            style: TextStyle(
-                              color: isServerActive ? kGreenNeon : kRedNeon,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Divider(
-                      color: Colors.white24,
-                      height: 6,
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Active Orders: $orderCount',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Lots: ${totalLots.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 10,
-                          ),
-                        ),
-                        Flexible(
-                          child: Text(
-                            'P/L: ${isTotalProfit ? "+" : ""}\$${totalOrdersProfit.toStringAsFixed(2)}',
-                            textAlign: TextAlign.end,
-                            style: TextStyle(
-                              color: isTotalProfit ? kGreenNeon : kRedNeon,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          Positioned(
-            right: 8,
-            top: 8,
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _isLiveStatusVisible = false;
-                });
-                _sendOverlayData();
-              },
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: kGoldPrimary,
-                    width: 1.5,
-                  ),
-                ),
-                child: const Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 16,
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -2590,9 +1838,6 @@ Future<void> _startFloatingOverlay() async {
     );
   }
 }
-
-// (หมายเหตุ: คลาสส่วนอื่นๆ เช่น HomeScreen, OrdersScreen, HistoryScreen, AlertsScreen, SettingsScreen, TradingCalendarDialog ยังคงอยู่ครบถ้วนเหมือนเดิม)
-
 
 
 
@@ -2838,6 +2083,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
+  // ฟังก์ชันสำหรับเรียกบอลลูนลอยกลับมาแสดงอีกครั้งจากในแอปหลัก (วางไว้นอก Widget build ถูกต้องแล้ว)
+  Future<void> _restoreFloatingOverlay() async {
+    try {
+      bool granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
+      if (!granted) {
+        final result = await FlutterOverlayWindow.requestPermission();
+        if (result != true) return;
+      }
+
+      final active = await FlutterOverlayWindow.isActive();
+      if (!active) {
+        await FlutterOverlayWindow.showOverlay(
+          height: 70,
+          width: 70,
+          enableDrag: true,
+          overlayTitle: 'GOLD PRO',
+          overlayContent: 'BUBBLE',
+          alignment: OverlayAlignment.topRight,
+          flag: OverlayFlag.defaultFlag,
+          visibility: NotificationVisibility.visibilityPublic,
+          positionGravity: PositionGravity.none,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error restoring overlay: $e');
+    }
+  }
+
   void _showTradingCalendarDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -2976,6 +2249,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           onPressed: () => _toggleBotStatus(!isRunning),
                           isLarge: true,
                         ),
+                        const SizedBox(width: 18),
+                        
+                        // ปุ่มสำหรับเรียกบอลลูนลอยกลับมาแสดง
+                        _buildCircularButton(
+                          label: 'BUBBLE',
+                          icon: Icons.bubble_chart,
+                          borderColor: kGoldPrimary,
+                          onPressed: _restoreFloatingOverlay,
+                        ),
+
                         const SizedBox(width: 18),
                         _buildCircularButton(
                           label: 'STATS', 
@@ -4018,6 +3301,7 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 }
+
 
 // ==========================================
 // #9 OrdersScreen
