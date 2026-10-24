@@ -18,67 +18,400 @@ const Color kDarkCard = Color(0xFF161616);    // การ์ดดำเข้�
 const Color kRedNeon = Color(0xFFFF1744);     // สีแดง SELL / Loss / Stop
 const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Profit / Start
 
-// ==========================================
-// #1.1 GOLD PRO OVERLAY - หน้าต่างลอยนอกแอป (บอลลูนวงกลม)
-// ==========================================
+
+ // ==========================================
+ // #1.1 GOLD PRO OVERLAY - บอลลูน + STATUS & LOGS
+ // ==========================================
 
 @pragma("vm:entry-point")
 void overlayMain() {
+  WidgetsFlutterBinding.ensureInitialized();
+
   runApp(
     const MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Material(
         color: Colors.transparent,
-        child: FloatingBubbleOverlay(),
+        child: GoldProFloatingOverlay(),
       ),
     ),
   );
 }
 
-class FloatingBubbleOverlay extends StatelessWidget {
-  const FloatingBubbleOverlay({super.key});
+class GoldProFloatingOverlay extends StatefulWidget {
+  const GoldProFloatingOverlay({super.key});
+
+  @override
+  State<GoldProFloatingOverlay> createState() =>
+      _GoldProFloatingOverlayState();
+}
+
+class _GoldProFloatingOverlayState
+    extends State<GoldProFloatingOverlay> {
+  bool _showLogs = false;
+  bool _showStatus = true;
+
+  Map<String, dynamic> _data = {};
+  StreamSubscription<dynamic>? _subscription;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _subscription =
+        FlutterOverlayWindow.overlayListener.listen((event) {
+      if (!mounted || event is! Map) return;
+
+      final data = Map<String, dynamic>.from(event);
+
+      if (data['type'] == 'snapshot') {
+        setState(() {
+          _data = data;
+        });
+      }
+
+      if (data['type'] == 'command') {
+        final command = data['command']?.toString() ?? '';
+
+        if (command == 'toggle_floating_log') {
+          setState(() {
+            _showLogs = !_showLogs;
+          });
+        }
+
+        if (command == 'close_floating_log') {
+          setState(() {
+            _showLogs = false;
+          });
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Color get _statusColor {
+    return _data['connected'] == true &&
+            _data['running'] == true
+        ? const Color(0xFF00E676)
+        : const Color(0xFFFF1744);
+  }
+
+  Future<void> _sendCommand(String command) async {
+    try {
+      await FlutterOverlayWindow.shareData({
+        'type': 'command',
+        'command': command,
+      });
+    } catch (e) {
+      debugPrint('Overlay command error: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: GestureDetector(
-        onTap: () async {
-          // ส่งคำสั่งกลับไปที่แอปหลักเมื่อกดที่บอลลูนนอกแอป
-          await FlutterOverlayWindow.shareData({
-            'type': 'command',
-            'command': 'toggle_floating_log',
-          });
-        },
-        child: Container(
-          width: 58,
-          height: 58,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xFF181A20),
-            border: Border.all(color: const Color(0xFFFFD700), width: 2.0),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0xFF00FF66),
-                blurRadius: 10,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: ClipOval(
-            child: Image.asset(
-              'assets/images/7.png',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => const Icon(
-                Icons.smart_toy,
-                color: Color(0xFFFFD700),
+    final logs = _data['logs'] is List
+        ? List<dynamic>.from(_data['logs'] as List)
+        : <dynamic>[];
+
+    return Material(
+      type: MaterialType.transparency,
+      child: Stack(
+        children: [
+          // บอลลูนหุ่นยนต์ที่ลอยอยู่นอกแอป
+          Positioned(
+            right: 8,
+            top: 8,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showLogs = !_showLogs;
+                });
+              },
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF161616),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFFFD700),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _statusColor.withOpacity(0.65),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/images/7.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.smart_toy,
+                      color: Color(0xFFFFD700),
+                      size: 34,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
+
+          // หน้าต่าง STATUS & LOGS ภายใน Overlay จริง
+          if (_showLogs)
+            Positioned(
+              left: 8,
+              right: 8,
+              top: 78,
+              bottom: 8,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xF2161616),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFFFFD700),
+                    width: 1.5,
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black54,
+                      blurRadius: 12,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.terminal,
+                            color: Color(0xFFFFD700),
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'STATUS & LOGS',
+                              style: TextStyle(
+                                color: Color(0xFFFFD700),
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'ซ่อนหน้าต่าง',
+                            onPressed: () {
+                              setState(() {
+                                _showLogs = false;
+                              });
+                            },
+                            icon: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const Divider(
+                      color: Color(0xFFFFD700),
+                      height: 1,
+                    ),
+
+                    if (_showStatus)
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _data['connected'] == true
+                                  ? 'FIREBASE: CONNECTED'
+                                  : 'FIREBASE: DISCONNECTED',
+                              style: TextStyle(
+                                color: _data['connected'] == true
+                                    ? const Color(0xFF00E676)
+                                    : const Color(0xFFFF1744),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              _data['running'] == true
+                                  ? 'EA: RUNNING'
+                                  : 'EA: STOPPED',
+                              style: TextStyle(
+                                color: _statusColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              'Symbol: ${_data['symbol'] ?? 'XAUUSD'}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              'Timeframe: ${_data['timeframe'] ?? 'M1'}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              'Orders: ${_data['ordersCount'] ?? 0}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              'Lots: ${_number(_data['totalLots'])}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              'P/L: ${_number(_data['ordersProfit'])}',
+                              style: TextStyle(
+                                color: (double.tryParse(
+                                          '${_data['ordersProfit'] ?? 0}',
+                                        ) ??
+                                        0) >=
+                                    0
+                                    ? const Color(0xFF00E676)
+                                    : const Color(0xFFFF1744),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _showStatus = false;
+                                  });
+                                },
+                                child: const Text(
+                                  'ซ่อนสถานะ',
+                                  style: TextStyle(
+                                    color: Color(0xFFFFD700),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    if (!_showStatus)
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _showStatus = true;
+                          });
+                        },
+                        child: const Text(
+                          'แสดงสถานะ',
+                          style: TextStyle(
+                            color: Color(0xFFFFD700),
+                          ),
+                        ),
+                      ),
+
+                    const Divider(
+                      color: Colors.white24,
+                      height: 1,
+                    ),
+
+                    const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'ACTIVITY LOGS',
+                          style: TextStyle(
+                            color: Color(0xFFFFD700),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    Expanded(
+                      child: logs.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No log records...',
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                              ),
+                              itemCount: logs.length,
+                              itemBuilder: (context, index) {
+                                final item = logs[index];
+
+                                final message = item is Map
+                                    ? item['message']?.toString() ?? ''
+                                    : item.toString();
+
+                                return Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: 8,
+                                  ),
+                                  child: Text(
+                                    '> $message',
+                                    style: const TextStyle(
+                                      color: Color(0xFF00E676),
+                                      fontSize: 11,
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
+
+  String _number(dynamic value) {
+    final n = double.tryParse(value?.toString() ?? '') ?? 0;
+    return n.toStringAsFixed(2);
+  }
 }
+
 
 // ==========================================
 // #2 โหมดเมนหลักของแอป
@@ -1114,40 +1447,46 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   // ==========================================
   // เปิดบอลลูนลอยทับแอปอื่น (ปรับขนาดเป็น 80x80)
   // ==========================================
-  Future<void> _startFloatingOverlay() async {
-    try {
-      bool granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
+  
+Future<void> _startFloatingOverlay() async {
+  try {
+    bool granted =
+        await FlutterOverlayWindow.isPermissionGranted() ?? false;
 
-      if (!granted) {
-        final result = await FlutterOverlayWindow.requestPermission();
-        if (result != true) return;
-        granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
-      }
+    if (!granted) {
+      final result = await FlutterOverlayWindow.requestPermission();
+      if (result != true) return;
 
-      if (!granted) return;
-
-      final active = await FlutterOverlayWindow.isActive();
-
-      if (!active) {
-        await FlutterOverlayWindow.showOverlay(
-          height: 80,
-          width: 80,
-          enableDrag: true,
-          overlayTitle: 'GOLD PRO',
-          overlayContent: 'STATUS & LOGS',
-          alignment: OverlayAlignment.topRight,
-          flag: OverlayFlag.defaultFlag,
-          visibility: NotificationVisibility.visibilityPublic,
-          positionGravity: PositionGravity.none,
-        );
-      }
-
-      await Future.delayed(const Duration(milliseconds: 400));
-      await _sendOverlayData();
-    } catch (e) {
-      debugPrint('Error starting overlay: $e');
+      granted =
+          await FlutterOverlayWindow.isPermissionGranted() ?? false;
     }
+
+    if (!granted) return;
+
+    final active = await FlutterOverlayWindow.isActive();
+
+    if (!active) {
+      await FlutterOverlayWindow.showOverlay(
+        height: 600,
+        width: 330,
+        enableDrag: true,
+        overlayTitle: 'GOLD PRO',
+        overlayContent: 'STATUS & LOGS',
+        alignment: OverlayAlignment.topRight,
+        flag: OverlayFlag.defaultFlag,
+        visibility: NotificationVisibility.visibilityPublic,
+        positionGravity: PositionGravity.none,
+      );
+    }
+
+    await Future.delayed(const Duration(milliseconds: 700));
+
+    await _sendOverlayData();
+  } catch (e) {
+    debugPrint('Error starting overlay: $e');
   }
+}
+
 
   // ==========================================
   // รับคำสั่งจาก Overlay
