@@ -1,5 +1,5 @@
 // ==========================================
-// #1 โหมดการเชื่อมต่อเซิร์ฟเวอร์ & ธีมสี & ระบบ Overlay
+// #1 โหมดการเชื่อมต่อเซิร์ฟเวอร์ & ธีมสี
 // ==========================================
 
 import 'dart:async';  
@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
 // ค่าสีหลักสำหรับธีม Luxury Gold & Dark Metallic
 const Color kGoldPrimary = Color(0xFFFFD700); // สีทองหลัก
@@ -19,307 +18,7 @@ const Color kRedNeon = Color(0xFFFF1744);     // สีแดง SELL / Loss / S
 const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Profit / Start
 
 // ==========================================
-// #1.1 GOLD PRO OVERLAY - หน้าต่างลอยนอกแอป (ทับแอปอื่นได้จริง)
-// ==========================================
-
-@pragma('vm:entry-point')
-void overlayMain() {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  runApp(
-    const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: FloatingRobotOverlay(),
-    ),
-  );
-}
-
-class FloatingRobotOverlay extends StatefulWidget {
-  const FloatingRobotOverlay({super.key});
-
-  @override
-  State<FloatingRobotOverlay> createState() => _FloatingRobotOverlayState();
-}
-
-class _FloatingRobotOverlayState extends State<FloatingRobotOverlay> {
-  bool _expanded = false;
-  bool _showStatus = true;
-
-  Map<String, dynamic> _data = {};
-  StreamSubscription<dynamic>? _subscription;
-
-  @override
-  void initState() {
-    super.initState();
-    _subscription = FlutterOverlayWindow.overlayListener.listen((event) {
-      if (!mounted || event is! Map) return;
-      setState(() {
-        _data = Map<String, dynamic>.from(event);
-      });
-    });
-  }
-
-  Future<void> _togglePanel() async {
-    final next = !_expanded;
-
-    try {
-      // ขยายหรือย่อขนาดหน้าต่าง Overlay เมื่อกดที่บอลลูน
-      await FlutterOverlayWindow.resizeOverlay(
-        next ? 360 : 80,
-        next ? 700 : 80,
-        true,
-      );
-
-      if (mounted) {
-        setState(() => _expanded = next);
-      }
-    } catch (e) {
-      debugPrint('Overlay resize error: $e');
-    }
-  }
-
-  double _number(dynamic value) {
-    if (value is num) return value.toDouble();
-    return double.tryParse(value?.toString() ?? '') ?? 0;
-  }
-
-  @override
-  void dispose() {
-    _subscription?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final running = _data['running'] == true;
-    final connected = _data['connected'] == true;
-    final active = running && connected;
-
-    final logs = (_data['logs'] as List? ?? const [])
-        .map((e) => e is Map
-            ? Map<String, dynamic>.from(e)
-            : <String, dynamic>{'message': e.toString()})
-        .toList();
-
-    final orderCount = _data['ordersCount'] ?? 0;
-    final totalLots = _number(_data['totalLots']);
-    final totalProfit = _number(_data['ordersProfit']);
-
-    // หากยังไม่ขยาย ให้แสดงเป็นบอลลูนกลมลอยทับหน้าจอ
-    if (!_expanded) {
-      return Material(
-        color: Colors.transparent,
-        child: Align(
-          alignment: Alignment.topRight,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 100, right: 10),
-            child: GestureDetector(
-              onTap: _togglePanel,
-              child: Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: kDarkCard,
-                  border: Border.all(color: kGoldPrimary, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (active ? kGreenNeon : kRedNeon).withOpacity(0.8),
-                      blurRadius: 12,
-                    ),
-                  ],
-                ),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    ClipOval(
-                      child: Image.asset(
-                        'assets/images/7.png',
-                        width: 56,
-                        height: 56,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.smart_toy,
-                          color: kGoldPrimary,
-                          size: 32,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: active ? kGreenNeon : kRedNeon,
-                          border: Border.all(color: Colors.black, width: 2),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    // เมื่อขยาย จะแสดงกล่อง Status & Logs นอกแอป
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        margin: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: kDarkBg.withOpacity(0.97),
-          border: Border.all(color: kGoldPrimary, width: 2),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: Row(
-                children: [
-                  const Icon(Icons.terminal, color: kGoldPrimary, size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'STATUS & LOGS (OVERLAY)',
-                      style: TextStyle(
-                        color: kGoldPrimary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => setState(() => _showStatus = !_showStatus),
-                    icon: Icon(
-                      _showStatus ? Icons.visibility : Icons.visibility_off,
-                      color: kGreenNeon,
-                      size: 20,
-                    ),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _togglePanel,
-                    icon: const Icon(Icons.close, color: Colors.white, size: 22),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(color: kGoldPrimary, height: 1, thickness: 1.5),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(10),
-                children: [
-                  if (_showStatus) ...[
-                    Container(
-                      decoration: BoxDecoration(
-                        color: kDarkCard,
-                        border: Border.all(color: kGoldPrimary, width: 1.5),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'LIVE STATUS',
-                              style: TextStyle(
-                                color: kGoldPrimary,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Icon(Icons.circle, size: 10, color: active ? kGreenNeon : kRedNeon),
-                                const SizedBox(width: 6),
-                                Text(
-                                  active ? 'EA SERVER ONLINE & RUNNING' : 'EA SERVER OFFLINE / STOPPED',
-                                  style: TextStyle(
-                                    color: active ? kGreenNeon : kRedNeon,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Symbol: ${_data['symbol'] ?? 'XAUUSD'} | TF: ${_data['timeframe'] ?? 'M1'}',
-                              style: const TextStyle(color: Colors.white70, fontSize: 10),
-                            ),
-                            const Divider(color: Colors.white24, height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('Orders: $orderCount', style: const TextStyle(color: Colors.white70, fontSize: 10)),
-                                Text('Lots: ${totalLots.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70, fontSize: 10)),
-                                Text(
-                                  'P/L: ${totalProfit >= 0 ? '+' : ''}\$${totalProfit.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    color: totalProfit >= 0 ? kGreenNeon : kRedNeon,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                  const Text(
-                    'ACTIVITY LOGS',
-                    style: TextStyle(
-                      color: kGoldPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (logs.isEmpty)
-                    const Text('No log records...', style: TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace'))
-                  else
-                    ...logs.map((log) {
-                      final message = log['message']?.toString() ?? '';
-                      final isLatest = logs.first == log;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Text(
-                          '${isLatest ? '➔ ' : '> '}$message',
-                          style: TextStyle(
-                            color: isLatest ? kGreenNeon : Colors.white,
-                            fontSize: 11,
-                            fontFamily: 'monospace',
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      );
-                    }),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ==========================================
-// #2 โหมดเมนหลักของแอป
+// #2 โหมดเมนหลัก
 // ==========================================
 
 void main() async {
@@ -668,7 +367,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                       ),
                       const SizedBox(height: 6),
                       const Text(
-                        'ROBOT ALGO TRADING',
+                        ' ROBOT ALGO TRADING',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 16,
@@ -1074,7 +773,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'ROBOT ALGO TRADING',
+                      ' ROBOT ALGO TRADING',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.white70,
@@ -1222,55 +921,70 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen>
     with TickerProviderStateMixin {
-  
   int _currentIndex = 2;
   String currentLogin = "235305975";
-  
-  bool isRunning = false;
-  double profit = 0.0;
-  String symbol = "XAUUSD";
-  String timeframe = "M1";
-  bool isConnected = false;
   int unreadAlertsCount = 0;
 
-  List<Map<dynamic, dynamic>> activeOrders = [];
-  List<Map<String, dynamic>> _botLogs = [];
-
-  bool _isLargeLogsModalOpen = false;
-  bool _isLiveStatusVisible = true;
-  Offset _modalOffset = const Offset(15, 80);
-
-  Offset _robotBubbleOffset = const Offset(320, 150);
-  bool _isRobotBubblePressed = false;
-
-  int _imageIndex = 0;
-  Timer? _imageTimer;
-  final List<String> _images = ['assets/images/5.png', 'assets/images/8.png'];
-
-  DatabaseReference? _dbRef;
   DatabaseReference? _alertsRef;
+  DatabaseReference? _dbRef;
   DatabaseReference? _logsRef;
   DatabaseReference? _ordersRef;
 
-  late final AnimationController _bounceController = AnimationController(
-    duration: const Duration(milliseconds: 1200),
+  Offset _robotBubbleOffset = const Offset(320, 600);
+  Offset _modalOffset = const Offset(16, 80);
+
+  bool _isLiveStatusVisible = true;
+  bool _isRobotBubblePressed = false;
+  bool _isLargeLogsModalOpen = false;
+  bool isRunning = false;
+  bool isConnected = false;
+
+  String symbol = "XAUUSD";
+  String timeframe = "M1";
+  double profit = 0.0;
+
+  List<Map<String, dynamic>> _botLogs = [];
+  List<Map<dynamic, dynamic>> activeOrders = [];
+
+  final List<String> _images = [
+    'assets/images/2.png',
+    'assets/images/4.png',
+    'assets/images/6.png',
+  ];
+  int _imageIndex = 0; 
+  Timer? _imageTimer; 
+
+  late final AnimationController _bounceController =
+      AnimationController(
+    duration: const Duration(seconds: 1),
     vsync: this,
   )..repeat(reverse: true);
 
-  late final Animation<double> _bounceAnimation = Tween<double>(begin: 0, end: 6).animate(
-    CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut),
+  late final Animation<double> _bounceAnimation =
+      Tween<double>(begin: 0.0, end: -10.0).animate(
+    CurvedAnimation(
+      parent: _bounceController,
+      curve: Curves.easeInOut,
+    ),
   );
 
-  late final AnimationController _scannerController = AnimationController(
-    duration: const Duration(seconds: 2),
+  late final AnimationController _scannerController =
+      AnimationController(
+    duration: const Duration(seconds: 3),
     vsync: this,
   )..repeat(reverse: true);
+
+  late final Animation<double> _scannerAnimation =
+      Tween<double>(begin: 0.0, end: 1.0).animate(
+    CurvedAnimation(
+      parent: _scannerController,
+      curve: Curves.easeInOut,
+    ),
+  );
 
   @override
   void initState() {
     super.initState();
-    
-    _startFloatingOverlay(); // เรียกสั่งเปิดบอลลูนลอยนอกแอป
 
     _loadSavedLogin().then((_) {
       if (!mounted) return;
@@ -1290,26 +1004,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         });
       }
     });
-  }
-
-  Future<void> _startFloatingOverlay() async {
-    try {
-      bool? isGranted = await FlutterOverlayWindow.isPermissionGranted();
-      if (isGranted == false) {
-        await FlutterOverlayWindow.requestPermission();
-      } else {
-        await FlutterOverlayWindow.showOverlay(
-          height: 80,
-          width: 80,
-          alignment: OverlayAlignment.topRight,
-          flag: OverlayFlag.defaultFlag,
-          visibility: NotificationVisibility.visibilityPublic,
-          positionGravity: PositionGravity.none,
-        );
-      }
-    } catch (e) {
-      debugPrint("Error starting overlay: $e");
-    }
   }
 
   @override
@@ -1647,7 +1341,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
 
     final bool isTotalProfit = totalOrdersProfit >= 0;
-    final screenSize = MediaQuery.of(context).size;
 
     return WillPopScope(
       onWillPop: _handleBackButton,
@@ -1728,7 +1421,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 ),
               ),
             ),
-            
             if (_isLargeLogsModalOpen)
               Positioned(
                 left: _modalOffset.dx,
@@ -1740,8 +1432,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     });
                   },
                   child: Container(
-                    width: screenSize.width * 0.92,
-                    height: screenSize.height * 0.72,
+                    width: MediaQuery.of(context).size.width * 0.92,
+                    height: MediaQuery.of(context).size.height * 0.72,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
@@ -1755,7 +1447,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                           spreadRadius: 2,
                         ),
                       ],
-                      color: kDarkCard.withOpacity(0.92),
+                      color: kDarkCard.withOpacity(0.85),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1805,6 +1497,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                             !_isLiveStatusVisible;
                                       });
                                     },
+                                    tooltip: _isLiveStatusVisible
+                                        ? 'Hide Live Status'
+                                        : 'Show Live Status',
                                     constraints: const BoxConstraints(),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 6,
@@ -1818,6 +1513,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                         size: 20,
                                       ),
                                       onPressed: _clearAllLogs,
+                                      tooltip: 'Clear All Logs',
                                       constraints: const BoxConstraints(),
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 6,
@@ -1993,7 +1689,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   ),
                 ),
               ),
-
             Positioned(
               left: _robotBubbleOffset.dx,
               top: _robotBubbleOffset.dy,
@@ -2005,15 +1700,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     child: child,
                   );
                 },
-                child: Listener(
-                  onPointerMove: (pointerEvent) {
+                child: Draggable(
+                  feedback: Material(
+                    color: Colors.transparent,
+                    child: _buildRobotBubbleWidget(),
+                  ),
+                  childWhenDragging: const SizedBox.shrink(),
+                  onDragEnd: (details) {
                     setState(() {
-                      _robotBubbleOffset = Offset(
-                        (_robotBubbleOffset.dx + pointerEvent.delta.dx)
-                            .clamp(0.0, screenSize.width - 60),
-                        (_robotBubbleOffset.dy + pointerEvent.delta.dy)
-                            .clamp(40.0, screenSize.height - 120),
-                      );
+                      _robotBubbleOffset = details.offset;
                     });
                   },
                   child: GestureDetector(
@@ -2144,10 +1839,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   width: double.infinity,
                   color: Colors.black,
                   child: AnimatedBuilder(
-                    animation: _scannerController,
+                    animation: _scannerAnimation,
                     builder: (context, child) {
                       final double scanValue =
-                          _scannerController.value * 150;
+                          _scannerAnimation.value * 150;
 
                       return Stack(
                         fit: StackFit.expand,
@@ -2161,6 +1856,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                               width: double.infinity,
                               height: 150,
                               errorBuilder: (context, error, stackTrace) {
+                                debugPrint('GOLD PRO image error: $error');
                                 return const ColoredBox(
                                   color: Colors.black,
                                   child: Center(
@@ -2422,10 +2118,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 }
 
-// ==========================================
-// #7 HomeScreen
-// ==========================================
 
+
+// ==========================================
+// 🌟 HomeScreen (GOLD PRO) - โค้ดฉบับสมบูรณ์
+// ==========================================
 class HomeScreen extends StatefulWidget {
   final String accountLogin;
   const HomeScreen({super.key, required this.accountLogin});
@@ -2819,6 +2516,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     _buildBidAskBoxContent(context),
                     const SizedBox(height: 16),
                     
+                    // 🌟 ปุ่ม Trading Journal พร้อมรูป 8.jpg และไฟนีออนเรืองแสง พร้อมชื่อกำกับด้านล่าง
                     Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -3294,7 +2992,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 }
 
 // ==========================================
-// #8 TradingCalendarDialog
+// 🌟 TradingCalendarDialog (ระบบปฏิทินบันทึกผลกำไร)
 // ==========================================
 class TradingCalendarDialog extends StatefulWidget {
   final List<Map<dynamic, dynamic>> historyTrades;
@@ -3845,8 +3543,12 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
   }
 }
 
+
+
+
+
 // ==========================================
-// #9 OrdersScreen
+// #8 โหมดรายงานออเดอร์ (OrdersScreen)
 // ==========================================
 
 class OrdersScreen extends StatefulWidget {
@@ -4270,7 +3972,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
 }
 
 // ==========================================
-// #10 HistoryScreen
+// #9 โหมดการบันทึกประจำวัน (HistoryScreen)
 // ==========================================
 
 class HistoryScreen extends StatefulWidget {
@@ -4659,7 +4361,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 }
 
 // ==========================================
-// #11 AlertsScreen
+// #10 โหมดการแจ้งเตือนข้อความ (AlertsScreen)
 // ==========================================
 
 class AlertsScreen extends StatefulWidget {
@@ -4919,7 +4621,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
 }
 
 // ==========================================
-// #12 SettingsScreen
+// #11 โหมดการตั้งค่าพารามิเตอร์ (SettingsScreen) - Full Version
 // ==========================================
 
 class SettingsScreen extends StatefulWidget {
@@ -4949,7 +4651,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController slPointsController = TextEditingController(text: "500");
   final TextEditingController riskRewardController = TextEditingController(text: "2.0");
   
-  final TextEditingController recoveryStepController = TextEditingController(text: "200");
+  final TextEditingController recoveryStepController = TextEditingController(text: "500");
   final TextEditingController startTimeController = TextEditingController(text: "08:00");
   final TextEditingController endTimeController = TextEditingController(text: "22:00");
 
@@ -5042,7 +4744,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             initialLotController.text = (data['initial_lot'] ?? 0.01).toString();
             maxRecoveryController.text = (data['max_recovery'] ?? 10).toString();
             maxOrdersController.text = (data['max_orders'] ?? 10).toString();
-            recoveryStepController.text = (data['recovery_step'] ?? 200).toString();
+            recoveryStepController.text = (data['recovery_step'] ?? 500).toString();
             slPointsController.text = (data['sl_points'] ?? 500).toString();
             riskRewardController.text = (data['risk_reward'] ?? 2.0).toString();
             startTimeController.text = data['start_time_th']?.toString() ?? '08:00';
@@ -5093,7 +4795,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         'initial_lot': initialLotVal ?? 0.01,
         'max_recovery': maxRecoveryVal ?? 10,
         'max_orders': maxOrdersVal ?? 10,
-        'recovery_step': recoveryStepVal ?? 200,
+        'recovery_step': recoveryStepVal ?? 500,
         'sl_points': slPointsVal ?? 500,
         'risk_reward': riskRewardVal ?? 2.0,
         'start_time_th': startTimeController.text.trim(),
