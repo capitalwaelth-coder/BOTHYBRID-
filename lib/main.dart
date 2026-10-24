@@ -5142,7 +5142,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
 }
 
 // ==========================================
-// #12 SettingsScreen
+// #12 โหมดการตั้งค่าพารามิเตอร์ (SettingsScreen) - Full Version
 // ==========================================
 
 class SettingsScreen extends StatefulWidget {
@@ -5172,7 +5172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController slPointsController = TextEditingController(text: "500");
   final TextEditingController riskRewardController = TextEditingController(text: "2.0");
   
-  final TextEditingController recoveryStepController = TextEditingController(text: "200");
+  final TextEditingController recoveryStepController = TextEditingController(text: "500");
   final TextEditingController startTimeController = TextEditingController(text: "08:00");
   final TextEditingController endTimeController = TextEditingController(text: "22:00");
 
@@ -5265,7 +5265,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             initialLotController.text = (data['initial_lot'] ?? 0.01).toString();
             maxRecoveryController.text = (data['max_recovery'] ?? 10).toString();
             maxOrdersController.text = (data['max_orders'] ?? 10).toString();
-            recoveryStepController.text = (data['recovery_step'] ?? 200).toString();
+            recoveryStepController.text = (data['recovery_step'] ?? 500).toString();
             slPointsController.text = (data['sl_points'] ?? 500).toString();
             riskRewardController.text = (data['risk_reward'] ?? 2.0).toString();
             startTimeController.text = data['start_time_th']?.toString() ?? '08:00';
@@ -5316,7 +5316,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         'initial_lot': initialLotVal ?? 0.01,
         'max_recovery': maxRecoveryVal ?? 10,
         'max_orders': maxOrdersVal ?? 10,
-        'recovery_step': recoveryStepVal ?? 200,
+        'recovery_step': recoveryStepVal ?? 500,
         'sl_points': slPointsVal ?? 500,
         'risk_reward': riskRewardVal ?? 2.0,
         'start_time_th': startTimeController.text.trim(),
@@ -5771,3 +5771,283 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const SizedBox(width: 10),
                           Expanded(child: _buildControllerInputField('Max Recovery', maxRecoveryController, TextInputType.number)),
                         ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(child: _buildControllerInputField('Max Orders', maxOrdersController, TextInputType.number)),
+                          const SizedBox(width: 10),
+                          Expanded(child: _buildControllerInputField('Recovery Step (Pts)', recoveryStepController, TextInputType.number)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(child: _buildControllerInputField('SL Points', slPointsController, TextInputType.number)),
+                          const SizedBox(width: 10),
+                          Expanded(child: _buildControllerInputField('Risk Reward', riskRewardController, TextInputType.number)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Calculated TP', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
+                          const SizedBox(height: 4),
+                          Container(
+                            width: double.infinity,
+                            height: 46,
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: kDarkBg.withOpacity(0.75),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: kGoldPrimary.withOpacity(0.3), width: 1),
+                            ),
+                            child: Text(
+                              '${calculatedTP.toStringAsFixed(1)} Pts',
+                              style: const TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold, fontSize: 13, fontStyle: FontStyle.italic),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(child: _buildControllerInputField('Start Time (เวลาไทย)', startTimeController, TextInputType.text)),
+                          const SizedBox(width: 10),
+                          Expanded(child: _buildControllerInputField('End Time (เวลาไทย)', endTimeController, TextInputType.text)),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      const Divider(color: kGoldPrimary),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('BASKET CONTROL', style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 12)),
+                          Row(
+                            children: [
+                              const Text('Enable Basket', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                              Switch(
+                                value: enableBasketControl,
+                                activeColor: Colors.blueAccent,
+                                onChanged: (val) => setState(() { enableBasketControl = val; }),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: kDarkBg.withOpacity(0.75),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.blueAccent, width: 1.5),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Basket TP', style: TextStyle(color: Colors.blueAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                                      Switch(
+                                        value: enableBasketTp,
+                                        activeColor: Colors.blueAccent,
+                                        onChanged: (val) => setState(() { enableBasketTp = val; }),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  _buildControllerInputField('Target (\$)', basketTpController, TextInputType.number),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: kDarkBg.withOpacity(0.75),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: kRedNeon, width: 1.5),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Basket SL', style: TextStyle(color: kRedNeon, fontSize: 11, fontWeight: FontWeight.bold)),
+                                      Switch(
+                                        value: enableBasketSl,
+                                        activeColor: kRedNeon,
+                                        onChanged: (val) => setState(() { enableBasketSl = val; }),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  _buildControllerInputField('Limit (\$)', basketSlController, TextInputType.number),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('DAILY TARGET & LOSS CONTROL', style: TextStyle(color: kGreenNeon, fontWeight: FontWeight.bold, fontSize: 12)),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: kDarkBg.withOpacity(0.75),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: kGreenNeon, width: 1.5),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Daily Target', style: TextStyle(color: kGreenNeon, fontSize: 11, fontWeight: FontWeight.bold)),
+                                      Switch(
+                                        value: enableDailyTarget,
+                                        activeColor: kGreenNeon,
+                                        onChanged: (val) => setState(() { enableDailyTarget = val; }),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  _buildControllerInputField('Target (\$)', dailyTargetController, TextInputType.number),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: kDarkBg.withOpacity(0.75),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: kRedNeon, width: 1.5),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Daily Loss', style: TextStyle(color: kRedNeon, fontSize: 11, fontWeight: FontWeight.bold)),
+                                      Switch(
+                                        value: enableDailyLoss,
+                                        activeColor: kRedNeon,
+                                        onChanged: (val) => setState(() { enableDailyLoss = val; }),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  _buildControllerInputField('Limit (\$)', dailyLossController, TextInputType.number),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _saveBotParametersToFirebase,
+                          icon: const Icon(Icons.save, color: kGoldPrimary),
+                          label: const Text('SYNC & SAVE TO EA', style: TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: kDarkBg.withOpacity(0.75),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: const BorderSide(color: kGoldPrimary, width: 1.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Divider(color: kGoldPrimary, height: 24),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'SECURITY & PRIVACY', 
+                        style: TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'monospace')
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Reset Security PIN / Login', style: TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace')),
+                                SizedBox(height: 2),
+                                Text('ตั้งค่ารหัส PIN ใหม่', style: TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
+                              ],
+                            ),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: kDarkBg.withOpacity(0.75),
+                              side: const BorderSide(color: kGoldPrimary, width: 1),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            ),
+                            onPressed: _resetPin,
+                            child: const Text('Reset', style: TextStyle(color: kGoldPrimary, fontSize: 12, fontFamily: 'monospace')),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Log Out (เปลี่ยนบัญชี MT5)', style: TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace')),
+                                SizedBox(height: 2),
+                                Text('ออกจากระบบเพื่อกลับไปหน้าล็อกอิน', style: TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
+                              ],
+                            ),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              side: const BorderSide(color: kGoldPrimary, width: 1.5),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            ),
+                            onPressed: _logoutToLoginScreen,
+                            child: const Text('Log Out', style: TextStyle(color: kGoldPrimary, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 30),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
