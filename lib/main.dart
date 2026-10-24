@@ -20,7 +20,7 @@ const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Pro
 
 
 // ==========================================
-// #1.1 โหมดการเชื่อม ระบบ Overlay
+// #1.1 โหมดการเชื่อม ระบบ Overlay (แบบไม่มีปุ่ม Start/Stop ตามที่คุณต้องการ)
 // ==========================================
 
 @pragma("vm:entry-point")
@@ -43,12 +43,11 @@ class FullOverlayContent extends StatefulWidget {
   State<FullOverlayContent> createState() => _FullOverlayContentState();
 }
 
-class _FullOverlayContentState extends State<FullOverlayContent> with TickerProviderStateMixin {
+class _FullOverlayContentState extends State<FullOverlayContent> {
   bool _isExpanded = false;
   String currentLogin = "235305975";
   bool isRunning = false;
   bool isConnected = false;
-  
   List<Map<String, dynamic>> _botLogs = [];
   DatabaseReference? _logsRef;
 
@@ -57,7 +56,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
     super.initState();
     _initFirebaseForOverlay();
 
-    // รับข้อมูล Real-time จากแอปหลัก
     FlutterOverlayWindow.overlayListener.listen((event) {
       if (event is Map) {
         final data = Map<String, dynamic>.from(event);
@@ -66,7 +64,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
             currentLogin = data['login']?.toString() ?? currentLogin;
             isRunning = data['running'] ?? isRunning;
             isConnected = data['connected'] ?? isConnected;
-            
             if (data['logs'] is List) {
               _botLogs = List<Map<String, dynamic>>.from(data['logs']);
             }
@@ -76,11 +73,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
     });
 
     FlutterOverlayWindow.shareData({'type': 'command', 'command': 'request_snapshot'});
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   void _initFirebaseForOverlay() async {
@@ -115,14 +107,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
     }
   }
 
-  void _clearLogItem(String key) async {
-    try {
-      if (_logsRef != null) await _logsRef!.child(key).remove();
-    } catch (e) {
-      debugPrint("Overlay clear log error: $e");
-    }
-  }
-
   void _clearAllLogs() async {
     try {
       if (_logsRef != null) {
@@ -132,7 +116,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
         });
       }
     } catch (e) {
-      debugPrint("Overlay clear all logs error: $e");
+      debugPrint("Overlay clear logs error: $e");
     }
   }
 
@@ -142,268 +126,177 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Stack(
-        alignment: Alignment.center,
-        children: [
-          if (_isExpanded)
-            Center(
-              child: SizedBox(
-                width: 330,
-                height: 420, // ปรับความสูงให้พอดีกับดีไซน์ใหม่ตามเรฟ
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF121212),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFFFD700), width: 2.0),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black87, blurRadius: 20, spreadRadius: 3),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ส่วนบน: รูปภาพพื้นหลัง (6.png) พร้อมชื่อบอทและสถานะทับอยู่ด้านใน
-                        Stack(
-                          children: [
-                            SizedBox(
-                              height: 220,
-                              width: double.infinity,
-                              child: Image.asset(
-                                'assets/images/6.png',
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => const ColoredBox(color: Colors.black),
-                              ),
+      body: Center(
+        child: _isExpanded
+            ? Container(
+                width: 320,
+                height: 380,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF161616),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFFD700), width: 2.0),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black87, blurRadius: 15, spreadRadius: 2),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Column(
+                    children: [
+                      // ส่วนหัวรูปภาพ 6.png พร้อมปุ่มปิด/ย่อ และถังขยะ
+                      Stack(
+                        children: [
+                          SizedBox(
+                            height: 110,
+                            width: double.infinity,
+                            child: Image.asset(
+                              'assets/images/6.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const ColoredBox(color: Colors.black),
                             ),
-                            // ไล่ระดับสีด้านล่างรูปภาพเพื่อให้ตัวหนังสือเด่นชัดขึ้น
-                            Positioned.fill(
-                              child: DecoratedBox(
+                          ),
+                          Positioned(
+                            top: 6,
+                            right: 36,
+                            child: GestureDetector(
+                              onTap: _clearAllLogs,
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
                                 decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.transparent,
-                                      Colors.black.withOpacity(0.8),
-                                    ],
-                                  ),
+                                  color: Colors.black.withOpacity(0.7),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: const Color(0xFFFF1744), width: 1.5),
                                 ),
+                                child: const Icon(Icons.delete_sweep, color: Color(0xFFFF1744), size: 16),
                               ),
                             ),
-                            // ชื่อบอทและสถานะทับบนรูปภาพ
-                            Positioned(
-                              left: 14,
-                              bottom: 12,
-                              right: 14,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'GOLD PRO',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 1.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                          color: isServerActive ? const Color(0xFF00E676) : const Color(0xFFFF1744),
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: (isServerActive ? const Color(0xFF00E676) : const Color(0xFFFF1744)).withOpacity(0.8),
-                                              blurRadius: 6,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        isServerActive ? 'SERVER CONNECTED' : 'SERVER OFFLINE',
-                                        style: TextStyle(
-                                          color: isServerActive ? const Color(0xFF00E676) : const Color(0xFFFF1744),
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 1.0,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                          ),
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: GestureDetector(
+                              onTap: () async {
+                                setState(() {
+                                  _isExpanded = false;
+                                });
+                                await FlutterOverlayWindow.resizeOverlay(70, 70);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.7),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: const Color(0xFFFFD700), width: 1.5),
+                                ),
+                                child: const Icon(Icons.keyboard_arrow_up, color: Color(0xFFFFD700), size: 16),
                               ),
                             ),
-                            // ปุ่มกากบาท (X) มุมขวาบน สำหรับปิด/ย่อหน้าต่าง
-                            Positioned(
-                              top: 10,
-                              right: 10,
-                              child: GestureDetector(
-                                onTap: () async {
-                                  setState(() {
-                                    _isExpanded = false;
-                                  });
-                                  await FlutterOverlayWindow.showOverlay(
-                                    height: 70,
-                                    width: 70,
-                                    enableDrag: true,
-                                    overlayTitle: 'GOLD PRO',
-                                    overlayContent: 'BUBBLE',
-                                    alignment: OverlayAlignment.topRight,
-                                    flag: OverlayFlag.defaultFlag,
-                                    visibility: NotificationVisibility.visibilityPublic,
-                                    positionGravity: PositionGravity.none,
-                                  );
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.6),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white24, width: 1),
-                                  ),
-                                  child: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                ),
+                          ),
+                        ],
+                      ),
+                      // สถานะ Server
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 7,
+                              height: 7,
+                              decoration: BoxDecoration(
+                                color: isServerActive ? const Color(0xFF00E676) : const Color(0xFFFF1744),
+                                shape: BoxShape.circle,
                               ),
                             ),
-                            // ปุ่มถังขยะล้าง Log อยู่ถัดจากปุ่มปิด
-                            Positioned(
-                              top: 10,
-                              right: 44,
-                              child: GestureDetector(
-                                onTap: _clearAllLogs,
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.6),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white24, width: 1),
-                                  ),
-                                  child: const Icon(
-                                    Icons.delete_sweep,
-                                    color: Color(0xFFFF1744),
-                                    size: 16,
-                                  ),
-                                ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isServerActive ? 'SERVER IS ONLINE' : 'SERVER IS OFFLINE',
+                              style: const TextStyle(
+                                color: Color(0xFFFFD700),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
                               ),
                             ),
                           ],
                         ),
-
-                        // ส่วนล่าง: กล่อง Log สีเข้มตามสไตล์ในรูปตัวอย่าง[span_2](start_span)[span_2](end_span)[span_3](start_span)[span_3](end_span)
-                        Expanded(
-                          child: Container(
-                            width: double.infinity,
-                            color: const Color(0xFF1A1F29),
-                            padding: const EdgeInsets.all(12.0),
-                            child: _botLogs.isEmpty
-                                ? const Center(
-                                    child: Text(
-                                      'No log records...',
-                                      style: TextStyle(color: Colors.grey, fontFamily: 'monospace', fontSize: 11),
-                                    ),
-                                  )
-                                : ListView.builder(
-                                    itemCount: _botLogs.length,
-                                    itemBuilder: (context, index) {
-                                      final log = _botLogs[index];
-                                      return Padding(
-                                        padding: const EdgeInsets.only(bottom: 6.0),
-                                        child: Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                "> ${log['message']}",
-                                                style: const TextStyle(
-                                                  color: Colors.white70,
-                                                  fontFamily: 'monospace',
-                                                  fontSize: 11,
-                                                  height: 1.3,
-                                                ),
-                                              ),
-                                            ),
-                                            GestureDetector(
-                                              onTap: () => _clearLogItem(log['key'].toString()),
-                                              child: const Padding(
-                                                padding: EdgeInsets.only(left: 6.0),
-                                                child: Icon(Icons.delete_outline, color: Color(0xFFFF1744), size: 14),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
+                      ),
+                      const Divider(color: Color(0xFFFFD700), height: 1),
+                      // กล่องแสดง Activity Logs ด้านล่าง
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: _botLogs.isEmpty
+                              ? const Center(
+                                  child: Text(
+                                    'No log records...',
+                                    style: TextStyle(color: Colors.grey, fontFamily: 'monospace', fontSize: 11),
                                   ),
-                          ),
+                                )
+                              : ListView.builder(
+                                  itemCount: _botLogs.length,
+                                  itemBuilder: (context, index) {
+                                    final log = _botLogs[index];
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 6.0),
+                                      child: Text(
+                                        "> ${log['message']}",
+                                        style: const TextStyle(
+                                          color: Color(0xFF00E676),
+                                          fontFamily: 'monospace',
+                                          fontSize: 10.5,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : GestureDetector(
+                onTap: () async {
+                  setState(() {
+                    _isExpanded = true;
+                  });
+                  await FlutterOverlayWindow.resizeOverlay(320, 380);
+                },
+                onLongPress: () async {
+                  await FlutterOverlayWindow.closeOverlay();
+                },
+                child: Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF161616),
+                    border: Border.all(color: const Color(0xFFFFD700), width: 2.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isServerActive ? const Color(0xFF00E676) : const Color(0xFFFF1744)).withOpacity(0.8),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: SizedBox.expand(
+                      child: Image.asset(
+                        'assets/images/7.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.smart_toy, color: Color(0xFFFFD700)),
+                      ),
                     ),
                   ),
                 ),
               ),
-            )
-          else
-            // ตัวบอลลูนกลมๆ นอกแอป
-            GestureDetector(
-              onTap: () async {
-                setState(() {
-                  _isExpanded = true;
-                });
-                await FlutterOverlayWindow.showOverlay(
-                  height: 440,
-                  width: 330,
-                  enableDrag: true,
-                  overlayTitle: 'GOLD PRO',
-                  overlayContent: 'LOGS',
-                  alignment: OverlayAlignment.center,
-                  flag: OverlayFlag.defaultFlag,
-                  visibility: NotificationVisibility.visibilityPublic,
-                  positionGravity: PositionGravity.none,
-                );
-              },
-              onLongPress: () async {
-                await FlutterOverlayWindow.closeOverlay();
-              },
-              child: Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF161616),
-                  border: Border.all(color: const Color(0xFFFFD700), width: 2.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isServerActive ? const Color(0xFF00E676) : const Color(0xFFFF1744)).withOpacity(0.8),
-                      blurRadius: 10,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: ClipOval(
-                  child: Image.asset(
-                    'assets/images/7.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.smart_toy, color: Color(0xFFFFD700)),
-                  ),
-                ),
-              ),
-            ),
-        ],
       ),
     );
   }
 }
+
 
 
 
