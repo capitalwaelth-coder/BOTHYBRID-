@@ -207,7 +207,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ส่วนหัว Status & Logs (ไม่มีกากบาทแปลกปลอม)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
                       child: Row(
@@ -253,7 +252,18 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                                   setState(() {
                                     _isExpanded = false;
                                   });
-                                  await FlutterOverlayWindow.resizeOverlay(60, 60);
+                                  // ใช้การเรียก showOverlay แทนการ resize เพื่อปรับขนาดกลับเป็นบอลลูน
+                                  await FlutterOverlayWindow.showOverlay(
+                                    height: 60,
+                                    width: 60,
+                                    enableDrag: true,
+                                    overlayTitle: 'GOLD PRO',
+                                    overlayContent: 'BUBBLE',
+                                    alignment: OverlayAlignment.topRight,
+                                    flag: OverlayFlag.defaultFlag,
+                                    visibility: NotificationVisibility.visibilityPublic,
+                                    positionGravity: PositionGravity.none,
+                                  );
                                 },
                               ),
                             ],
@@ -263,7 +273,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                     ),
                     const Divider(color: Color(0xFFFFD700), height: 1, thickness: 1.5),
                     
-                    // เนื้อหาข้างในครบถ้วนเหมือนในแอป
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.all(12.0),
@@ -422,13 +431,23 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
               ),
             )
           else
-            // ตัวบอลลูนกลมๆ ลอยอิสระ ไม่มีกรอบสี่เหลี่ยมดำกวนใจ
+            // ตัวบอลลูนกลมๆ เมื่อกดแล้วขยายหน้าต่างเป็นกล่อง Logs ขนาดใหญ่
             GestureDetector(
               onTap: () async {
                 setState(() {
                   _isExpanded = true;
                 });
-                await FlutterOverlayWindow.resizeOverlay(380, 700);
+                await FlutterOverlayWindow.showOverlay(
+                  height: 700,
+                  width: 380,
+                  enableDrag: true,
+                  overlayTitle: 'GOLD PRO',
+                  overlayContent: 'LOGS',
+                  alignment: OverlayAlignment.center,
+                  flag: OverlayFlag.defaultFlag,
+                  visibility: NotificationVisibility.visibilityPublic,
+                  positionGravity: PositionGravity.none,
+                );
               },
               child: Container(
                 width: 58,
@@ -459,6 +478,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
     );
   }
 }
+
 
 
 // ==========================================
