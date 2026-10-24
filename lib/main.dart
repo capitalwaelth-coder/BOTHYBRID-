@@ -1387,44 +1387,46 @@ Future<void> _sendOverlayData() async {
     }
   }
 
-  void _initFirebaseAndListen() {
-    try {
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-      );
+  
+void _initFirebaseAndListen() {
+  try {
+    final database = FirebaseDatabase.instanceFor(
+      app: Firebase.app(),
+      databaseURL:
+          'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+    );
 
-      _dbRef = database.ref('accounts/$currentLogin/status');
+    _dbRef = database.ref('accounts/$currentLogin/status');
 
-      _dbRef?.onValue.listen((DatabaseEvent event) {
-        final rawData = event.snapshot.value;
+    _dbRef?.onValue.listen((DatabaseEvent event) {
+      final rawData = event.snapshot.value;
 
-        if (rawData is Map && mounted) {
-          final data = Map<dynamic, dynamic>.from(rawData);
+      if (rawData is Map && mounted) {
+        final data = Map<dynamic, dynamic>.from(rawData);
 
-       ///////////////////////////////
-          
-       setState(() {
-       isRunning = data['is_running'] == true;
+        setState(() {
+          isRunning = data['is_running'] == true;
 
-       final rawProfit = data['profit'];
-       profit = rawProfit is num
-       ? rawProfit.toDouble()
-       : double.tryParse(rawProfit?.toString() ?? '0') ?? 0.0;
+          final rawProfit = data['profit'];
+          profit = rawProfit is num
+              ? rawProfit.toDouble()
+              : double.tryParse(
+                    rawProfit?.toString() ?? '0',
+                  ) ??
+                  0.0;
 
-       symbol = data['symbol']?.toString() ?? 'BTCUSD';
-       timeframe = data['timeframe']?.toString() ?? 'M1';
-       });
+          symbol = data['symbol']?.toString() ?? 'BTCUSD';
+          timeframe = data['timeframe']?.toString() ?? 'M1';
+        });
 
-      _sendOverlayData();
-          
-//////////////////////////////////////////
-      
-    } catch (e) {
-      debugPrint("Database listen error: $e");
-    }
+        _sendOverlayData();
+      }
+    });
+  } catch (e) {
+    debugPrint('Firebase status listener error: $e');
   }
+}
+
 
   void _listenToConnectionStatus() {
     try {
