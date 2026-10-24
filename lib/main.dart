@@ -121,57 +121,15 @@ class _GoldProFloatingOverlayState
     return Material(
       type: MaterialType.transparency,
       child: Stack(
+        alignment: Alignment.topLeft,
         children: [
-          // บอลลูนหุ่นยนต์ที่ลอยอยู่นอกแอป
-          Positioned(
-            right: 8,
-            top: 8,
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _showLogs = !_showLogs;
-                });
-              },
-              child: Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF161616),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFFFFD700),
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _statusColor.withOpacity(0.65),
-                      blurRadius: 12,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: ClipOval(
-                  child: Image.asset(
-                    'assets/images/7.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.smart_toy,
-                      color: Color(0xFFFFD700),
-                      size: 34,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // หน้าต่าง STATUS & LOGS ภายใน Overlay จริง
+          // หน้าต่าง STATUS & LOGS ภายใน Overlay (ขนาดใหญ่เต็มตาเหมือนในแดชบอร์ด)
           if (_showLogs)
             Positioned(
-              left: 8,
-              right: 8,
-              top: 78,
-              bottom: 8,
+              left: 4,
+              top: 4,
+              right: 4,
+              bottom: 4,
               child: Container(
                 decoration: BoxDecoration(
                   color: const Color(0xF2161616),
@@ -199,6 +157,7 @@ class _GoldProFloatingOverlayState
                           const Icon(
                             Icons.terminal,
                             color: Color(0xFFFFD700),
+                            size: 18,
                           ),
                           const SizedBox(width: 8),
                           const Expanded(
@@ -221,6 +180,7 @@ class _GoldProFloatingOverlayState
                             icon: const Icon(
                               Icons.close,
                               color: Colors.white,
+                              size: 18,
                             ),
                           ),
                         ],
@@ -234,61 +194,51 @@ class _GoldProFloatingOverlayState
 
                     if (_showStatus)
                       Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(10),
                         child: Column(
                           crossAxisAlignment:
                               CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              _data['connected'] == true
-                                  ? 'FIREBASE: CONNECTED'
-                                  : 'FIREBASE: DISCONNECTED',
-                              style: TextStyle(
-                                color: _data['connected'] == true
-                                    ? const Color(0xFF00E676)
-                                    : const Color(0xFFFF1744),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: _data['connected'] == true && _data['running'] == true
+                                        ? const Color(0xFF00E676)
+                                        : const Color(0xFFFF1744),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _data['connected'] == true && _data['running'] == true
+                                      ? 'EA SERVER ONLINE & RUNNING'
+                                      : 'EA SERVER OFFLINE / STOPPED',
+                                  style: TextStyle(
+                                    color: _data['connected'] == true && _data['running'] == true
+                                        ? const Color(0xFF00E676)
+                                        : const Color(0xFFFF1744),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              _data['running'] == true
-                                  ? 'EA: RUNNING'
-                                  : 'EA: STOPPED',
-                              style: TextStyle(
-                                color: _statusColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              'Symbol: ${_data['symbol'] ?? 'XAUUSD'}',
+                              'Symbol: ${_data['symbol'] ?? 'XAUUSD'} | TF: ${_data['timeframe'] ?? 'M1'}',
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 12,
+                                fontSize: 11,
                               ),
                             ),
                             Text(
-                              'Timeframe: ${_data['timeframe'] ?? 'M1'}',
+                              'Active Orders: ${_data['ordersCount'] ?? 0} | Lots: ${_number(_data['totalLots'])}',
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 12,
-                              ),
-                            ),
-                            Text(
-                              'Orders: ${_data['ordersCount'] ?? 0}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
-                            ),
-                            Text(
-                              'Lots: ${_number(_data['totalLots'])}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
+                                fontSize: 11,
                               ),
                             ),
                             Text(
@@ -302,12 +252,13 @@ class _GoldProFloatingOverlayState
                                     ? const Color(0xFF00E676)
                                     : const Color(0xFFFF1744),
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                                fontSize: 11,
                               ),
                             ),
                             Align(
                               alignment: Alignment.centerRight,
                               child: TextButton(
+                                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(50, 25)),
                                 onPressed: () {
                                   setState(() {
                                     _showStatus = false;
@@ -317,6 +268,7 @@ class _GoldProFloatingOverlayState
                                   'ซ่อนสถานะ',
                                   style: TextStyle(
                                     color: Color(0xFFFFD700),
+                                    fontSize: 10,
                                   ),
                                 ),
                               ),
@@ -326,16 +278,20 @@ class _GoldProFloatingOverlayState
                       ),
 
                     if (!_showStatus)
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _showStatus = true;
-                          });
-                        },
-                        child: const Text(
-                          'แสดงสถานะ',
-                          style: TextStyle(
-                            color: Color(0xFFFFD700),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _showStatus = true;
+                            });
+                          },
+                          child: const Text(
+                            'แสดงสถานะ',
+                            style: TextStyle(
+                              color: Color(0xFFFFD700),
+                              fontSize: 10,
+                            ),
                           ),
                         ),
                       ),
@@ -354,6 +310,7 @@ class _GoldProFloatingOverlayState
                           style: TextStyle(
                             color: Color(0xFFFFD700),
                             fontWeight: FontWeight.bold,
+                            fontSize: 11,
                           ),
                         ),
                       ),
@@ -366,6 +323,7 @@ class _GoldProFloatingOverlayState
                                 'No log records...',
                                 style: TextStyle(
                                   color: Colors.white54,
+                                  fontSize: 11,
                                 ),
                               ),
                             )
@@ -383,13 +341,13 @@ class _GoldProFloatingOverlayState
 
                                 return Padding(
                                   padding: const EdgeInsets.only(
-                                    bottom: 8,
+                                    bottom: 6,
                                   ),
                                   child: Text(
                                     '> $message',
                                     style: const TextStyle(
                                       color: Color(0xFF00E676),
-                                      fontSize: 11,
+                                      fontSize: 10,
                                       fontFamily: 'monospace',
                                     ),
                                   ),
@@ -401,6 +359,73 @@ class _GoldProFloatingOverlayState
                 ),
               ),
             ),
+
+          // บอลลูนหุ่นยนต์ลอยอยู่นอกแอป (กดเปิด/ปิดหน้าต่าง และมีปุ่มกากบาทปิดแอพอเวอเลย์ได้)
+          Positioned(
+            right: 4,
+            top: 4,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    await FlutterOverlayWindow.closeOverlay();
+                  },
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFF1744),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _showLogs = !_showLogs;
+                    });
+                  },
+                  child: Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF161616),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFFFD700),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _statusColor.withOpacity(0.65),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/7.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.smart_toy,
+                          color: Color(0xFFFFD700),
+                          size: 30,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1445,7 +1470,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 
   // ==========================================
-  // เปิดบอลลูนลอยทับแอปอื่น (ปรับขนาดเป็น 80x80)
+  // เปิดบอลลูนลอยทับแอปอื่น (ปรับขนาดกว้างยาวเต็มจอสำหรับแสดงกล่อง 620x340)
   // ==========================================
   
 Future<void> _startFloatingOverlay() async {
@@ -1467,8 +1492,8 @@ Future<void> _startFloatingOverlay() async {
 
     if (!active) {
       await FlutterOverlayWindow.showOverlay(
-        height: 600,
-        width: 330,
+        height: 620,
+        width: 340,
         enableDrag: true,
         overlayTitle: 'GOLD PRO',
         overlayContent: 'STATUS & LOGS',
@@ -1926,7 +1951,10 @@ Future<void> _startFloatingOverlay() async {
                 child: GestureDetector(
                   onPanUpdate: (details) {
                     setState(() {
-                      _modalOffset += details.delta;
+                      _modalOffset = Offset(
+                        _modalOffset.dx.clamp(0.0, screenSize.width - 50),
+                        _modalOffset.dy.clamp(0.0, screenSize.height - 50),
+                      );
                     });
                   },
                   child: Container(
@@ -2190,7 +2218,7 @@ Future<void> _startFloatingOverlay() async {
                 ),
               ),
 
-            // บอลลูนลอย (พร้อมให้กดเปิดใช้งาน Overlay นอกแอป)
+            // บอลลูนลอยหน้า Home (ลากขยับได้อิสระจนถึงขอบจอด้านล่างสุด)
             Positioned(
               left: _robotBubbleOffset.dx,
               top: _robotBubbleOffset.dy,
@@ -2210,7 +2238,7 @@ Future<void> _startFloatingOverlay() async {
                         (_robotBubbleOffset.dx + details.delta.dx)
                             .clamp(0.0, screenSize.width - 60),
                         (_robotBubbleOffset.dy + details.delta.dy)
-                            .clamp(40.0, screenSize.height - 120),
+                            .clamp(0.0, screenSize.height - 60),
                       );
                     });
                   },
@@ -5743,283 +5771,3 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const SizedBox(width: 10),
                           Expanded(child: _buildControllerInputField('Max Recovery', maxRecoveryController, TextInputType.number)),
                         ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(child: _buildControllerInputField('Max Orders', maxOrdersController, TextInputType.number)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _buildControllerInputField('Recovery Step (Pts)', recoveryStepController, TextInputType.number)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(child: _buildControllerInputField('SL Points', slPointsController, TextInputType.number)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _buildControllerInputField('Risk Reward', riskRewardController, TextInputType.number)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Calculated TP', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
-                          const SizedBox(height: 4),
-                          Container(
-                            width: double.infinity,
-                            height: 46,
-                            alignment: Alignment.center,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              color: kDarkBg.withOpacity(0.75),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: kGoldPrimary.withOpacity(0.3), width: 1),
-                            ),
-                            child: Text(
-                              '${calculatedTP.toStringAsFixed(1)} Pts',
-                              style: const TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold, fontSize: 13, fontStyle: FontStyle.italic),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(child: _buildControllerInputField('Start Time (เวลาไทย)', startTimeController, TextInputType.text)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _buildControllerInputField('End Time (เวลาไทย)', endTimeController, TextInputType.text)),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      const Divider(color: kGoldPrimary),
-                      const SizedBox(height: 12),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('BASKET CONTROL', style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 12)),
-                          Row(
-                            children: [
-                              const Text('Enable Basket', style: TextStyle(color: Colors.white70, fontSize: 11)),
-                              Switch(
-                                value: enableBasketControl,
-                                activeColor: Colors.blueAccent,
-                                onChanged: (val) => setState(() { enableBasketControl = val; }),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: kDarkBg.withOpacity(0.75),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.blueAccent, width: 1.5),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Basket TP', style: TextStyle(color: Colors.blueAccent, fontSize: 11, fontWeight: FontWeight.bold)),
-                                      Switch(
-                                        value: enableBasketTp,
-                                        activeColor: Colors.blueAccent,
-                                        onChanged: (val) => setState(() { enableBasketTp = val; }),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  _buildControllerInputField('Target (\$)', basketTpController, TextInputType.number),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: kDarkBg.withOpacity(0.75),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: kRedNeon, width: 1.5),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Basket SL', style: TextStyle(color: kRedNeon, fontSize: 11, fontWeight: FontWeight.bold)),
-                                      Switch(
-                                        value: enableBasketSl,
-                                        activeColor: kRedNeon,
-                                        onChanged: (val) => setState(() { enableBasketSl = val; }),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  _buildControllerInputField('Limit (\$)', basketSlController, TextInputType.number),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('DAILY TARGET & LOSS CONTROL', style: TextStyle(color: kGreenNeon, fontWeight: FontWeight.bold, fontSize: 12)),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: kDarkBg.withOpacity(0.75),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: kGreenNeon, width: 1.5),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Daily Target', style: TextStyle(color: kGreenNeon, fontSize: 11, fontWeight: FontWeight.bold)),
-                                      Switch(
-                                        value: enableDailyTarget,
-                                        activeColor: kGreenNeon,
-                                        onChanged: (val) => setState(() { enableDailyTarget = val; }),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  _buildControllerInputField('Target (\$)', dailyTargetController, TextInputType.number),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: kDarkBg.withOpacity(0.75),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: kRedNeon, width: 1.5),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text('Daily Loss', style: TextStyle(color: kRedNeon, fontSize: 11, fontWeight: FontWeight.bold)),
-                                      Switch(
-                                        value: enableDailyLoss,
-                                        activeColor: kRedNeon,
-                                        onChanged: (val) => setState(() { enableDailyLoss = val; }),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  _buildControllerInputField('Limit (\$)', dailyLossController, TextInputType.number),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _saveBotParametersToFirebase,
-                          icon: const Icon(Icons.save, color: kGoldPrimary),
-                          label: const Text('SYNC & SAVE TO EA', style: TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: kDarkBg.withOpacity(0.75),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: const BorderSide(color: kGoldPrimary, width: 1.5),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Divider(color: kGoldPrimary, height: 24),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'SECURITY & PRIVACY', 
-                        style: TextStyle(color: kGoldPrimary, fontWeight: FontWeight.bold, fontSize: 11, fontFamily: 'monospace')
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Reset Security PIN / Login', style: TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace')),
-                                SizedBox(height: 2),
-                                Text('ตั้งค่ารหัส PIN ใหม่', style: TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
-                              ],
-                            ),
-                          ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: kDarkBg.withOpacity(0.75),
-                              side: const BorderSide(color: kGoldPrimary, width: 1),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            ),
-                            onPressed: _resetPin,
-                            child: const Text('Reset', style: TextStyle(color: kGoldPrimary, fontSize: 12, fontFamily: 'monospace')),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Log Out (เปลี่ยนบัญชี MT5)', style: TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace')),
-                                SizedBox(height: 2),
-                                Text('ออกจากระบบเพื่อกลับไปหน้าล็อกอิน', style: TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
-                              ],
-                            ),
-                          ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              side: const BorderSide(color: kGoldPrimary, width: 1.5),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            ),
-                            onPressed: _logoutToLoginScreen,
-                            child: const Text('Log Out', style: TextStyle(color: kGoldPrimary, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 30),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
