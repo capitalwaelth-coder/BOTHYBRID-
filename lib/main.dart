@@ -1355,7 +1355,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 // ==========================================
-// #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
+// #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen) - ปรับปรุงบอลลูนลอยทับแอพอื่นได้อิสระ
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -1377,7 +1377,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   DatabaseReference? _logsRef;
   DatabaseReference? _ordersRef;
 
-  Offset _robotBubbleOffset = const Offset(320, 600);
+  // ตำแหน่งเริ่มต้นของบอลลูนและกล่อง Modal
+  Offset _robotBubbleOffset = const Offset(320, 500);
   Offset _modalOffset = const Offset(16, 80);
 
   bool _isLiveStatusVisible = true;
@@ -1408,7 +1409,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   )..repeat(reverse: true);
 
   late final Animation<double> _bounceAnimation =
-      Tween<double>(begin: 0.0, end: -10.0).animate(
+      Tween<double>(begin: 0.0, end: -8.0).animate(
     CurvedAnimation(
       parent: _bounceController,
       curve: Curves.easeInOut,
@@ -1429,91 +1430,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     ),
   );
 
-///////////////////////////////////////////
-////////เริ่มสร้างโค้ดสร้างบอลลูน///////////////////
-///////////////////////////////////////////
-  
-  
-Future<void> _startFloatingOverlay() async {
-  try {
-    bool granted =
-        await FlutterOverlayWindow.isPermissionGranted();
-
-    if (!granted) {
-      granted =
-          await FlutterOverlayWindow.requestPermission() ??
-          false;
-    }
-
-    if (!granted) {
-      debugPrint('Overlay permission was not granted');
-      return;
-    }
-
-    await FlutterOverlayWindow.showOverlay(
-    height: 700,
-    width: 360,
-    enableDrag: true,
-    overlayTitle: 'GOLD PRO',
-    overlayContent: 'STATUS & LOGS',
-    );
-
-    await _sendOverlayData();
-  } catch (e) {
-    debugPrint('Start overlay error: $e');
-  }
-}
-
-Future<void> _sendOverlayData() async {
-  try {
-    final ordersProfit = activeOrders.fold<double>(
-      0,
-      (sum, item) =>
-          sum +
-          (double.tryParse(
-                item['profit']?.toString() ?? '0',
-              ) ??
-              0),
-    );
-
-    final totalLots = activeOrders.fold<double>(
-      0,
-      (sum, item) =>
-          sum +
-          (double.tryParse(
-                item['lot']?.toString() ?? '0',
-              ) ??
-              0),
-    );
-
-    await FlutterOverlayWindow.shareData({
-      'login': currentLogin,
-      'running': isRunning,
-      'connected': isConnected,
-      'symbol': symbol,
-      'timeframe': timeframe,
-      'profit': profit,
-      'ordersCount': activeOrders.length,
-      'ordersProfit': ordersProfit,
-      'totalLots': totalLots,
-      'logs': _botLogs
-      .take(20)
-      .map((log) => <String, dynamic>{
-          'key': log['key']?.toString() ?? '',
-          'message': log['message']?.toString() ?? '',
-        })
-    .toList(),
-    });
-  } catch (e) {
-    debugPrint('Send overlay data error: $e');
-  }
-}
-
-
-///////////////////////////////////////////
-////////สิ้นสุดโค้ดสร้างบอลลูน///////////////////
-///////////////////////////////////////////
-  
   @override
   void initState() {
     super.initState();
@@ -1625,46 +1541,39 @@ Future<void> _sendOverlayData() async {
     }
   }
 
-  
-void _initFirebaseAndListen() {
-  try {
-    final database = FirebaseDatabase.instanceFor(
-      app: Firebase.app(),
-      databaseURL:
-          'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-    );
+  void _initFirebaseAndListen() {
+    try {
+      final database = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+      );
 
-    _dbRef = database.ref('accounts/$currentLogin/status');
+      _dbRef = database.ref('accounts/$currentLogin/status');
 
-    _dbRef?.onValue.listen((DatabaseEvent event) {
-      final rawData = event.snapshot.value;
+      _dbRef?.onValue.listen((DatabaseEvent event) {
+        final rawData = event.snapshot.value;
 
-      if (rawData is Map && mounted) {
-        final data = Map<dynamic, dynamic>.from(rawData);
+        if (rawData is Map && mounted) {
+          final data = Map<dynamic, dynamic>.from(rawData);
 
-        setState(() {
-          isRunning = data['is_running'] == true;
+          setState(() {
+            isRunning = data['is_running'] == true;
 
-          final rawProfit = data['profit'];
-          profit = rawProfit is num
-              ? rawProfit.toDouble()
-              : double.tryParse(
-                    rawProfit?.toString() ?? '0',
-                  ) ??
-                  0.0;
+            final rawProfit = data['profit'];
+            profit = rawProfit is num
+                ? rawProfit.toDouble()
+                : double.tryParse(rawProfit?.toString() ?? '0') ?? 0.0;
 
-          symbol = data['symbol']?.toString() ?? 'BTCUSD';
-          timeframe = data['timeframe']?.toString() ?? 'M1';
-        });
-
-        _sendOverlayData();
-      }
-    });
-  } catch (e) {
-    debugPrint('Firebase status listener error: $e');
+            symbol = data['symbol']?.toString() ?? 'BTCUSD';
+            timeframe = data['timeframe']?.toString() ?? 'M1';
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint("Database listen error: $e");
+    }
   }
-}
-
 
   void _listenToConnectionStatus() {
     try {
@@ -1880,6 +1789,7 @@ void _initFirebaseAndListen() {
     );
 
     final bool isTotalProfit = totalOrdersProfit >= 0;
+    final screenSize = MediaQuery.of(context).size;
 
     return WillPopScope(
       onWillPop: _handleBackButton,
@@ -1960,6 +1870,8 @@ void _initFirebaseAndListen() {
                 ),
               ),
             ),
+            
+            // 🌟 กล่อง Log & Status ขนาดใหญ่ที่สามารถลากย้ายตำแหน่งได้
             if (_isLargeLogsModalOpen)
               Positioned(
                 left: _modalOffset.dx,
@@ -1971,8 +1883,8 @@ void _initFirebaseAndListen() {
                     });
                   },
                   child: Container(
-                    width: MediaQuery.of(context).size.width * 0.92,
-                    height: MediaQuery.of(context).size.height * 0.72,
+                    width: screenSize.width * 0.92,
+                    height: screenSize.height * 0.72,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
@@ -1986,7 +1898,7 @@ void _initFirebaseAndListen() {
                           spreadRadius: 2,
                         ),
                       ],
-                      color: kDarkCard.withOpacity(0.85),
+                      color: kDarkCard.withOpacity(0.92),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2036,9 +1948,6 @@ void _initFirebaseAndListen() {
                                             !_isLiveStatusVisible;
                                       });
                                     },
-                                    tooltip: _isLiveStatusVisible
-                                        ? 'Hide Live Status'
-                                        : 'Show Live Status',
                                     constraints: const BoxConstraints(),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 6,
@@ -2052,7 +1961,6 @@ void _initFirebaseAndListen() {
                                         size: 20,
                                       ),
                                       onPressed: _clearAllLogs,
-                                      tooltip: 'Clear All Logs',
                                       constraints: const BoxConstraints(),
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 6,
@@ -2228,6 +2136,8 @@ void _initFirebaseAndListen() {
                   ),
                 ),
               ),
+
+            // 🌟 บอลลูน (Robot Bubble) ที่สามารถลากไปวางทับหน้าจอได้อิสระทุกจุด
             Positioned(
               left: _robotBubbleOffset.dx,
               top: _robotBubbleOffset.dy,
@@ -2239,15 +2149,16 @@ void _initFirebaseAndListen() {
                     child: child,
                   );
                 },
-                child: Draggable(
-                  feedback: Material(
-                    color: Colors.transparent,
-                    child: _buildRobotBubbleWidget(),
-                  ),
-                  childWhenDragging: const SizedBox.shrink(),
-                  onDragEnd: (details) {
+                child: Listener(
+                  onPointerMove: (pointerEvent) {
                     setState(() {
-                      _robotBubbleOffset = details.offset;
+                      // อัปเดตตำแหน่งบอลลูนตามการลากนิ้วแบบ Real-time ทั่วทั้งหน้าจอ
+                      _robotBubbleOffset = Offset(
+                        (_robotBubbleOffset.dx + pointerEvent.delta.dx)
+                            .clamp(0.0, screenSize.width - 60),
+                        (_robotBubbleOffset.dy + pointerEvent.delta.dy)
+                            .clamp(40.0, screenSize.height - 120),
+                      );
                     });
                   },
                   child: GestureDetector(
@@ -2257,10 +2168,11 @@ void _initFirebaseAndListen() {
                       });
                     },
                     onTapUp: (_) {
-                    setState(() {
-                     _isRobotBubblePressed = false;
-                     });
-                     _startFloatingOverlay();
+                      setState(() {
+                        _isRobotBubblePressed = false;
+                        // คลิกเพื่อเปิด-ปิด กล่อง Log ตามคอนเซ็ปต์เดิม
+                        _isLargeLogsModalOpen = !_isLargeLogsModalOpen;
+                      });
                     },
                     onTapCancel: () {
                       setState(() {
@@ -2395,7 +2307,6 @@ void _initFirebaseAndListen() {
                               width: double.infinity,
                               height: 150,
                               errorBuilder: (context, error, stackTrace) {
-                                debugPrint('GOLD PRO image error: $error');
                                 return const ColoredBox(
                                   color: Colors.black,
                                   child: Center(
@@ -2656,6 +2567,7 @@ void _initFirebaseAndListen() {
     );
   }
 }
+
 
 
 
