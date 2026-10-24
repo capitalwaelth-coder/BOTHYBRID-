@@ -69,6 +69,7 @@ class _FloatingRobotOverlayState
       await FlutterOverlayWindow.resizeOverlay(
         next ? 320 : 75,
         next ? 440 : 75,
+        true,
       );
 
       if (mounted) {
