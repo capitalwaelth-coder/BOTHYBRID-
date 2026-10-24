@@ -19,12 +19,11 @@ const Color kRedNeon = Color(0xFFFF1744);     // สีแดง SELL / Loss / S
 const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Profit / Start
 
 
-
 // ==========================================
 // #1.1 โหมดการเชื่อม ระบบ Overlay
 // ==========================================
 
- @pragma("vm:entry-point")
+@pragma("vm:entry-point")
 void overlayMain() {
   runApp(
     const MaterialApp(
@@ -120,16 +119,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
   void _initFirebaseForOverlay() async {
     try {
       if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp(
-          options: const FirebaseOptions(
-            apiKey: "AIzaSyBnKyMazopUyD1k-kcIXo3bFedWfHXN0JA",
-            appId: "1:155532929563:android:49d8a1e0040dc87ce766be",
-            messagingSenderId: "155532929563",
-            projectId: "liquidity-b8739",
-            storageBucket: "liquidity-b8739.firebasestorage.app",
-            databaseURL: "https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app",
-          ),
-        );
+        await Firebase.initializeApp();
       }
 
       final database = FirebaseDatabase.instanceFor(
@@ -252,7 +242,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                                   setState(() {
                                     _isExpanded = false;
                                   });
-                                  // ใช้การเรียก showOverlay แทนการ resize เพื่อปรับขนาดกลับเป็นบอลลูน
                                   await FlutterOverlayWindow.showOverlay(
                                     height: 60,
                                     width: 60,
@@ -478,7 +467,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
     );
   }
 }
-
 
 
 // ==========================================
@@ -6093,4 +6081,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-}
+}  void _initFirebaseForOverlay() async {
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp();
+      }
+
+      final database = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+      );
+
+      _logsRef = database.ref('accounts/$currentLogin/logs');
+      _logsRef?.onValue.listen((event) {
+        final data = event.snapshot.value;
+        if (!mounted) return;
+        List<Map<String, dynamic>> tempLogs = [];
+        if (data is Map) {
+          data.forEach((key, value) {
+            if (value != null) {
+              tempLogs.add({'key': key.toString(), 'message': value.toString()});
+            }
+          });
+        }
+        setState(() {
+          _botLogs = tempLogs;
+        });
+      });
+    } catch (e) {
+      debugPrint("Overlay Firebase init error: $e");
+    }
+  }
