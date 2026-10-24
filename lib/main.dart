@@ -1403,19 +1403,24 @@ Future<void> _sendOverlayData() async {
         if (rawData is Map && mounted) {
           final data = Map<dynamic, dynamic>.from(rawData);
 
-          setState(() {
-            isRunning = data['is_running'] == true;
+       ///////////////////////////////
+          
+       setState(() {
+       isRunning = data['is_running'] == true;
 
-            final rawProfit = data['profit'];
-            profit = rawProfit is num
-                ? rawProfit.toDouble()
-                : double.tryParse(rawProfit?.toString() ?? '0') ?? 0.0;
+       final rawProfit = data['profit'];
+       profit = rawProfit is num
+       ? rawProfit.toDouble()
+       : double.tryParse(rawProfit?.toString() ?? '0') ?? 0.0;
 
-            symbol = data['symbol']?.toString() ?? 'BTCUSD';
-            timeframe = data['timeframe']?.toString() ?? 'M1';
-          });
-        }
-      });
+       symbol = data['symbol']?.toString() ?? 'BTCUSD';
+       timeframe = data['timeframe']?.toString() ?? 'M1';
+       });
+
+      _sendOverlayData();
+          
+//////////////////////////////////////////
+      
     } catch (e) {
       debugPrint("Database listen error: $e");
     }
