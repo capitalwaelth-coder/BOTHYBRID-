@@ -20,7 +20,7 @@ const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Pro
 
 
 // ==========================================
-// #1.1 โหมดการเชื่อม ระบบ Overlay (แก้ไขให้ถูกต้องตาม Error)
+// #1.1 โหมดการเชื่อม ระบบ Overlay (แก้ไขและลบส่วนที่ Error ออกแล้ว)
 // ==========================================
 
 @pragma("vm:entry-point")
@@ -175,12 +175,10 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
                             top: 6,
                             right: 6,
                             child: GestureDetector(
-                              onTap: () async {
+                              onTap: () {
                                 setState(() {
                                   _isExpanded = false;
                                 });
-                                // เพิ่ม duration: 0 เข้าไปให้ครบ 3 arguments ตามที่แพ็กเกจต้องการ
-                                await FlutterOverlayWindow.resizeOverlay(70, 70, duration: 0);
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(5),
@@ -254,12 +252,10 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
                 ),
               )
             : GestureDetector(
-                onTap: () async {
+                onTap: () {
                   setState(() {
                     _isExpanded = true;
                   });
-                  // เพิ่ม duration: 0 เข้าไปให้ครบ 3 arguments เช่นกัน
-                  await FlutterOverlayWindow.resizeOverlay(320, 380, duration: 0);
                 },
                 onLongPress: () async {
                   await FlutterOverlayWindow.closeOverlay();
@@ -295,7 +291,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
     );
   }
 }
-
 
 
 
