@@ -19,12 +19,9 @@ const Color kRedNeon = Color(0xFFFF1744);     // สีแดง SELL / Loss / S
 const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Profit / Start
 
 // ==========================================
-// #1.1 GOLD PRO OVERLAY - หน้าต่างลอยนอกแอป (ทับแอปอื่นได้จริง)
+// #1.1 GOLD PRO OVERLAY - หน้าต่างลอยนอกแอป (บอลลูนวงกลม)
 // ==========================================
 
-// ========================================================
-// ฟังก์ชันนี้จำเป็นมาก สำหรับสั่งให้บอลลูนไปแสดงผลอยู่นอกแอป
-// ========================================================
 @pragma("vm:entry-point")
 void overlayMain() {
   runApp(
@@ -46,8 +43,11 @@ class FloatingBubbleOverlay extends StatelessWidget {
     return Center(
       child: GestureDetector(
         onTap: () async {
-          // สั่งส่งข้อความกลับเข้าแอป หรือเปิดแอปหลัก
-          await FlutterOverlayWindow.shareData("toggle_logs");
+          // ส่งคำสั่งกลับไปที่แอปหลักเมื่อกดที่บอลลูนนอกแอป
+          await FlutterOverlayWindow.shareData({
+            'type': 'command',
+            'command': 'toggle_floating_log',
+          });
         },
         child: Container(
           width: 58,
@@ -79,7 +79,6 @@ class FloatingBubbleOverlay extends StatelessWidget {
     );
   }
 }
-
 
 // ==========================================
 // #2 โหมดเมนหลักของแอป
@@ -1113,7 +1112,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 
   // ==========================================
-  // เปิดบอลลูนลอยทับแอปอื่น
+  // เปิดบอลลูนลอยทับแอปอื่น (ปรับขนาดเป็น 80x80)
   // ==========================================
   Future<void> _startFloatingOverlay() async {
     try {
@@ -1131,8 +1130,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
       if (!active) {
         await FlutterOverlayWindow.showOverlay(
-          height: 680,
-          width: 360,
+          height: 80,
+          width: 80,
           enableDrag: true,
           overlayTitle: 'GOLD PRO',
           overlayContent: 'STATUS & LOGS',
@@ -1158,30 +1157,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
     _overlayCommandSubscription =
         FlutterOverlayWindow.overlayListener.listen((event) {
-      if (!mounted || event is! Map) return;
+      if (!mounted) return;
 
-      final data = Map<String, dynamic>.from(event);
-      if (data['type'] != 'command') return;
+      if (event is Map) {
+        final data = Map<String, dynamic>.from(event);
+        if (data['type'] == 'command') {
+          final command = data['command']?.toString() ?? '';
+          if (command == 'toggle_floating_log') {
+            setState(() {
+              _isLargeLogsModalOpen = !_isLargeLogsModalOpen;
+            });
+            return;
+          }
+        }
+      }
 
-      final command = data['command']?.toString() ?? '';
-      final key = data['key']?.toString() ?? '';
-
-      switch (command) {
-        case 'request_snapshot':
-          _sendOverlayData();
-          break;
-        case 'delete_log':
-          if (key.isNotEmpty) _clearLogItem(key);
-          break;
-        case 'clear_all_logs':
-          _clearAllLogs();
-          break;
-        case 'toggle_status':
-          setState(() {
-            _isLiveStatusVisible = !_isLiveStatusVisible;
-          });
-          _sendOverlayData();
-          break;
+      if (event is String && event == 'toggle_logs') {
+        setState(() {
+          _isLargeLogsModalOpen = !_isLargeLogsModalOpen;
+        });
       }
     });
   }
@@ -1856,9 +1850,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   ),
                 ),
               ),
-             /////////////////////////////////
-            // บอลลูนลอย (พร้อมให้กดและลากได้ปกติ)
-            /////////////////////////////////
+
+            // บอลลูนลอย (พร้อมให้กดเปิดใช้งาน Overlay นอกแอป)
             Positioned(
               left: _robotBubbleOffset.dx,
               top: _robotBubbleOffset.dy,
@@ -1911,8 +1904,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       ),
     );
   }
-//////////////////////////////////
-//////////////////////////////////
 
   Widget _buildRobotBubbleWidget() {
     final bool isServerActive = isConnected && isRunning;
@@ -2281,6 +2272,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
+// (หมายเหตุ: คลาสส่วนอื่นๆ เช่น HomeScreen, OrdersScreen, HistoryScreen, AlertsScreen, SettingsScreen, TradingCalendarDialog ยังคงอยู่ครบถ้วนเหมือนเดิม)
 
 
 
