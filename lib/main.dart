@@ -1202,8 +1202,7 @@ class MainNavigationScreen extends StatefulWidget {
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen>
-    with TickerProviderStateMixin {
+class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 2;
   String currentLogin = "235305975";
 
@@ -1222,8 +1221,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   DatabaseReference? _logsRef;
   DatabaseReference? _ordersRef;
 
-  StreamSubscription<dynamic>? _overlayCommandSubscription;
-
   @override
   void initState() {
     super.initState();
@@ -1240,23 +1237,47 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     });
   }
 
-  // ==========================================
-  // ส่งข้อมูลสถานะจาก Main Screen ไปยัง Overlay นอกแอป
-  // ==========================================
+  // ฟังก์ชันสำหรับเปิด/สลับการแสดงผลบอลลูนลอยนอกแอป (Overlay)
+  Future<void> restoreFloatingOverlay() async {
+    try {
+      bool granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
+      if (!granted) {
+        final result = await FlutterOverlayWindow.requestPermission();
+        if (result != true) return;
+      }
+
+      final active = await FlutterOverlayWindow.isActive();
+      if (!active) {
+        await FlutterOverlayWindow.showOverlay(
+          height: 70,
+          width: 70,
+          enableDrag: true,
+          overlayTitle: 'GOLD PRO',
+          overlayContent: 'BUBBLE',
+          alignment: OverlayAlignment.topRight,
+          flag: OverlayFlag.defaultFlag,
+          visibility: NotificationVisibility.visibilityPublic,
+          positionGravity: PositionGravity.none,
+        );
+      } else {
+        // ถ้าเปิดอยู่นอกแอปแล้วให้ส่ง snapshot ข้อมูลอัปเดตล่าสุดไปให้
+        _sendOverlayData();
+      }
+    } catch (e) {
+      debugPrint('Error restoring overlay: $e');
+    }
+  }
+
   Future<void> _sendOverlayData() async {
     try {
       final ordersProfit = activeOrders.fold<double>(
         0.0,
-        (sum, item) =>
-            sum +
-            (double.tryParse(item['profit']?.toString() ?? '0') ?? 0.0),
+        (sum, item) => sum + (double.tryParse(item['profit']?.toString() ?? '0') ?? 0.0),
       );
 
       final totalLots = activeOrders.fold<double>(
         0.0,
-        (sum, item) =>
-            sum +
-            (double.tryParse(item['lot']?.toString() ?? '0') ?? 0.0),
+        (sum, item) => sum + (double.tryParse(item['lot']?.toString() ?? '0') ?? 0.0),
       );
 
       await FlutterOverlayWindow.shareData({
@@ -1282,12 +1303,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  @override
-  void dispose() {
-    _overlayCommandSubscription?.cancel();
-    super.dispose();
-  }
-
   Future<void> _loadSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('mt5_login');
@@ -1303,8 +1318,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     try {
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
 
       database.ref('status/login').onValue.listen((event) {
@@ -1319,7 +1333,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           _initFirebaseAndListen();
           _listenToLogs();
           _listenToOrdersForDialog();
-          _sendOverlayData();
         }
       });
     } catch (e) {
@@ -1331,8 +1344,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     try {
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
 
       _alertsRef = database.ref('accounts/$currentLogin/alerts');
@@ -1368,8 +1380,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     try {
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
 
       _dbRef = database.ref('accounts/$currentLogin/status');
@@ -1389,7 +1400,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             symbol = data['symbol']?.toString() ?? 'BTCUSD';
             timeframe = data['timeframe']?.toString() ?? 'M1';
           });
-
           _sendOverlayData();
         }
       });
@@ -1402,13 +1412,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     try {
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
 
       database.ref('.info/connected').onValue.listen((event) {
         final connected = event.snapshot.value as bool? ?? false;
-
         if (mounted) {
           setState(() {
             isConnected = connected;
@@ -1425,8 +1433,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     try {
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
 
       _logsRef = database.ref('accounts/$currentLogin/logs');
@@ -1473,7 +1480,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         setState(() {
           _botLogs = tempLogs;
         });
-
         _sendOverlayData();
       });
     } catch (e) {
@@ -1485,8 +1491,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     try {
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
 
       _ordersRef = database.ref('accounts/$currentLogin/orders');
@@ -1514,7 +1519,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         setState(() {
           activeOrders = newOrders;
         });
-
         _sendOverlayData();
       });
     } catch (e) {
@@ -1529,7 +1533,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       });
       return false;
     }
-
     return true;
   }
 
@@ -1538,7 +1541,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     final List<Widget> pages = [
       const SettingsScreen(),
       OrdersScreen(accountLogin: currentLogin),
-      HomeScreen(accountLogin: currentLogin),
+      HomeScreen(
+        accountLogin: currentLogin,
+        onRestoreOverlay: restoreFloatingOverlay, // ส่งฟังก์ชันเปิดบอลลูนลงไปใช้ใน HomeScreen
+      ),
       HistoryScreen(accountLogin: currentLogin),
       AlertsScreen(
         accountLogin: currentLogin,
@@ -1648,7 +1654,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       onTap: () {
         setState(() {
           _currentIndex = index;
-
           if (index == 4) {
             unreadAlertsCount = 0;
           }
@@ -1732,916 +1737,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 }
 
-
-
-// ==========================================
-// #7 HomeScreen
-// ==========================================
-
-class HomeScreen extends StatefulWidget {
-  final String accountLogin;
-  const HomeScreen({super.key, required this.accountLogin});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  bool isRunning = false;
-  DatabaseReference? _dbRef;
-  
-  double balance = 0.0;
-  double equity = 0.0;
-  double profit = 0.0;
-  String symbol = "XAUUSD";
-  String timeframe = "M1";
-
-  int cycleWins = 0;
-  int cycleLosses = 0;
-  double cycleWinRate = 0.0;
-
-  List<Map<dynamic, dynamic>> activeOrders = [];
-  DatabaseReference? _ordersRef;
-
-  List<Map<dynamic, dynamic>> _historyTrades = [];
-  DatabaseReference? _historyRef;
-
-  bool isConnected = false;
-
-  int _currentImageIndex = 0;
-  Timer? _imageTimer;
-
-  late final AnimationController _scannerController = AnimationController(
-    duration: const Duration(seconds: 2),
-    vsync: this,
-  )..repeat(reverse: true);
-
-  late final AnimationController _titleGlowController = AnimationController(
-    duration: const Duration(milliseconds: 1500),
-    vsync: this,
-  )..repeat(reverse: true);
-
-  double realTimeBid = 0.0;
-  double realTimeAsk = 0.0;
-
-  bool _isChartModalOpen = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _initFirebaseAndListen(widget.accountLogin);
-    _listenToOrdersForDialog(widget.accountLogin);
-    _listenToConnectionStatus();
-    _listenToHistoryForStats(widget.accountLogin);
-
-    _imageTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (mounted) {
-        setState(() {
-          _currentImageIndex = (_currentImageIndex == 0) ? 1 : 0;
-        });
-      }
-    });
-  }
-
-  @override
-  void didUpdateWidget(covariant HomeScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.accountLogin != widget.accountLogin) {
-      _initFirebaseAndListen(widget.accountLogin);
-      _listenToOrdersForDialog(widget.accountLogin);
-      _listenToHistoryForStats(widget.accountLogin);
-    }
-  }
-
-  @override
-  void dispose() {
-    _scannerController.dispose();
-    _titleGlowController.dispose();
-    _imageTimer?.cancel();
-    super.dispose();
-  }
-
-  void _listenToConnectionStatus() {
-    try {
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-      );
-      database.ref('.info/connected').onValue.listen((event) {
-        final connected = event.snapshot.value as bool? ?? false;
-        if (mounted) {
-          setState(() {
-            isConnected = connected;
-          });
-        }
-      });
-    } catch (e) {
-      debugPrint("Connection listen error: $e");
-    }
-  }
-
-  void _initFirebaseAndListen(String login) {
-    try {
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-      );
-
-      _dbRef = database.ref('accounts/$login/status');
-      _dbRef?.onValue.listen((DatabaseEvent event) {
-        final data = event.snapshot.value as Map<dynamic, dynamic>?;
-        if (data != null && mounted) {
-          setState(() {
-            isRunning = data['is_running'] ?? false;
-            balance = (data['balance'] ?? 0.0).toDouble();
-            equity = (data['equity'] ?? 0.0).toDouble();
-            profit = (data['profit'] ?? 0.0).toDouble();
-            symbol = data['symbol']?.toString() ?? 'XAUUSD';
-            timeframe = data['timeframe']?.toString() ?? 'M1';
-            
-            if (data['bid'] != null) {
-              realTimeBid = double.tryParse(data['bid'].toString()) ?? realTimeBid;
-            }
-            if (data['ask'] != null) {
-              realTimeAsk = double.tryParse(data['ask'].toString()) ?? realTimeAsk;
-            }
-
-            cycleWins = int.tryParse(data['cycle_wins']?.toString() ?? '0') ?? 0;
-            cycleLosses = int.tryParse(data['cycle_losses']?.toString() ?? '0') ?? 0;
-            cycleWinRate = (data['cycle_win_rate'] ?? 0.0).toDouble();
-          });
-        }
-      });
-    } catch (e) {
-      debugPrint("Database listen error: $e");
-    }
-  }
-
-  void _listenToHistoryForStats(String login) {
-    try {
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-      );
-      _historyRef = database.ref('accounts/$login/history');
-      _historyRef?.onValue.listen((DatabaseEvent event) {
-        final data = event.snapshot.value;
-        if (mounted) {
-          List<Map<dynamic, dynamic>> tempHistory = [];
-          if (data is Map) {
-            data.forEach((key, value) {
-              if (value is Map) {
-                tempHistory.add(Map<dynamic, dynamic>.from(value));
-              } else if (value is List) {
-                for (var item in value) {
-                  if (item is Map) {
-                    tempHistory.add(Map<dynamic, dynamic>.from(item));
-                  }
-                }
-              }
-            });
-          } else if (data is List) {
-            for (var e in data) {
-              if (e is Map) {
-                tempHistory.add(Map<dynamic, dynamic>.from(e));
-              }
-            }
-          }
-          setState(() {
-            _historyTrades = tempHistory;
-          });
-        }
-      });
-    } catch (e) {
-      debugPrint("History stats listen error: $e");
-    }
-  }
-
-  void _listenToOrdersForDialog(String login) {
-    try {
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-      );
-      _ordersRef = database.ref('accounts/$login/orders');
-      _ordersRef?.onValue.listen((DatabaseEvent event) {
-        final data = event.snapshot.value;
-        if (mounted) {
-          List<Map<dynamic, dynamic>> newOrders = [];
-          if (data is Map) {
-            data.forEach((key, value) {
-              if (value is Map) {
-                newOrders.add(Map<dynamic, dynamic>.from(value));
-              }
-            });
-          } else if (data is List) {
-            for (var e in data) {
-              if (e is Map) {
-                newOrders.add(Map<dynamic, dynamic>.from(e));
-              }
-            }
-          }
-          setState(() {
-            activeOrders = newOrders;
-          });
-        }
-      });
-    } catch (e) {
-      debugPrint("Orders listen error: $e");
-    }
-  }
-
-  void _toggleBotStatus(bool status) {
-    try {
-      _dbRef?.update({
-        'is_running': status,
-        'command_timestamp': DateTime.now().millisecondsSinceEpoch,
-      });
-    } catch (e) {
-      debugPrint("Toggle bot error: $e");
-    }
-  }
-
-  void _closeAllOrders() {
-    try {
-      _dbRef?.update({
-        'close_all': true,
-        'command_timestamp': DateTime.now().millisecondsSinceEpoch,
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sent Close All Command to EA!'), backgroundColor: kDarkCard),
-      );
-    } catch (e) {
-      debugPrint("Close all error: $e");
-    }
-  }
-
-  // ฟังก์ชันสำหรับเรียกบอลลูนลอยกลับมาแสดงอีกครั้งจากในแอปหลัก (วางไว้นอก Widget build ถูกต้องแล้ว)
-  Future<void> _restoreFloatingOverlay() async {
-    try {
-      bool granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
-      if (!granted) {
-        final result = await FlutterOverlayWindow.requestPermission();
-        if (result != true) return;
-      }
-
-      final active = await FlutterOverlayWindow.isActive();
-      if (!active) {
-        await FlutterOverlayWindow.showOverlay(
-          height: 70,
-          width: 70,
-          enableDrag: true,
-          overlayTitle: 'GOLD PRO',
-          overlayContent: 'BUBBLE',
-          alignment: OverlayAlignment.topRight,
-          flag: OverlayFlag.defaultFlag,
-          visibility: NotificationVisibility.visibilityPublic,
-          positionGravity: PositionGravity.none,
-        );
-      }
-    } catch (e) {
-      debugPrint('Error restoring overlay: $e');
-    }
-  }
-
-  void _showTradingCalendarDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return TradingCalendarDialog(historyTrades: _historyTrades);
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    Color startStopColor = isRunning ? kGreenNeon : kRedNeon;
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 15),
-                    Center(
-                      child: Container(
-                        width: 220,
-                        height: 220,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: kGoldPrimary, width: 2.0),
-                          boxShadow: [
-                            BoxShadow(
-                              color: kGoldPrimary.withOpacity(0.25),
-                              blurRadius: 20,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 800),
-                            child: Opacity(
-                              key: ValueKey<int>(_currentImageIndex),
-                              opacity: 0.9,
-                              child: Image.asset(
-                                'assets/images/8.png',
-                                width: double.infinity,
-                                height: double.infinity,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: Colors.black,
-                                    child: const Center(
-                                      child: Icon(Icons.smart_toy, color: kGoldPrimary, size: 80),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    AnimatedBuilder(
-                      animation: _titleGlowController,
-                      builder: (context, child) {
-                        return Transform.scale(
-                          scale: 1.0 + (_titleGlowController.value * 0.05),
-                          child: Text(
-                            'GOLD PRO',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
-                              color: kGoldPrimary,
-                              letterSpacing: 3.0,
-                              shadows: [
-                                BoxShadow(
-                                  color: kGoldPrimary.withOpacity(0.4 + (_titleGlowController.value * 0.5)),
-                                  blurRadius: 10 + (_titleGlowController.value * 10),
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'ROBOT ALGO TRADING',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white70,
-                        letterSpacing: 3.0,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: kGoldPrimary, width: 1.2),
-                        color: Colors.black.withOpacity(0.75),
-                      ),
-                      child: const Text(
-                        'Powered By Algohost',
-                        style: TextStyle(color: kGoldPrimary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildCircularButton(
-                          label: 'CLOSE',
-                          icon: Icons.delete_outline,
-                          borderColor: kGoldPrimary,
-                          onPressed: _closeAllOrders,
-                        ),
-                        const SizedBox(width: 20),
-                        _buildCircularButton(
-                          label: isRunning ? 'STOP' : 'START',
-                          icon: isRunning ? Icons.stop : Icons.play_arrow,
-                          borderColor: startStopColor,
-                          glowColor: startStopColor,
-                          iconColor: startStopColor,
-                          labelColor: startStopColor,
-                          onPressed: () => _toggleBotStatus(!isRunning),
-                          isLarge: true,
-                        ),
-                        const SizedBox(width: 18),
-                        
-                        // ปุ่มสำหรับเรียกบอลลูนลอยกลับมาแสดง
-                        _buildCircularButton(
-                          label: 'BUBBLE',
-                          icon: Icons.bubble_chart,
-                          borderColor: kGoldPrimary,
-                          onPressed: _restoreFloatingOverlay,
-                        ),
-
-                        const SizedBox(width: 18),
-                        _buildCircularButton(
-                          label: 'STATS', 
-                          icon: Icons.bar_chart,
-                          borderColor: kGoldPrimary,
-                          onPressed: () {
-                            setState(() {
-                              _isChartModalOpen = true;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    _buildBidAskBoxContent(context),
-                    const SizedBox(height: 16),
-                    
-                    Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          GestureDetector(
-                            onTap: () => _showTradingCalendarDialog(context),
-                            child: Container(
-                              width: 65,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: kGoldPrimary, width: 1.8),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: kGoldPrimary.withOpacity(0.6),
-                                    blurRadius: 12,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8.5),
-                                child: Image.asset(
-                                  'assets/images/8.png',
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      color: kDarkCard,
-                                      child: const Center(
-                                        child: Icon(Icons.smart_toy, color: kGoldPrimary, size: 20),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          const Text(
-                            'TRADING JOURNAL',
-                            style: TextStyle(
-                              color: kGoldPrimary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.0,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          if (_isChartModalOpen)
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _isChartModalOpen = false;
-                    });
-                  },
-                  child: Container(color: Colors.black54),
-                ),
-                Center(
-                  child: Container(
-                    width: MediaQuery.of(context).size.width * 0.92,
-                    height: MediaQuery.of(context).size.height * 0.52,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: kGoldPrimary, width: 2.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.8),
-                          blurRadius: 20,
-                          spreadRadius: 3,
-                        ),
-                      ],
-                      color: kDarkCard.withOpacity(0.9),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Row(
-                                children: [
-                                  Icon(Icons.dashboard_outlined, color: kGoldPrimary, size: 18),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'DASHBOARD STATS',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w900,
-                                      color: kGoldPrimary,
-                                      letterSpacing: 1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              IconButton(
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                                onPressed: () {
-                                  setState(() {
-                                    _isChartModalOpen = false;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Divider(color: kGoldPrimary, height: 1, thickness: 1.5),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(10.0),
-                            child: _buildDashboardStatsContent(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDashboardStatsContent() {
-    double totalProfitLoss = 0.0;
-    double maxProfit = 0.0;
-    double maxLoss = 0.0;
-
-    for (var trade in _historyTrades) {
-      double p = double.tryParse(trade['profit']?.toString() ?? '0.0') ?? 0.0;
-      totalProfitLoss += p;
-      if (p > 0) {
-        if (p > maxProfit) maxProfit = p;
-      } else if (p < 0) {
-        if (p < maxLoss) maxLoss = p;
-      }
-    }
-
-    int displayWins = cycleWins;
-    int displayLosses = cycleLosses;
-    int totalCycles = displayWins + displayLosses;
-    double displayWinRate = totalCycles > 0 ? (displayWins / totalCycles) * 100 : cycleWinRate;
-    double lossRate = 100.0 - displayWinRate;
-
-    double peak = balance > 0 ? balance : 1000.0;
-    double maxDDAmount = 0.0;
-    for (var trade in _historyTrades) {
-      double p = double.tryParse(trade['profit']?.toString() ?? '0.0') ?? 0.0;
-      peak += p;
-      double currentDD = peak > 0 ? (maxLoss.abs() / peak) * 100 : 0.0;
-      if (currentDD > maxDDAmount) {
-        maxDDAmount = currentDD;
-      }
-    }
-    if (maxDDAmount == 0 && displayLosses > 0) {
-      maxDDAmount = (maxLoss.abs() / (balance > 0 ? balance : 1000.0)) * 100;
-    }
-
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  title: 'WIN RATE',
-                  value: '${displayWinRate.toStringAsFixed(1)}%',
-                  subText: '$displayWins Win / $displayLosses Loss',
-                  color: kGreenNeon,
-                  icon: Icons.pie_chart,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildStatCard(
-                  title: 'MAX DRAWDOWN',
-                  value: '${maxDDAmount.toStringAsFixed(2)}%',
-                  subText: 'Max Loss: \$${maxLoss.toStringAsFixed(2)}',
-                  color: kRedNeon,
-                  icon: Icons.trending_down,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  title: 'TOTAL CYCLES',
-                  value: '$totalCycles',
-                  subText: '',
-                  color: kGoldPrimary,
-                  icon: Icons.receipt_long,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildStatCard(
-                  title: 'NET PROFIT',
-                  value: '${totalProfitLoss >= 0 ? "+" : ""}\$${totalProfitLoss.toStringAsFixed(2)}',
-                  subText: 'Balance: \$${balance.toStringAsFixed(2)}',
-                  color: totalProfitLoss >= 0 ? kGreenNeon : kRedNeon,
-                  icon: Icons.account_balance_wallet,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: kDarkCard.withOpacity(0.85),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: kGoldPrimary, width: 1.2),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'WIN RATE & CYCLES',
-                  style: TextStyle(
-                    color: kGoldPrimary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: kDarkBg.withOpacity(0.75),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: kGoldPrimary.withOpacity(0.5), width: 1.0),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('WIN RATE', style: TextStyle(color: kGreenNeon, fontSize: 9, fontWeight: FontWeight.bold)),
-                              Text('${displayWinRate.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const Text('LOSS RATE', style: TextStyle(color: kRedNeon, fontSize: 9, fontWeight: FontWeight.bold)),
-                              Text('${lossRate.toStringAsFixed(1)}%', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          height: 10,
-                          width: double.infinity,
-                          color: kRedNeon.withOpacity(0.4),
-                          child: FractionallySizedBox(
-                            alignment: Alignment.centerLeft,
-                            widthFactor: (displayWinRate / 100).clamp(0.0, 1.0),
-                            child: Container(color: kGreenNeon),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard({required String title, required String value, required String subText, required Color color, required IconData icon}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: kDarkBg.withOpacity(0.75),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.6), width: 1.2),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: const TextStyle(color: Colors.grey, fontSize: 9, fontWeight: FontWeight.bold)),
-              Icon(icon, color: color, size: 14),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Center(
-            child: Text(
-              value, 
-              style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w900),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 1),
-          Text(subText, style: const TextStyle(color: Colors.white54, fontSize: 8)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBidAskBoxContent(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double boxWidth = screenWidth - 32;
-    double spreadVal = (realTimeAsk > 0 && realTimeBid > 0) ? (realTimeAsk - realTimeBid) * 100 : 500.0;
-
-    return Container(
-      width: boxWidth,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kGoldPrimary, width: 1.5),
-        color: kDarkCard.withOpacity(0.8),
-        boxShadow: [
-          BoxShadow(
-            color: kGoldPrimary.withOpacity(0.15),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: kDarkBg.withOpacity(0.75),
-          borderRadius: BorderRadius.circular(13),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.show_chart, color: kGoldPrimary, size: 16),
-                    const SizedBox(width: 6),
-                    Text(
-                      symbol,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'monospace'),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.75),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: kGoldPrimary, width: 1),
-                  ),
-                  child: Text(
-                    'Spread: ${spreadVal.toStringAsFixed(1)}',
-                    style: const TextStyle(color: kGoldPrimary, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
-                  ),
-                ),
-              ],
-            ),
-            const Divider(color: kGoldPrimary, height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Column(
-                  children: [
-                    const Text('BID', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
-                    const SizedBox(height: 6),
-                    Text(
-                      realTimeBid > 0 ? realTimeBid.toStringAsFixed(2) : '0.00',
-                      style: const TextStyle(color: kRedNeon, fontSize: 18, fontFamily: 'monospace', fontWeight: FontWeight.w900),
-                    ),
-                  ],
-                ),
-                Container(height: 35, width: 1, color: kGoldPrimary.withOpacity(0.3)),
-                Column(
-                  children: [
-                    const Text('ASK', style: TextStyle(color: kGoldPrimary, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
-                    const SizedBox(height: 6),
-                    Text(
-                      realTimeAsk > 0 ? realTimeAsk.toStringAsFixed(2) : '0.00',
-                      style: const TextStyle(color: kGreenNeon, fontSize: 18, fontFamily: 'monospace', fontWeight: FontWeight.w900),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCircularButton({
-    required String label,
-    required IconData icon,
-    required Color borderColor,
-    Color? glowColor,
-    Color? iconColor,
-    Color? labelColor,
-    required VoidCallback onPressed,
-    bool isLarge = false,
-  }) {
-    double size = isLarge ? 82 : 70;
-    return GestureDetector(
-      onTap: onPressed,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: kDarkCard.withOpacity(0.85),
-              border: Border.all(color: borderColor, width: 2.0),
-              boxShadow: [
-                BoxShadow(
-                  color: (glowColor ?? borderColor).withOpacity(0.6),
-                  blurRadius: isLarge ? 16 : 10,
-                  spreadRadius: isLarge ? 3 : 1,
-                ),
-              ],
-            ),
-            child: Icon(icon, color: iconColor ?? kGoldPrimary, size: isLarge ? 34 : 28),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: labelColor ?? kGoldPrimary,
-              fontWeight: FontWeight.bold,
-              fontSize: 11,
-              letterSpacing: 0.5,
-              fontFamily: 'monospace',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ==========================================
 // #8 TradingCalendarDialog
