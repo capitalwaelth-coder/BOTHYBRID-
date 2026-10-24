@@ -20,7 +20,7 @@ const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Pro
 
 
 // ==========================================
-// #1.1 โหมดการเชื่อม ระบบ Overlay (แบบไม่มีปุ่ม Start/Stop ตามที่คุณต้องการ)
+// #1.1 โหมดการเชื่อม ระบบ Overlay (แก้ไขให้ถูกต้องตาม Error)
 // ==========================================
 
 @pragma("vm:entry-point")
@@ -143,7 +143,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
                   borderRadius: BorderRadius.circular(14),
                   child: Column(
                     children: [
-                      // ส่วนหัวรูปภาพ 6.png พร้อมปุ่มปิด/ย่อ และถังขยะ
                       Stack(
                         children: [
                           SizedBox(
@@ -180,7 +179,8 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
                                 setState(() {
                                   _isExpanded = false;
                                 });
-                                await FlutterOverlayWindow.resizeOverlay(70, 70);
+                                // เพิ่ม duration: 0 เข้าไปให้ครบ 3 arguments ตามที่แพ็กเกจต้องการ
+                                await FlutterOverlayWindow.resizeOverlay(70, 70, duration: 0);
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(5),
@@ -195,7 +195,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
                           ),
                         ],
                       ),
-                      // สถานะ Server
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         child: Row(
@@ -221,7 +220,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
                         ),
                       ),
                       const Divider(color: Color(0xFFFFD700), height: 1),
-                      // กล่องแสดง Activity Logs ด้านล่าง
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
@@ -260,7 +258,8 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
                   setState(() {
                     _isExpanded = true;
                   });
-                  await FlutterOverlayWindow.resizeOverlay(320, 380);
+                  // เพิ่ม duration: 0 เข้าไปให้ครบ 3 arguments เช่นกัน
+                  await FlutterOverlayWindow.resizeOverlay(320, 380, duration: 0);
                 },
                 onLongPress: () async {
                   await FlutterOverlayWindow.closeOverlay();
