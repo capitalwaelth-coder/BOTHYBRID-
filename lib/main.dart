@@ -1456,9 +1456,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   int _imageIndex = 0;
   Timer? _imageTimer;
-  final List<String> _images = [
-    'assets/images/5.png',
-    'assets/images/8.png',
+    final List<String> _images = [
+    'assets/images/2.png',
+    'assets/images/4.png',
+    'assets/images/6.png',
   ];
 
   DatabaseReference? _dbRef;
@@ -1493,8 +1494,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     super.initState();
 
     _listenToOverlayCommands();
-    _startFloatingOverlay();
-
+    
     _loadSavedLogin().then((_) {
       if (!mounted) return;
 
@@ -2405,11 +2405,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                       });
                     },
                     onTapUp: (_) {
-                      setState(() {
-                        _isRobotBubblePressed = false;
-                        _isLargeLogsModalOpen =
-                            !_isLargeLogsModalOpen;
-                      });
+                    setState(() {
+                    _isRobotBubblePressed = false;
+                    });
+                    _startFloatingOverlay();
                     },
                     onTapCancel: () {
                       setState(() {
