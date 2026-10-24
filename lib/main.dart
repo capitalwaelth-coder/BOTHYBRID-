@@ -23,6 +23,10 @@ const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Pro
 // #1.1 โหมดการเชื่อม ระบบ Overlay
 // ==========================================
 
+// ==========================================
+// #1.1 โหมดการเชื่อม ระบบ Overlay
+// ==========================================
+
 @pragma("vm:entry-point")
 void overlayMain() {
   runApp(
@@ -52,7 +56,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
   String timeframe = "M1";
   double profit = 0.0;
   List<Map<String, dynamic>> _botLogs = [];
-  List<Map<dynamic, dynamic>> activeOrders = [];
 
   final List<String> _images = [
     'assets/images/2.png',
@@ -148,14 +151,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
     }
   }
 
-  void _clearLogItem(String key) async {
-    try {
-      if (_logsRef != null) await _logsRef!.child(key).remove();
-    } catch (e) {
-      debugPrint("Overlay clear log error: $e");
-    }
-  }
-
   void _clearAllLogs() async {
     try {
       if (_logsRef != null) {
@@ -171,8 +166,10 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
 
   @override
   Widget build(BuildContext context) {
-    final double ordersProfit = activeOrders.fold<double>(0.0, (sum, item) => sum + (double.tryParse(item['profit']?.toString() ?? '0') ?? 0.0));
-    final bool isTotalProfit = ordersProfit >= 0;
+    // ดึงข้อความ Log ล่าสุดมาแสดง แทนที่ข้อความเซิร์ฟเวอร์เดิม
+    final String latestLogMessage = _botLogs.isNotEmpty 
+        ? _botLogs.last['message'].toString() 
+        : ((isConnected && isRunning) ? 'EA SERVER ONLINE & RUNNING' : 'EA SERVER OFFLINE / STOPPED');
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -196,6 +193,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
@@ -231,11 +229,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                                   });
                                 },
                               ),
-                              if (_botLogs.isNotEmpty)
-                                IconButton(
-                                  icon: const Icon(Icons.delete_sweep, color: Color(0xFFFF1744), size: 20),
-                                  onPressed: _clearAllLogs,
-                                ),
                               IconButton(
                                 icon: const Icon(Icons.close, color: Colors.white, size: 20),
                                 onPressed: () async {
@@ -263,7 +256,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                     const Divider(color: Color(0xFFFFD700), height: 1, thickness: 1.5),
                     
                     Expanded(
-                      child: Padding(
+                      child: SingleChildScrollView(
                         padding: const EdgeInsets.all(12.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,42 +274,67 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                                   children: [
                                     ClipRRect(
                                       borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                      child: Container(
-                                        height: 130,
-                                        width: double.infinity,
-                                        color: Colors.black,
-                                        child: AnimatedBuilder(
-                                          animation: _scannerController,
-                                          builder: (context, child) {
-                                            final double scanValue = _scannerController.value * 130;
-                                            final String scanImage = _images[_imageIndex];
+                                      child: Stack(
+                                        children: [
+                                          Container(
+                                            height: 130,
+                                            width: double.infinity,
+                                            color: Colors.black,
+                                            child: AnimatedBuilder(
+                                              animation: _scannerController,
+                                              builder: (context, child) {
+                                                final double scanValue = _scannerController.value * 130;
+                                                final String scanImage = _images[_imageIndex];
 
-                                            return Stack(
-                                              fit: StackFit.expand,
-                                              children: [
-                                                Image.asset(
-                                                  scanImage,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error, stackTrace) => const ColoredBox(color: Colors.black),
-                                                ),
-                                                Positioned(
-                                                  top: scanValue.clamp(0.0, 127.0),
-                                                  left: 0,
-                                                  right: 0,
-                                                  child: Container(
-                                                    height: 3,
-                                                    decoration: const BoxDecoration(
-                                                      color: Color(0xFFFFD700),
-                                                      boxShadow: [
-                                                        BoxShadow(color: Color(0xFFFFD700), blurRadius: 8, spreadRadius: 2),
-                                                      ],
+                                                return Stack(
+                                                  fit: StackFit.expand,
+                                                  children: [
+                                                    Image.asset(
+                                                      scanImage,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (context, error, stackTrace) => const ColoredBox(color: Colors.black),
                                                     ),
-                                                  ),
+                                                    Positioned(
+                                                      top: scanValue.clamp(0.0, 127.0),
+                                                      left: 0,
+                                                      right: 0,
+                                                      child: Container(
+                                                        height: 3,
+                                                        decoration: const BoxDecoration(
+                                                          color: Color(0xFFFFD700),
+                                                          boxShadow: [
+                                                            BoxShadow(color: Color(0xFFFFD700), blurRadius: 8, spreadRadius: 2),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                          // ปุ่มถังขยะ ย้ายมาวางมุมขวาบนของกรอบรูปภาพตามต้องการ
+                                          Positioned(
+                                            top: 8,
+                                            right: 8,
+                                            child: GestureDetector(
+                                              onTap: _clearAllLogs,
+                                              child: Container(
+                                                padding: const EdgeInsets.all(6),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black.withOpacity(0.6),
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(color: const Color(0xFFFF1744), width: 1.5),
                                                 ),
-                                              ],
-                                            );
-                                          },
-                                        ),
+                                                child: const Icon(
+                                                  Icons.delete_sweep,
+                                                  color: Color(0xFFFF1744),
+                                                  size: 18,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                     Padding(
@@ -340,12 +358,17 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                                                 ),
                                               ),
                                               const SizedBox(width: 6),
-                                              Text(
-                                                (isConnected && isRunning) ? 'EA SERVER ONLINE & RUNNING' : 'EA SERVER OFFLINE / STOPPED',
-                                                style: TextStyle(
-                                                  color: (isConnected && isRunning) ? const Color(0xFF00E676) : const Color(0xFFFF1744),
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
+                                              Expanded(
+                                                child: Text(
+                                                  latestLogMessage,
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF00E676),
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontFamily: 'monospace',
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
                                                 ),
                                               ),
                                             ],
@@ -357,10 +380,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                                             children: [
                                               Text('Symbol: $symbol', style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
                                               Text('TF: $timeframe', style: const TextStyle(color: Colors.white70, fontSize: 10)),
-                                              Text(
-                                                'P/L: ${isTotalProfit ? "+" : ""}\$${ordersProfit.toStringAsFixed(2)}',
-                                                style: TextStyle(color: isTotalProfit ? const Color(0xFF00E676) : const Color(0xFFFF1744), fontSize: 10, fontWeight: FontWeight.bold),
-                                              ),
                                             ],
                                           ),
                                         ],
@@ -369,48 +388,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 10),
                             ],
-                            const Text(
-                              'ACTIVITY LOGS',
-                              style: TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold, fontSize: 12),
-                            ),
-                            const SizedBox(height: 6),
-                            Expanded(
-                              child: _botLogs.isEmpty
-                                  ? const Center(
-                                      child: Text('No log records...', style: TextStyle(color: Colors.grey, fontFamily: 'monospace', fontSize: 12)),
-                                    )
-                                  : ListView.builder(
-                                      itemCount: _botLogs.length,
-                                      itemBuilder: (context, index) {
-                                        final log = _botLogs[index];
-                                        return Padding(
-                                          padding: const EdgeInsets.only(bottom: 6.0),
-                                          child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  "> ${log['message']}",
-                                                  style: const TextStyle(
-                                                    color: Color(0xFF00E676),
-                                                    fontFamily: 'monospace',
-                                                    fontSize: 11,
-                                                    height: 1.3,
-                                                  ),
-                                                ),
-                                              ),
-                                              GestureDetector(
-                                                onTap: () => _clearLogItem(log['key'].toString()),
-                                                child: const Icon(Icons.delete_outline, color: Color(0xFFFF1744), size: 14),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                    ),
-                            ),
                           ],
                         ),
                       ),
@@ -420,14 +398,14 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
               ),
             )
           else
-            // ตัวบอลลูนกลมๆ เมื่อกดแล้วขยายหน้าต่างเป็นกล่อง Logs ขนาดใหญ่
+            // ตัวบอลลูนกลมๆ เมื่อกดแล้วขยายหน้าต่าง
             GestureDetector(
               onTap: () async {
                 setState(() {
                   _isExpanded = true;
                 });
                 await FlutterOverlayWindow.showOverlay(
-                  height: 700,
+                  height: 280,
                   width: 380,
                   enableDrag: true,
                   overlayTitle: 'GOLD PRO',
@@ -467,6 +445,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
     );
   }
 }
+
 
 
 // ==========================================
