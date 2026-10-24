@@ -105,70 +105,63 @@ class _FloatingRobotOverlayState extends State<FloatingRobotOverlay> {
     final totalLots = _number(_data['totalLots']);
     final totalProfit = _number(_data['ordersProfit']);
 
-    // หากยังไม่ขยาย ให้แสดงเป็นบอลลูนกลมที่สามารถลากขยับได้
+    // หากยังไม่ขยาย ให้แสดงเป็นบอลลูนกลมลอยทับหน้าจอ
     if (!_expanded) {
       return Material(
         color: Colors.transparent,
-        child: SizedBox.expand(
-          child: Stack(
-            children: [
-              Positioned(
-                left: MediaQuery.of(context).size.width - 90,
-                top: 150,
-                child: GestureDetector(
-                  onPanUpdate: (details) async {
-                    await FlutterOverlayWindow.moveOverlay(details.delta);
-                  },
-                  onTap: _togglePanel,
-                  child: Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: kDarkCard,
-                      border: Border.all(color: kGoldPrimary, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (active ? kGreenNeon : kRedNeon).withOpacity(0.8),
-                          blurRadius: 12,
-                        ),
-                      ],
+        child: Align(
+          alignment: Alignment.topRight,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 100, right: 10),
+            child: GestureDetector(
+              onTap: _togglePanel,
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: kDarkCard,
+                  border: Border.all(color: kGoldPrimary, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (active ? kGreenNeon : kRedNeon).withOpacity(0.8),
+                      blurRadius: 12,
                     ),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        ClipOval(
-                          child: Image.asset(
-                            'assets/images/7.png',
-                            width: 56,
-                            height: 56,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.smart_toy,
-                              color: kGoldPrimary,
-                              size: 32,
-                            ),
-                          ),
+                  ],
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    ClipOval(
+                      child: Image.asset(
+                        'assets/images/7.png',
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.smart_toy,
+                          color: kGoldPrimary,
+                          size: 32,
                         ),
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            width: 14,
-                            height: 14,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: active ? kGreenNeon : kRedNeon,
-                              border: Border.all(color: Colors.black, width: 2),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: active ? kGreenNeon : kRedNeon,
+                          border: Border.all(color: Colors.black, width: 2),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       );
