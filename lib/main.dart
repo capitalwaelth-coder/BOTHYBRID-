@@ -1500,33 +1500,29 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     });
   }
 
-  // ให้เรียกใช้จากปุ่ม หรือเรียกเพียงครั้งเดียว ไม่ผูกกับ State ในหน้า Dashboard
-Future<void> startGlobalOverlayService() async {
-  try {
-    bool isGranted = await FlutterOverlayWindow.isPermissionGranted();
-    if (!isGranted) {
-      isGranted = await FlutterOverlayWindow.requestPermission() ?? false;
-    }
-    
-    if (isGranted) {
-      // ตรวจสอบว่า Overlay เปิดอยู่แล้วหรือไม่
-      if (!await FlutterOverlayWindow.isActive()) {
-        await FlutterOverlayWindow.showOverlay(
-          enableDrag: true, // อนุญาตให้ระบบ Android ลากย้ายตำแหน่งได้เองโดยไม่ต้องเขียน Gesture
-          overlayTitle: "GOLD PRO Trading Bot",
-          overlayContent: "Bot is running in background...",
-          flag: OverlayFlag.defaultFlag,
-          visibility: NotificationVisibility.visibilityPublic,
-          positionGravity: PositionGravity.none,
-          height: 150, // ขนาดตั้งต้น
-          width: 150,
-        );
+  Future<void> _startFloatingOverlay() async {
+    try {
+      bool? isGranted = await FlutterOverlayWindow.isPermissionGranted();
+      if (isGranted == false) {
+        await FlutterOverlayWindow.requestPermission();
+      } else {
+        bool isActive = await FlutterOverlayWindow.isActive();
+        if (!isActive) {
+          await FlutterOverlayWindow.showOverlay(
+            height: 60,
+            width: 60,
+            alignment: OverlayAlignment.topRight,
+            flag: OverlayFlag.defaultFlag,
+            visibility: NotificationVisibility.visibilityPublic,
+            positionGravity: PositionGravity.none,
+          );
+        }
       }
+    } catch (e) {
+      debugPrint("Error starting overlay: $e");
     }
-  } catch (e) {
-    debugPrint("Overlay error: $e");
   }
-}
+
 
 
   @override
