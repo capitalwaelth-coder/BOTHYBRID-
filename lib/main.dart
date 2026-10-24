@@ -1225,71 +1225,17 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen>
     with TickerProviderStateMixin {
+  
   int _currentIndex = 2;
   String currentLogin = "235305975";
-  int unreadAlertsCount = 0;
+  // ... (ตัวแปรอื่นๆ)
 
-  DatabaseReference? _alertsRef;
-  DatabaseReference? _dbRef;
-  DatabaseReference? _logsRef;
-  DatabaseReference? _ordersRef;
-
-  // ตำแหน่งเริ่มต้นของบอลลูนและกล่อง Modal
-  Offset _robotBubbleOffset = const Offset(320, 500);
-  Offset _modalOffset = const Offset(16, 80);
-
-  bool _isLiveStatusVisible = true;
-  bool _isRobotBubblePressed = false;
-  bool _isLargeLogsModalOpen = false;
-  bool isRunning = false;
-  bool isConnected = false;
-
-  String symbol = "XAUUSD";
-  String timeframe = "M1";
-  double profit = 0.0;
-
-  List<Map<String, dynamic>> _botLogs = [];
-  List<Map<dynamic, dynamic>> activeOrders = [];
-
-  final List<String> _images = [
-    'assets/images/2.png',
-    'assets/images/4.png',
-    'assets/images/6.png',
-  ];
-  int _imageIndex = 0; 
-  Timer? _imageTimer; 
-
-  late final AnimationController _bounceController =
-      AnimationController(
-    duration: const Duration(seconds: 1),
-    vsync: this,
-  )..repeat(reverse: true);
-
-  late final Animation<double> _bounceAnimation =
-      Tween<double>(begin: 0.0, end: -8.0).animate(
-    CurvedAnimation(
-      parent: _bounceController,
-      curve: Curves.easeInOut,
-    ),
-  );
-
-  late final AnimationController _scannerController =
-      AnimationController(
-    duration: const Duration(seconds: 3),
-    vsync: this,
-  )..repeat(reverse: true);
-
-  late final Animation<double> _scannerAnimation =
-      Tween<double>(begin: 0.0, end: 1.0).animate(
-    CurvedAnimation(
-      parent: _scannerController,
-      curve: Curves.easeInOut,
-    ),
-  );
-
+  // 📍 นำ initState() มาวางไว้ตรงนี้ (ให้อยู่ใต้คลาส _MainNavigationScreenState โดยตรง)
   @override
   void initState() {
     super.initState();
+    
+    _startFloatingOverlay(); // เรียกสั่งเปิดบอลลูนลอยนอกแอป
 
     _loadSavedLogin().then((_) {
       if (!mounted) return;
@@ -1311,49 +1257,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     });
   }
 
-
-@override
-void initState() {
-  super.initState();
-
-  // 🌟 เรียกใช้คำสั่งสั่งเปิดบอลลูนลอยทันทีเมื่อเข้าหน้า Dashboard
-  _startFloatingOverlay();
-
-  _loadSavedLogin().then((_) {
-    if (!mounted) return;
-    _listenToActiveAccount();
-    _listenToAlertsCount();
-    _initFirebaseAndListen();
-    _listenToLogs();
-    _listenToConnectionStatus();
-    _listenToOrdersForDialog();
-  });
-}
-
-// ฟังก์ชันสั่งเปิดบอลลูนลอยอัตโนมัติ
-Future<void> _startFloatingOverlay() async {
-  try {
-    // 1. เช็คสิทธิ์การแสดงทับแอปอื่น
-    bool? isGranted = await FlutterOverlayWindow.isPermissionGranted();
-    
-    if (isGranted == false) {
-      // ถ้ายังไม่ได้สิทธิ์ ให้เด้งไปหน้าตั้งค่าของ Android เพื่อกดอนุญาตก่อนครั้งแรก
-      await FlutterOverlayWindow.requestPermission();
-    } else {
-      // 2. ถ้าได้สิทธิ์แล้ว สั่งเปิดบอลลูนลอยขึ้นมาบนหน้าจอทันที!
-      await FlutterOverlayWindow.showOverlay(
-        height: 80,
-        width: 80,
-        alignment: OverlayAlignment.topRight,
-        flag: OverlayFlag.defaultFlag,
-        visibility: NotificationVisibility.visibilityPublic,
-        positionGravity: PositionGravity.none,
-      );
+  // ... (ฟังก์ชัน _startFloatingOverlay และฟังก์ชันอื่นๆ ต่อด้านล่างนี้)
+  Future<void> _startFloatingOverlay() async {
+    try {
+      bool? isGranted = await FlutterOverlayWindow.isPermissionGranted();
+      if (isGranted == false) {
+        await FlutterOverlayWindow.requestPermission();
+      } else {
+        await FlutterOverlayWindow.showOverlay(
+          height: 80,
+          width: 80,
+          alignment: OverlayAlignment.topRight,
+          flag: OverlayFlag.defaultFlag,
+          visibility: NotificationVisibility.visibilityPublic,
+          positionGravity: PositionGravity.none,
+        );
+      }
+    } catch (e) {
+      debugPrint("Error starting overlay: $e");
     }
-  } catch (e) {
-    debugPrint("Error starting overlay: $e");
   }
-}
 
 
   @override
