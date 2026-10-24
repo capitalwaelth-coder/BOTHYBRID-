@@ -10,17 +10,15 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
-// ค่าสีหลักสำหรับธีม Luxury Gold & Dark Metallic
-const Color kGoldPrimary = Color(0xFFFFD700); // สีทองหลัก
-const Color kGoldAccent = Color(0xFFFFC107);  // สีทองสว่าง
-const Color kDarkBg = Color(0xFF0D0D0D);      // พื้นหลังดำเมทัลลิก
-const Color kDarkCard = Color(0xFF161616);    // การ์ดดำเข้ม
-const Color kRedNeon = Color(0xFFFF1744);     // สีแดง SELL / Loss / Stop
-const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Profit / Start
-
+const Color kGoldPrimary = Color(0xFFFFD700);
+const Color kGoldAccent = Color(0xFFFFC107);
+const Color kDarkBg = Color(0xFF0D0D0D);
+const Color kDarkCard = Color(0xFF161616);
+const Color kRedNeon = Color(0xFFFF1744);
+const Color kGreenNeon = Color(0xFF00E676);
 
 // ==========================================
-// #1.1 โหมดการเชื่อม ระบบ Overlay (แก้ไขและลบส่วนที่ Error ออกแล้ว)
+// #1.1 โหมดการเชื่อม ระบบ Overlay (แก้ไขแสดง Log และจัดการขนาดถูกต้อง)
 // ==========================================
 
 @pragma("vm:entry-point")
@@ -235,11 +233,11 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
                                     return Padding(
                                       padding: const EdgeInsets.only(bottom: 6.0),
                                       child: Text(
-                                        "> ${log['message']}",
+                                        "> ${log['message'] ?? ''}",
                                         style: const TextStyle(
                                           color: Color(0xFF00E676),
                                           fontFamily: 'monospace',
-                                          fontSize: 10.5,
+                                          fontSize: 11,
                                         ),
                                       ),
                                     );
@@ -292,8 +290,6 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
   }
 }
 
-
-
 // ==========================================
 // #2 โหมดเมนหลักของแอป
 // ==========================================
@@ -321,7 +317,6 @@ void main() async {
   runApp(const LiquiditySweepApp());
 }
 
-// Widget ช่วยทำเอฟเฟกต์พิมพ์ดีดข้อความ
 class TypewriterText extends StatefulWidget {
   final String text;
   final TextStyle style;
@@ -408,11 +403,9 @@ class LiquiditySweepApp extends StatelessWidget {
   Future<bool> _checkLoginSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-
       final login = prefs.getString('mt5_login') ??
           prefs.getString('saved_mt5_login') ??
           '';
-
       return login.trim().isNotEmpty;
     } catch (e) {
       debugPrint('Check login session error: $e');
@@ -459,7 +452,7 @@ class LiquiditySweepApp extends StatelessWidget {
 }
 
 // ==========================================
-// #4 โหมดการเข้าใช้งานครั้งแรก (MT5 Login Wrapper)
+// #4 MT5LoginWrapper
 // ==========================================
 
 class MT5LoginWrapper extends StatefulWidget {
@@ -755,7 +748,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
 }
 
 // ==========================================
-// #5 PIN AUTH WRAPPER
+// #5 PinAuthWrapper
 // ==========================================
 
 class PinAuthWrapper extends StatefulWidget {
@@ -1078,9 +1071,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                           height: 16,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: filled
-                                ? kGoldPrimary
-                                : Colors.transparent,
+                            color: filled ? kGoldPrimary : Colors.transparent,
                             border: Border.all(
                               color: kGoldPrimary,
                               width: 2,
@@ -1184,9 +1175,8 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
   }
 }
 
-
 // ==========================================
-// #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
+// #6 MainNavigationScreen
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -1208,7 +1198,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   DatabaseReference? _dbRef;
   DatabaseReference? _alertsRef;
 
-  // ตำแหน่งเริ่มต้นของบอลลูนลอยในแอป (ลากขยับได้อิสระ)
   Offset _robotBubbleOffset = const Offset(20, 120);
   bool _isRobotBubblePressed = false;
 
@@ -1367,7 +1356,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ฟังก์ชันสำหรับเปิดบอลลูนลอยภายนอกแอป (Overlay)
   Future<void> _launchExternalOverlay() async {
     try {
       bool granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
@@ -1505,8 +1493,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 ),
               ),
             ),
-
-            // บอลลูนลอยในแอป (ใช้รูป 7.png ลากวางได้อิสระ เด้งขึ้นลงได้ และกดเพื่อเรียก Overlay นอกแอป)
             Positioned(
               left: _robotBubbleOffset.dx,
               top: _robotBubbleOffset.dy,
@@ -1544,7 +1530,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     setState(() {
                       _isRobotBubblePressed = false;
                     });
-                    _launchExternalOverlay(); // กดเพื่อเปิดระบบ Overlay นอกแอป
+                    _launchExternalOverlay();
                   },
                   child: AnimatedScale(
                     scale: _isRobotBubblePressed ? 0.85 : 1.0,
@@ -1718,16 +1704,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 }
 
-
-
 // ==========================================
-// #7 HomeScreen
+// #7 HomeScreen (ลบปุ่ม BUBBLE ออกแล้ว)
 // ==========================================
 
 class HomeScreen extends StatefulWidget {
   final String accountLogin;
-  final VoidCallback? onRestoreOverlay; // Callback สำหรับเรียกบอลลูนนอกแอป
-  const HomeScreen({super.key, required this.accountLogin, this.onRestoreOverlay});
+  const HomeScreen({super.key, required this.accountLogin});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -2090,7 +2073,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           borderColor: kGoldPrimary,
                           onPressed: _closeAllOrders,
                         ),
-                        const SizedBox(width: 20),
+                        const SizedBox(width: 25),
                         _buildCircularButton(
                           label: isRunning ? 'STOP' : 'START',
                           icon: isRunning ? Icons.stop : Icons.play_arrow,
@@ -2101,21 +2084,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           onPressed: () => _toggleBotStatus(!isRunning),
                           isLarge: true,
                         ),
-                        const SizedBox(width: 18),
-                        
-                        // ปุ่ม BUBBLE สำหรับกดเรียกเปิดบอลลูนลอยนอกแอป (Overlay)
-                        _buildCircularButton(
-                          label: 'BUBBLE',
-                          icon: Icons.bubble_chart,
-                          borderColor: kGoldPrimary,
-                          onPressed: () {
-                            if (widget.onRestoreOverlay != null) {
-                              widget.onRestoreOverlay!();
-                            }
-                          },
-                        ),
-
-                        const SizedBox(width: 18),
+                        const SizedBox(width: 25),
                         _buildCircularButton(
                           label: 'STATS', 
                           icon: Icons.bar_chart,
@@ -2131,7 +2100,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 20),
                     _buildBidAskBoxContent(context),
                     const SizedBox(height: 16),
-                    
                     Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -2606,12 +2574,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 }
 
-
-
-
 // ==========================================
 // #8 TradingCalendarDialog
 // ==========================================
+
 class TradingCalendarDialog extends StatefulWidget {
   final List<Map<dynamic, dynamic>> historyTrades;
   const TradingCalendarDialog({Key? key, required this.historyTrades}) : super(key: key);
@@ -3160,7 +3126,6 @@ class _TradingCalendarDialogState extends State<TradingCalendarDialog> {
     );
   }
 }
-
 
 // ==========================================
 // #9 OrdersScreen
@@ -4236,7 +4201,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
 }
 
 // ==========================================
-// #12 โหมดการตั้งค่าพารามิเตอร์ (SettingsScreen) - Full Version
+// #12 SettingsScreen
 // ==========================================
 
 class SettingsScreen extends StatefulWidget {
@@ -5144,4 +5109,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-}  
+}
