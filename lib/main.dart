@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
 // ค่าสีหลักสำหรับธีม Luxury Gold & Dark Metallic
 const Color kGoldPrimary = Color(0xFFFFD700); // สีทองหลัก
@@ -16,6 +17,217 @@ const Color kDarkBg = Color(0xFF0D0D0D);      // พื้นหลังดำ�
 const Color kDarkCard = Color(0xFF161616);    // การ์ดดำเข้ม
 const Color kRedNeon = Color(0xFFFF1744);     // สีแดง SELL / Loss / Stop
 const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Profit / Start
+
+
+// ==========================================
+// #1.1 โหมดการสร้างบอลลูน
+// ==========================================
+
+@pragma('vm:entry-point')
+void overlayMain() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(
+    const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: FloatingRobotOverlay(),
+    ),
+  );
+}
+
+class FloatingRobotOverlay extends StatefulWidget {
+  const FloatingRobotOverlay({super.key});
+
+  @override
+  State<FloatingRobotOverlay> createState() =>
+      _FloatingRobotOverlayState();
+}
+
+class _FloatingRobotOverlayState
+    extends State<FloatingRobotOverlay> {
+  bool _expanded = false;
+  Map<String, dynamic> _data = {};
+  StreamSubscription<dynamic>? _subscription;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _subscription =
+        FlutterOverlayWindow.overlayListener.listen((event) {
+      if (!mounted || event is! Map) return;
+
+      setState(() {
+        _data = Map<String, dynamic>.from(event);
+      });
+    });
+  }
+
+  Future<void> _togglePanel() async {
+    final next = !_expanded;
+
+    try {
+      await FlutterOverlayWindow.resizeOverlay(
+        next ? 320 : 75,
+        next ? 440 : 75,
+      );
+
+      if (mounted) {
+        setState(() => _expanded = next);
+      }
+    } catch (e) {
+      debugPrint('Overlay resize error: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final running = _data['running'] == true;
+    final connected = _data['connected'] == true;
+    final logs = (_data['logs'] as List? ?? const [])
+        .map((e) => e.toString())
+        .toList();
+
+    if (!_expanded) {
+      return Material(
+        color: Colors.transparent,
+        child: Center(
+          child: GestureDetector(
+            onTap: _togglePanel,
+            child: Container(
+              width: 65,
+              height: 65,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: kDarkCard,
+                border: Border.all(
+                  color: kGoldPrimary,
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (running && connected
+                            ? kGreenNeon
+                            : kRedNeon)
+                        .withOpacity(0.7),
+                    blurRadius: 12,
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/7.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.smart_toy,
+                    color: kGoldPrimary,
+                    size: 35,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        margin: const EdgeInsets.all(5),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: kDarkBg.withOpacity(0.96),
+          border: Border.all(color: kGoldPrimary, width: 2),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'GOLD PRO • STATUS & LOGS',
+                    style: TextStyle(
+                      color: kGoldPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _togglePanel,
+                  icon: const Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              'Connection: ${connected ? "CONNECTED" : "OFFLINE"}',
+              style: TextStyle(
+                color: connected ? kGreenNeon : kRedNeon,
+              ),
+            ),
+            Text(
+              'Robot: ${running ? "RUNNING" : "STOPPED"}',
+              style: const TextStyle(color: Colors.white),
+            ),
+            Text(
+              'Symbol: ${_data['symbol'] ?? 'XAUUSD'}'
+              '  TF: ${_data['timeframe'] ?? 'M1'}',
+              style: const TextStyle(color: Colors.white),
+            ),
+            Text(
+              'Profit: ${_data['profit'] ?? 0}',
+              style: const TextStyle(color: kGoldPrimary),
+            ),
+            const Divider(color: kGoldPrimary),
+            const Text(
+              'ACTIVITY LOGS',
+              style: TextStyle(
+                color: kGoldPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Expanded(
+              child: logs.isEmpty
+                  ? const Text(
+                      'Waiting for logs...',
+                      style: TextStyle(color: Colors.white70),
+                    )
+                  : ListView.builder(
+                      itemCount: logs.length,
+                      itemBuilder: (_, index) => Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 3,
+                        ),
+                        child: Text(
+                          logs[index],
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 // ==========================================
 // #2 โหมดเมนหลัก
@@ -982,6 +1194,88 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     ),
   );
 
+///////////////////////////////////////////
+////////เริ่มสร้างโค้ดสร้างบอลลูน///////////////////
+///////////////////////////////////////////
+  
+  
+Future<void> _startFloatingOverlay() async {
+  try {
+    bool granted =
+        await FlutterOverlayWindow.isPermissionGranted();
+
+    if (!granted) {
+      granted =
+          await FlutterOverlayWindow.requestPermission() ??
+          false;
+    }
+
+    if (!granted) {
+      debugPrint('Overlay permission was not granted');
+      return;
+    }
+
+    await FlutterOverlayWindow.showOverlay(
+      height: 75,
+      width: 75,
+      enableDrag: true,
+      overlayTitle: 'GOLD PRO',
+      overlayContent: 'Floating STATUS & LOGS',
+    );
+
+    await _sendOverlayData();
+  } catch (e) {
+    debugPrint('Start overlay error: $e');
+  }
+}
+
+Future<void> _sendOverlayData() async {
+  try {
+    final ordersProfit = activeOrders.fold<double>(
+      0,
+      (sum, item) =>
+          sum +
+          (double.tryParse(
+                item['profit']?.toString() ?? '0',
+              ) ??
+              0),
+    );
+
+    final totalLots = activeOrders.fold<double>(
+      0,
+      (sum, item) =>
+          sum +
+          (double.tryParse(
+                item['lot']?.toString() ?? '0',
+              ) ??
+              0),
+    );
+
+    await FlutterOverlayWindow.shareData({
+      'login': currentLogin,
+      'running': isRunning,
+      'connected': isConnected,
+      'symbol': symbol,
+      'timeframe': timeframe,
+      'profit': profit,
+      'ordersCount': activeOrders.length,
+      'ordersProfit': ordersProfit,
+      'totalLots': totalLots,
+      'logs': _botLogs
+          .take(20)
+          .map((log) => log['message']?.toString() ?? '')
+          .toList(),
+    });
+  } catch (e) {
+    debugPrint('Send overlay data error: $e');
+  }
+}
+
+
+///////////////////////////////////////////
+////////สิ้นสุดโค้ดสร้างบอลลูน///////////////////
+///////////////////////////////////////////
+  
   @override
   void initState() {
     super.initState();
