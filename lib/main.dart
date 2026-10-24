@@ -19,13 +19,15 @@ const Color kRedNeon = Color(0xFFFF1744);     // สีแดง SELL / Loss / S
 const Color kGreenNeon = Color(0xFF00E676);   // สีเขียว BUY / Profit / Start
 
 
-// ==========================================
-// #1.1 โหมดการสร้างบอลลูน
-// ==========================================
+
+ // ==========================================
+ // #1.1 GOLD PRO OVERLAY - หน้าต่างเดิมนอกแอป
+ // ==========================================
 
 @pragma('vm:entry-point')
 void overlayMain() {
   WidgetsFlutterBinding.ensureInitialized();
+
   runApp(
     const MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -42,9 +44,10 @@ class FloatingRobotOverlay extends StatefulWidget {
       _FloatingRobotOverlayState();
 }
 
-class _FloatingRobotOverlayState
-    extends State<FloatingRobotOverlay> {
+class _FloatingRobotOverlayState extends State<FloatingRobotOverlay> {
   bool _expanded = false;
+  bool _showStatus = true;
+
   Map<String, dynamic> _data = {};
   StreamSubscription<dynamic>? _subscription;
 
@@ -67,8 +70,8 @@ class _FloatingRobotOverlayState
 
     try {
       await FlutterOverlayWindow.resizeOverlay(
-        next ? 320 : 75,
-        next ? 440 : 75,
+        next ? 360 : 80,
+        next ? 700 : 80,
         true,
       );
 
@@ -78,6 +81,11 @@ class _FloatingRobotOverlayState
     } catch (e) {
       debugPrint('Overlay resize error: $e');
     }
+  }
+
+  double _number(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   @override
@@ -90,9 +98,17 @@ class _FloatingRobotOverlayState
   Widget build(BuildContext context) {
     final running = _data['running'] == true;
     final connected = _data['connected'] == true;
+    final active = running && connected;
+
     final logs = (_data['logs'] as List? ?? const [])
-        .map((e) => e.toString())
+        .map((e) => e is Map
+            ? Map<String, dynamic>.from(e)
+            : <String, dynamic>{'message': e.toString()})
         .toList();
+
+    final orderCount = _data['ordersCount'] ?? 0;
+    final totalLots = _number(_data['totalLots']);
+    final totalProfit = _number(_data['ordersProfit']);
 
     if (!_expanded) {
       return Material(
@@ -101,8 +117,8 @@ class _FloatingRobotOverlayState
           child: GestureDetector(
             onTap: _togglePanel,
             child: Container(
-              width: 65,
-              height: 65,
+              width: 68,
+              height: 68,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: kDarkCard,
@@ -112,24 +128,45 @@ class _FloatingRobotOverlayState
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (running && connected
-                            ? kGreenNeon
-                            : kRedNeon)
-                        .withOpacity(0.7),
-                    blurRadius: 12,
+                    color: (active ? kGreenNeon : kRedNeon)
+                        .withOpacity(0.8),
+                    blurRadius: 14,
                   ),
                 ],
               ),
-              child: ClipOval(
-                child: Image.asset(
-                  'assets/images/7.png',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.smart_toy,
-                    color: kGoldPrimary,
-                    size: 35,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  ClipOval(
+                    child: Image.asset(
+                      'assets/images/7.png',
+                      width: 64,
+                      height: 64,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.smart_toy,
+                        color: kGoldPrimary,
+                        size: 38,
+                      ),
+                    ),
                   ),
-                ),
+                  Positioned(
+                    right: -1,
+                    top: -1,
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: active ? kGreenNeon : kRedNeon,
+                        border: Border.all(
+                          color: Colors.black,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -141,86 +178,282 @@ class _FloatingRobotOverlayState
       color: Colors.transparent,
       child: Container(
         margin: const EdgeInsets.all(5),
-        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: kDarkBg.withOpacity(0.96),
-          border: Border.all(color: kGoldPrimary, width: 2),
-          borderRadius: BorderRadius.circular(14),
+          color: kDarkBg.withOpacity(0.97),
+          border: Border.all(
+            color: kGoldPrimary,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(18),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'GOLD PRO • STATUS & LOGS',
-                    style: TextStyle(
-                      color: kGoldPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  onPressed: _togglePanel,
-                  icon: const Icon(
-                    Icons.close,
-                    color: Colors.white,
+            // หัวกล่อง STATUS & LOGS
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 8,
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.terminal,
+                    color: kGoldPrimary,
                     size: 20,
                   ),
-                ),
-              ],
-            ),
-            Text(
-              'Connection: ${connected ? "CONNECTED" : "OFFLINE"}',
-              style: TextStyle(
-                color: connected ? kGreenNeon : kRedNeon,
-              ),
-            ),
-            Text(
-              'Robot: ${running ? "RUNNING" : "STOPPED"}',
-              style: const TextStyle(color: Colors.white),
-            ),
-            Text(
-              'Symbol: ${_data['symbol'] ?? 'XAUUSD'}'
-              '  TF: ${_data['timeframe'] ?? 'M1'}',
-              style: const TextStyle(color: Colors.white),
-            ),
-            Text(
-              'Profit: ${_data['profit'] ?? 0}',
-              style: const TextStyle(color: kGoldPrimary),
-            ),
-            const Divider(color: kGoldPrimary),
-            const Text(
-              'ACTIVITY LOGS',
-              style: TextStyle(
-                color: kGoldPrimary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Expanded(
-              child: logs.isEmpty
-                  ? const Text(
-                      'Waiting for logs...',
-                      style: TextStyle(color: Colors.white70),
-                    )
-                  : ListView.builder(
-                      itemCount: logs.length,
-                      itemBuilder: (_, index) => Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 3,
-                        ),
-                        child: Text(
-                          logs[index],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                          ),
-                        ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'STATUS & LOGS',
+                      style: TextStyle(
+                        color: kGoldPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        fontStyle: FontStyle.italic,
+                        letterSpacing: 1,
                       ),
                     ),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      setState(() => _showStatus = !_showStatus);
+                    },
+                    icon: Icon(
+                      _showStatus
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                      color: kGreenNeon,
+                      size: 21,
+                    ),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _togglePanel,
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 23,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(
+              color: kGoldPrimary,
+              height: 1,
+              thickness: 1.5,
+            ),
+
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(10),
+                children: [
+                  if (_showStatus) ...[
+                    // LIVE STATUS เดิมในรูปแบบการ์ดทอง
+                    Container(
+                      decoration: BoxDecoration(
+                        color: kDarkCard,
+                        border: Border.all(
+                          color: kGoldPrimary,
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(13),
+                            ),
+                            child: SizedBox(
+                              height: 150,
+                              width: double.infinity,
+                              child: Image.asset(
+                                'assets/images/2.png',
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    const Center(
+                                  child: Icon(
+                                    Icons.smart_toy,
+                                    color: kGoldPrimary,
+                                    size: 65,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'LIVE STATUS',
+                                  style: TextStyle(
+                                    color: kGoldPrimary,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.circle,
+                                      size: 12,
+                                      color: active
+                                          ? kGreenNeon
+                                          : kRedNeon,
+                                    ),
+                                    const SizedBox(width: 7),
+                                    Expanded(
+                                      child: Text(
+                                        active
+                                            ? 'EA SERVER ONLINE & RUNNING'
+                                            : 'EA SERVER OFFLINE / STOPPED',
+                                        style: TextStyle(
+                                          color: active
+                                              ? kGreenNeon
+                                              : kRedNeon,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Symbol: ${_data['symbol'] ?? 'XAUUSD'}'
+                                  '   TF: ${_data['timeframe'] ?? 'M1'}',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                const Divider(color: Colors.white24),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        'Active Orders: $orderCount',
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      'Lots: ${totalLots.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                    Flexible(
+                                      child: Text(
+                                        'P/L: ${totalProfit >= 0 ? '+' : ''}\$${totalProfit.toStringAsFixed(2)}',
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: totalProfit >= 0
+                                              ? kGreenNeon
+                                              : kRedNeon,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
+                  // ACTIVITY LOGS
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.show_chart,
+                        color: kGoldPrimary,
+                        size: 18,
+                      ),
+                      SizedBox(width: 7),
+                      Text(
+                        'ACTIVITY LOGS',
+                        style: TextStyle(
+                          color: kGoldPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  if (logs.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text(
+                        'No log records...',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    )
+                  else
+                    ...logs.map((log) {
+                      final message =
+                          log['message']?.toString() ?? '';
+                      final isLatest = logs.first == log;
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${isLatest ? '➔ ' : '> '}$message',
+                                style: TextStyle(
+                                  color: isLatest
+                                      ? kGreenNeon
+                                      : Colors.white,
+                                  fontSize: 12,
+                                  fontFamily: 'monospace',
+                                  fontWeight: FontWeight.bold,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ),
+                            // คงปุ่มลบไว้ แต่การลบจริงต้องเชื่อม
+                            // กับ Firebase หรือคำสั่งจากแอปหลัก
+                            const Padding(
+                              padding: EdgeInsets.only(left: 5),
+                              child: Icon(
+                                Icons.delete_outline,
+                                color: kRedNeon,
+                                size: 17,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                ],
+              ),
             ),
           ],
         ),
@@ -228,6 +461,7 @@ class _FloatingRobotOverlayState
     );
   }
 }
+
 
 
 // ==========================================
@@ -1217,11 +1451,11 @@ Future<void> _startFloatingOverlay() async {
     }
 
     await FlutterOverlayWindow.showOverlay(
-      height: 75,
-      width: 75,
-      enableDrag: true,
-      overlayTitle: 'GOLD PRO',
-      overlayContent: 'Floating STATUS & LOGS',
+    height: 700,
+    width: 360,
+    enableDrag: true,
+    overlayTitle: 'GOLD PRO',
+    overlayContent: 'STATUS & LOGS',
     );
 
     await _sendOverlayData();
@@ -1263,9 +1497,12 @@ Future<void> _sendOverlayData() async {
       'ordersProfit': ordersProfit,
       'totalLots': totalLots,
       'logs': _botLogs
-          .take(20)
-          .map((log) => log['message']?.toString() ?? '')
-          .toList(),
+      .take(20)
+      .map((log) => <String, dynamic>{
+          'key': log['key']?.toString() ?? '',
+          'message': log['message']?.toString() ?? '',
+        })
+    .toList(),
     });
   } catch (e) {
     debugPrint('Send overlay data error: $e');
