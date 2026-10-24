@@ -1416,6 +1416,10 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
   }
 }
 
+
+
+
+
 // ==========================================
 // #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
 // ==========================================
@@ -1430,10 +1434,9 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen>
     with TickerProviderStateMixin {
-  
   int _currentIndex = 2;
   String currentLogin = "235305975";
-  
+
   bool isRunning = false;
   double profit = 0.0;
   String symbol = "XAUUSD";
@@ -1453,23 +1456,34 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   int _imageIndex = 0;
   Timer? _imageTimer;
-  final List<String> _images = ['assets/images/5.png', 'assets/images/8.png'];
+  final List<String> _images = [
+    'assets/images/5.png',
+    'assets/images/8.png',
+  ];
 
   DatabaseReference? _dbRef;
   DatabaseReference? _alertsRef;
   DatabaseReference? _logsRef;
   DatabaseReference? _ordersRef;
 
-  late final AnimationController _bounceController = AnimationController(
+  StreamSubscription<dynamic>? _overlayCommandSubscription;
+
+  late final AnimationController _bounceController =
+      AnimationController(
     duration: const Duration(milliseconds: 1200),
     vsync: this,
   )..repeat(reverse: true);
 
-  late final Animation<double> _bounceAnimation = Tween<double>(begin: 0, end: 6).animate(
-    CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut),
+  late final Animation<double> _bounceAnimation =
+      Tween<double>(begin: 0, end: 6).animate(
+    CurvedAnimation(
+      parent: _bounceController,
+      curve: Curves.easeInOut,
+    ),
   );
 
-  late final AnimationController _scannerController = AnimationController(
+  late final AnimationController _scannerController =
+      AnimationController(
     duration: const Duration(seconds: 2),
     vsync: this,
   )..repeat(reverse: true);
@@ -1477,8 +1491,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   @override
   void initState() {
     super.initState();
-    
-    _startFloatingOverlay(); // เรียกสั่งเปิดบอลลูนลอยนอกแอป
+
+    _listenToOverlayCommands();
+    _startFloatingOverlay();
 
     _loadSavedLogin().then((_) {
       if (!mounted) return;
@@ -1491,43 +1506,158 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       _listenToOrdersForDialog();
     });
 
-    _imageTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (mounted) {
+    _imageTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (timer) {
+        if (!mounted) return;
+
         setState(() {
           _imageIndex = (_imageIndex + 1) % _images.length;
         });
+      },
+    );
+  }
+
+  // ==========================================
+  // ส่งข้อมูลสถานะจาก Main Screen ไปยัง Overlay
+  // ==========================================
+  Future<void> _sendOverlayData() async {
+    try {
+      final ordersProfit = activeOrders.fold<double>(
+        0.0,
+        (sum, item) =>
+            sum +
+            (double.tryParse(
+                  item['profit']?.toString() ?? '0',
+                ) ??
+                0.0),
+      );
+
+      final totalLots = activeOrders.fold<double>(
+        0.0,
+        (sum, item) =>
+            sum +
+            (double.tryParse(
+                  item['lot']?.toString() ?? '0',
+                ) ??
+                0.0),
+      );
+
+      await FlutterOverlayWindow.shareData({
+        'type': 'snapshot',
+        'login': currentLogin,
+        'running': isRunning,
+        'connected': isConnected,
+        'symbol': symbol,
+        'timeframe': timeframe,
+        'profit': profit,
+        'ordersCount': activeOrders.length,
+        'ordersProfit': ordersProfit,
+        'totalLots': totalLots,
+        'showStatus': _isLiveStatusVisible,
+        'logs': _botLogs.take(100).map((log) {
+          return {
+            'key': log['key']?.toString() ?? '',
+            'message': log['message']?.toString() ?? '',
+          };
+        }).toList(),
+      });
+    } catch (e) {
+      debugPrint('Send overlay data error: $e');
+    }
+  }
+
+  // ==========================================
+  // เปิดบอลลูนลอยทับแอปอื่น
+  // ==========================================
+  Future<void> _startFloatingOverlay() async {
+    try {
+      bool granted =
+          await FlutterOverlayWindow.isPermissionGranted() ?? false;
+
+      if (!granted) {
+        final result =
+            await FlutterOverlayWindow.requestPermission();
+
+        if (result != true) return;
+
+        granted =
+            await FlutterOverlayWindow.isPermissionGranted() ?? false;
+      }
+
+      if (!granted) return;
+
+      final active = await FlutterOverlayWindow.isActive();
+
+      if (!active) {
+        await FlutterOverlayWindow.showOverlay(
+          height: 680,
+          width: 360,
+          enableDrag: true,
+          overlayTitle: 'GOLD PRO',
+          overlayContent: 'STATUS & LOGS',
+          alignment: OverlayAlignment.topRight,
+          flag: OverlayFlag.defaultFlag,
+          visibility: NotificationVisibility.visibilityPublic,
+          positionGravity: PositionGravity.none,
+        );
+      }
+
+      await Future.delayed(
+        const Duration(milliseconds: 400),
+      );
+
+      await _sendOverlayData();
+    } catch (e) {
+      debugPrint('Error starting overlay: $e');
+    }
+  }
+
+  // ==========================================
+  // รับคำสั่งจาก Overlay
+  // ==========================================
+  void _listenToOverlayCommands() {
+    _overlayCommandSubscription?.cancel();
+
+    _overlayCommandSubscription =
+        FlutterOverlayWindow.overlayListener.listen((event) {
+      if (!mounted || event is! Map) return;
+
+      final data = Map<String, dynamic>.from(event);
+      if (data['type'] != 'command') return;
+
+      final command = data['command']?.toString() ?? '';
+      final key = data['key']?.toString() ?? '';
+
+      switch (command) {
+        case 'request_snapshot':
+          _sendOverlayData();
+          break;
+
+        case 'delete_log':
+          if (key.isNotEmpty) {
+            _clearLogItem(key);
+          }
+          break;
+
+        case 'clear_all_logs':
+          _clearAllLogs();
+          break;
+
+        case 'toggle_status':
+          setState(() {
+            _isLiveStatusVisible = !_isLiveStatusVisible;
+          });
+          _sendOverlayData();
+          break;
       }
     });
   }
 
-  Future<void> _startFloatingOverlay() async {
-    try {
-      bool? isGranted = await FlutterOverlayWindow.isPermissionGranted();
-      if (isGranted == false) {
-        await FlutterOverlayWindow.requestPermission();
-      } else {
-        bool isActive = await FlutterOverlayWindow.isActive();
-        if (!isActive) {
-          await FlutterOverlayWindow.showOverlay(
-            height: 60,
-            width: 60,
-            alignment: OverlayAlignment.topRight,
-            flag: OverlayFlag.defaultFlag,
-            visibility: NotificationVisibility.visibilityPublic,
-            positionGravity: PositionGravity.none,
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint("Error starting overlay: $e");
-    }
-  }
-
-
-
   @override
   void dispose() {
     _imageTimer?.cancel();
+    _overlayCommandSubscription?.cancel();
     _bounceController.dispose();
     _scannerController.dispose();
     super.dispose();
@@ -1567,6 +1697,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           _initFirebaseAndListen();
           _listenToLogs();
           _listenToOrdersForDialog();
+          _sendOverlayData();
         }
       });
     } catch (e) {
@@ -1634,11 +1765,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             final rawProfit = data['profit'];
             profit = rawProfit is num
                 ? rawProfit.toDouble()
-                : double.tryParse(rawProfit?.toString() ?? '0') ?? 0.0;
+                : double.tryParse(
+                      rawProfit?.toString() ?? '0',
+                    ) ??
+                    0.0;
 
             symbol = data['symbol']?.toString() ?? 'BTCUSD';
             timeframe = data['timeframe']?.toString() ?? 'M1';
           });
+
+          _sendOverlayData();
         }
       });
     } catch (e) {
@@ -1662,6 +1798,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           setState(() {
             isConnected = connected;
           });
+
+          _sendOverlayData();
         }
       });
     } catch (e) {
@@ -1728,6 +1866,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         setState(() {
           _botLogs = tempLogs;
         });
+
+        _sendOverlayData();
       });
     } catch (e) {
       debugPrint("Logs listen error: $e");
@@ -1754,13 +1894,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         if (data is Map) {
           data.forEach((key, value) {
             if (value is Map) {
-              newOrders.add(Map<dynamic, dynamic>.from(value));
+              newOrders.add(
+                Map<dynamic, dynamic>.from(value),
+              );
             }
           });
         } else if (data is List) {
           for (final item in data) {
             if (item is Map) {
-              newOrders.add(Map<dynamic, dynamic>.from(item));
+              newOrders.add(
+                Map<dynamic, dynamic>.from(item),
+              );
             }
           }
         }
@@ -1768,6 +1912,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         setState(() {
           activeOrders = newOrders;
         });
+
+        _sendOverlayData();
       });
     } catch (e) {
       debugPrint("Orders listen error: $e");
@@ -1794,6 +1940,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             _botLogs.clear();
           });
         }
+
+        _sendOverlayData();
       }
     } catch (e) {
       debugPrint("Clear all logs error: $e");
@@ -1941,7 +2089,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 ),
               ),
             ),
-            
+
             if (_isLargeLogsModalOpen)
               Positioned(
                 left: _modalOffset.dx,
@@ -1979,7 +2127,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                             vertical: 10.0,
                           ),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
                             children: [
                               const Row(
                                 children: [
@@ -2017,8 +2166,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                         _isLiveStatusVisible =
                                             !_isLiveStatusVisible;
                                       });
+                                      _sendOverlayData();
                                     },
-                                    constraints: const BoxConstraints(),
+                                    constraints:
+                                        const BoxConstraints(),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 6,
                                     ),
@@ -2031,7 +2182,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                         size: 20,
                                       ),
                                       onPressed: _clearAllLogs,
-                                      constraints: const BoxConstraints(),
+                                      constraints:
+                                          const BoxConstraints(),
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 6,
                                       ),
@@ -2047,7 +2199,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                         _isLargeLogsModalOpen = false;
                                       });
                                     },
-                                    constraints: const BoxConstraints(),
+                                    constraints:
+                                        const BoxConstraints(),
                                     padding: EdgeInsets.zero,
                                   ),
                                 ],
@@ -2064,7 +2217,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                           child: Padding(
                             padding: const EdgeInsets.all(12.0),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
                               children: [
                                 if (_isLiveStatusVisible) ...[
                                   _buildStatusReportBox(
@@ -2115,10 +2269,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                       itemCount: _botLogs.length,
                                       itemBuilder: (context, index) {
                                         final log = _botLogs[index];
-                                        final bool isLatest = index == 0;
+                                        final bool isLatest =
+                                            index == 0;
 
                                         return Padding(
-                                          padding: const EdgeInsets.only(
+                                          padding:
+                                              const EdgeInsets.only(
                                             bottom: 8.0,
                                           ),
                                           child: Row(
@@ -2134,29 +2290,36 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                                         children: [
                                                           const Text(
                                                             '➔ ',
-                                                            style: TextStyle(
-                                                              color: kGreenNeon,
+                                                            style:
+                                                                TextStyle(
+                                                              color:
+                                                                  kGreenNeon,
                                                               fontSize: 13,
                                                               fontWeight:
-                                                                  FontWeight.bold,
+                                                                  FontWeight
+                                                                      .bold,
                                                             ),
                                                           ),
                                                           Expanded(
-                                                            child: TypewriterText(
+                                                            child:
+                                                                TypewriterText(
                                                               text:
                                                                   '${log['message']}',
                                                               speed:
                                                                   const Duration(
-                                                                milliseconds: 65,
+                                                                milliseconds:
+                                                                    65,
                                                               ),
                                                               style:
                                                                   const TextStyle(
-                                                                color: kGreenNeon,
+                                                                color:
+                                                                    kGreenNeon,
                                                                 fontFamily:
                                                                     'monospace',
                                                                 fontSize: 13,
                                                                 fontWeight:
-                                                                    FontWeight.bold,
+                                                                    FontWeight
+                                                                        .bold,
                                                                 height: 1.4,
                                                               ),
                                                             ),
@@ -2165,9 +2328,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                                       )
                                                     : Text(
                                                         "> ${log['message']}",
-                                                        style: const TextStyle(
-                                                          color: Colors.white,
-                                                          fontFamily: 'monospace',
+                                                        style:
+                                                            const TextStyle(
+                                                          color:
+                                                              Colors.white,
+                                                          fontFamily:
+                                                              'monospace',
                                                           fontSize: 13,
                                                           fontWeight:
                                                               FontWeight.bold,
@@ -2181,7 +2347,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                                   log['key'].toString(),
                                                 ),
                                                 child: const Padding(
-                                                  padding: EdgeInsets.only(
+                                                  padding:
+                                                      EdgeInsets.only(
                                                     left: 8.0,
                                                   ),
                                                   child: Icon(
@@ -2222,9 +2389,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   onPointerMove: (pointerEvent) {
                     setState(() {
                       _robotBubbleOffset = Offset(
-                        (_robotBubbleOffset.dx + pointerEvent.delta.dx)
+                        (_robotBubbleOffset.dx +
+                                pointerEvent.delta.dx)
                             .clamp(0.0, screenSize.width - 60),
-                        (_robotBubbleOffset.dy + pointerEvent.delta.dy)
+                        (_robotBubbleOffset.dy +
+                                pointerEvent.delta.dy)
                             .clamp(40.0, screenSize.height - 120),
                       );
                     });
@@ -2238,7 +2407,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     onTapUp: (_) {
                       setState(() {
                         _isRobotBubblePressed = false;
-                        _isLargeLogsModalOpen = !_isLargeLogsModalOpen;
+                        _isLargeLogsModalOpen =
+                            !_isLargeLogsModalOpen;
                       });
                     },
                     onTapCancel: () {
@@ -2248,7 +2418,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     },
                     child: AnimatedScale(
                       scale: _isRobotBubblePressed ? 0.85 : 1.0,
-                      duration: const Duration(milliseconds: 100),
+                      duration:
+                          const Duration(milliseconds: 100),
                       child: _buildRobotBubbleWidget(),
                     ),
                   ),
@@ -2296,7 +2467,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 width: 54,
                 height: 54,
                 errorBuilder: (context, error, stackTrace) {
-                  return const Icon(Icons.smart_toy, color: kGoldPrimary);
+                  return const Icon(
+                    Icons.smart_toy,
+                    color: kGoldPrimary,
+                  );
                 },
               ),
             ),
@@ -2366,14 +2540,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                         fit: StackFit.expand,
                         children: [
                           AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 800),
+                            duration:
+                                const Duration(milliseconds: 800),
                             child: Image.asset(
                               scanImage,
                               key: ValueKey<String>(scanImage),
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: 150,
-                              errorBuilder: (context, error, stackTrace) {
+                              errorBuilder:
+                                  (context, error, stackTrace) {
                                 return const ColoredBox(
                                   color: Colors.black,
                                   child: Center(
@@ -2431,7 +2607,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                           width: 8,
                           height: 8,
                           decoration: BoxDecoration(
-                            color: isServerActive ? kGreenNeon : kRedNeon,
+                            color: isServerActive
+                                ? kGreenNeon
+                                : kRedNeon,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
@@ -2451,8 +2629,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                 ? 'EA SERVER ONLINE & RUNNING'
                                 : 'EA SERVER OFFLINE / STOPPED',
                             style: TextStyle(
-                              color:
-                                  isServerActive ? kGreenNeon : kRedNeon,
+                              color: isServerActive
+                                  ? kGreenNeon
+                                  : kRedNeon,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.8,
@@ -2467,7 +2646,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                       height: 6,
                     ),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'Active Orders: $orderCount',
@@ -2512,6 +2692,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 setState(() {
                   _isLiveStatusVisible = false;
                 });
+                _sendOverlayData();
               },
               child: Container(
                 padding: const EdgeInsets.all(4),
@@ -2566,7 +2747,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? kGoldPrimary : Colors.transparent,
+            color: isSelected
+                ? kGoldPrimary
+                : Colors.transparent,
             width: isSelected ? 1.5 : 0,
           ),
           boxShadow: isSelected
@@ -2587,7 +2770,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               children: [
                 Icon(
                   icon,
-                  color: isSelected ? kGoldPrimary : Colors.white70,
+                  color: isSelected
+                      ? kGoldPrimary
+                      : Colors.white70,
                   size: 22,
                 ),
                 if (badgeCount > 0)
@@ -2621,10 +2806,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? kGoldPrimary : Colors.white70,
+                color: isSelected
+                    ? kGoldPrimary
+                    : Colors.white70,
                 fontSize: 10,
-                fontWeight:
-                    isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight: isSelected
+                    ? FontWeight.bold
+                    : FontWeight.normal,
                 fontFamily: 'monospace',
               ),
             ),
