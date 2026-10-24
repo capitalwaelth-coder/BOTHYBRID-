@@ -52,9 +52,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
   String currentLogin = "235305975";
   bool isRunning = false;
   bool isConnected = false;
-  String symbol = "XAUUSD";
-  String timeframe = "M1";
-  double profit = 0.0;
+  
   List<Map<String, dynamic>> _botLogs = [];
 
   final List<String> _images = [
@@ -64,11 +62,10 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
   ];
   int _imageIndex = 0; 
   Timer? _imageTimer; 
-  bool _isLiveStatusVisible = true;
 
   DatabaseReference? _logsRef;
 
-  // ตัวควบคุมเอฟเฟกต์สแกนภาพเหมือนหน้าหลัก
+  // ตัวควบคุมเอฟเฟกต์สแกนภาพ
   late final AnimationController _scannerController = AnimationController(
     duration: const Duration(seconds: 2),
     vsync: this,
@@ -79,7 +76,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
     super.initState();
     _initFirebaseForOverlay();
 
-    // ตัวเปลี่ยนรูปภาพ Live Status อัตโนมัติทุก 3 วินาที
+    // ตัวเปลี่ยนรูปภาพอัตโนมัติทุก 3 วินาที
     _imageTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (mounted) {
         setState(() {
@@ -88,7 +85,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
       }
     });
 
-    // รับข้อมูลแบบ Real-time จากแอปหลัก
+    // รับข้อมูล Real-time จากแอปหลัก
     FlutterOverlayWindow.overlayListener.listen((event) {
       if (event is Map) {
         final data = Map<String, dynamic>.from(event);
@@ -97,10 +94,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
             currentLogin = data['login']?.toString() ?? currentLogin;
             isRunning = data['running'] ?? isRunning;
             isConnected = data['connected'] ?? isConnected;
-            symbol = data['symbol']?.toString() ?? symbol;
-            timeframe = data['timeframe']?.toString() ?? timeframe;
-            profit = double.tryParse(data['profit']?.toString() ?? '0') ?? profit;
-            _isLiveStatusVisible = data['showStatus'] ?? _isLiveStatusVisible;
+            
             if (data['logs'] is List) {
               _botLogs = List<Map<String, dynamic>>.from(data['logs']);
             }
@@ -166,7 +160,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
 
   @override
   Widget build(BuildContext context) {
-    // ดึงข้อความ Log ล่าสุดมาแสดง แทนที่ข้อความเซิร์ฟเวอร์เดิม
+    // ข้อความ Log ล่าสุดสำหรับแสดงแจ้งเตือนระบบ
     final String latestLogMessage = _botLogs.isNotEmpty 
         ? _botLogs.last['message'].toString() 
         : ((isConnected && isRunning) ? 'EA SERVER ONLINE & RUNNING' : 'EA SERVER OFFLINE / STOPPED');
@@ -177,236 +171,144 @@ class _FullOverlayContentState extends State<FullOverlayContent> with TickerProv
         alignment: Alignment.center,
         children: [
           if (_isExpanded)
-            Positioned(
-              left: 10,
-              top: 30,
-              right: 10,
-              bottom: 30,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFFFD700), width: 2.0),
-                  color: const Color(0xFF161616).withOpacity(0.95),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black87, blurRadius: 20, spreadRadius: 2),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.terminal, color: Color(0xFFFFD700), size: 18),
-                              SizedBox(width: 8),
-                              Text(
-                                'STATUS & LOGS',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFFFFD700),
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: Icon(
-                                  _isLiveStatusVisible ? Icons.visibility : Icons.visibility_off,
-                                  color: _isLiveStatusVisible ? const Color(0xFF00E676) : Colors.grey,
-                                  size: 20,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _isLiveStatusVisible = !_isLiveStatusVisible;
-                                  });
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                                onPressed: () async {
-                                  setState(() {
-                                    _isExpanded = false;
-                                  });
-                                  await FlutterOverlayWindow.showOverlay(
-                                    height: 60,
-                                    width: 60,
-                                    enableDrag: true,
-                                    overlayTitle: 'GOLD PRO',
-                                    overlayContent: 'BUBBLE',
-                                    alignment: OverlayAlignment.topRight,
-                                    flag: OverlayFlag.defaultFlag,
-                                    visibility: NotificationVisibility.visibilityPublic,
-                                    positionGravity: PositionGravity.none,
+            Center(
+              child: SizedBox(
+                width: 310,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161616).withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFFFD700), width: 2.0),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black87, blurRadius: 15, spreadRadius: 2),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ส่วนกล่องรูปภาพสแกนสามเกลอ
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                        child: Stack(
+                          children: [
+                            Container(
+                              height: 120,
+                              width: double.infinity,
+                              color: Colors.black,
+                              child: AnimatedBuilder(
+                                animation: _scannerController,
+                                builder: (context, child) {
+                                  final double scanValue = _scannerController.value * 120;
+                                  final String scanImage = _images[_imageIndex];
+
+                                  return Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      Image.asset(
+                                        scanImage,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => const ColoredBox(color: Colors.black),
+                                      ),
+                                      Positioned(
+                                        top: scanValue.clamp(0.0, 117.0),
+                                        left: 0,
+                                        right: 0,
+                                        child: Container(
+                                          height: 3,
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFFFD700),
+                                            boxShadow: [
+                                              BoxShadow(color: Color(0xFFFFD700), blurRadius: 8, spreadRadius: 2),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   );
                                 },
                               ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(color: Color(0xFFFFD700), height: 1, thickness: 1.5),
-                    
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (_isLiveStatusVisible) ...[
-                              Container(
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF161616).withOpacity(0.9),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: const Color(0xFFFFD700), width: 2.0),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                      child: Stack(
-                                        children: [
-                                          Container(
-                                            height: 130,
-                                            width: double.infinity,
-                                            color: Colors.black,
-                                            child: AnimatedBuilder(
-                                              animation: _scannerController,
-                                              builder: (context, child) {
-                                                final double scanValue = _scannerController.value * 130;
-                                                final String scanImage = _images[_imageIndex];
-
-                                                return Stack(
-                                                  fit: StackFit.expand,
-                                                  children: [
-                                                    Image.asset(
-                                                      scanImage,
-                                                      fit: BoxFit.cover,
-                                                      errorBuilder: (context, error, stackTrace) => const ColoredBox(color: Colors.black),
-                                                    ),
-                                                    Positioned(
-                                                      top: scanValue.clamp(0.0, 127.0),
-                                                      left: 0,
-                                                      right: 0,
-                                                      child: Container(
-                                                        height: 3,
-                                                        decoration: const BoxDecoration(
-                                                          color: Color(0xFFFFD700),
-                                                          boxShadow: [
-                                                            BoxShadow(color: Color(0xFFFFD700), blurRadius: 8, spreadRadius: 2),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                          // ปุ่มถังขยะ ย้ายมาวางมุมขวาบนของกรอบรูปภาพตามต้องการ
-                                          Positioned(
-                                            top: 8,
-                                            right: 8,
-                                            child: GestureDetector(
-                                              onTap: _clearAllLogs,
-                                              child: Container(
-                                                padding: const EdgeInsets.all(6),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.black.withOpacity(0.6),
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(color: const Color(0xFFFF1744), width: 1.5),
-                                                ),
-                                                child: const Icon(
-                                                  Icons.delete_sweep,
-                                                  color: Color(0xFFFF1744),
-                                                  size: 18,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.all(10.0),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'LIVE STATUS',
-                                            style: TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.2),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              Container(
-                                                width: 8,
-                                                height: 8,
-                                                decoration: BoxDecoration(
-                                                  color: (isConnected && isRunning) ? const Color(0xFF00E676) : const Color(0xFFFF1744),
-                                                  shape: BoxShape.circle,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 6),
-                                              Expanded(
-                                                child: Text(
-                                                  latestLogMessage,
-                                                  style: const TextStyle(
-                                                    color: Color(0xFF00E676),
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontFamily: 'monospace',
-                                                  ),
-                                                  maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 6),
-                                          const Divider(color: Colors.white24, height: 4),
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text('Symbol: $symbol', style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
-                                              Text('TF: $timeframe', style: const TextStyle(color: Colors.white70, fontSize: 10)),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
+                            ),
+                            // ปุ่มถังขยะสำหรับล้าง Log มุมขวาบนของรูป
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: GestureDetector(
+                                onTap: _clearAllLogs,
+                                child: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.7),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: const Color(0xFFFF1744), width: 1.5),
+                                  ),
+                                  child: const Icon(
+                                    Icons.delete_sweep,
+                                    color: Color(0xFFFF1744),
+                                    size: 16,
+                                  ),
                                 ),
                               ),
-                            ],
+                            ),
                           ],
                         ),
                       ),
-                    ),
-                  ],
+
+                      // ส่วนแสดงข้อความแจ้งเตือนระบบ
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'LIVE STATUS',
+                              style: TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.2),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: BoxDecoration(
+                                    color: (isConnected && isRunning) ? const Color(0xFF00E676) : const Color(0xFFFF1744),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    latestLogMessage,
+                                    style: const TextStyle(
+                                      color: Color(0xFF00E676),
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'monospace',
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             )
           else
-            // ตัวบอลลูนกลมๆ เมื่อกดแล้วขยายหน้าต่าง
+            // ตัวบอลลูนกลมๆ เมื่อพับเก็บ
             GestureDetector(
               onTap: () async {
                 setState(() {
                   _isExpanded = true;
                 });
                 await FlutterOverlayWindow.showOverlay(
-                  height: 280,
-                  width: 380,
+                  height: 190, // ปรับลดความสูงให้พอดีกับเนื้อหาใหม่ที่ไม่มี Symbol/TF
+                  width: 310,
                   enableDrag: true,
                   overlayTitle: 'GOLD PRO',
                   overlayContent: 'LOGS',
