@@ -1417,9 +1417,6 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 
-
-
-
 // ==========================================
 // #6 โหมดควบคุมแดชบอร์ด (MainNavigationScreen)
 // ==========================================
@@ -1618,17 +1615,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         case 'request_snapshot':
           _sendOverlayData();
           break;
-
         case 'delete_log':
-          if (key.isNotEmpty) {
-            _clearLogItem(key);
-          }
+          if (key.isNotEmpty) _clearLogItem(key);
           break;
-
         case 'clear_all_logs':
           _clearAllLogs();
           break;
-
         case 'toggle_status':
           setState(() {
             _isLiveStatusVisible = !_isLiveStatusVisible;
@@ -1702,7 +1694,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
         if (data != null && mounted) {
           int total = 0;
-
           if (data is Map) {
             total = data.length;
           } else if (data is List) {
@@ -1743,12 +1734,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
           setState(() {
             isRunning = data['is_running'] == true;
-
             final rawProfit = data['profit'];
             profit = rawProfit is num
                 ? rawProfit.toDouble()
                 : double.tryParse(rawProfit?.toString() ?? '0') ?? 0.0;
-
             symbol = data['symbol']?.toString() ?? 'BTCUSD';
             timeframe = data['timeframe']?.toString() ?? 'M1';
           });
@@ -1776,7 +1765,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           setState(() {
             isConnected = connected;
           });
-
           _sendOverlayData();
         }
       });
@@ -1797,7 +1785,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
       _logsRef?.onValue.listen((DatabaseEvent event) {
         final data = event.snapshot.value;
-
         if (!mounted) return;
 
         List<Map<String, dynamic>> tempLogs = [];
@@ -1813,7 +1800,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 RegExp(r'command\s*', caseSensitive: false),
                 '',
               );
-
               tempLogs.add({
                 'key': entry.key.toString(),
                 'message': cleanMsg,
@@ -1828,7 +1814,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 RegExp(r'command\s*', caseSensitive: false),
                 '',
               );
-
               tempLogs.add({
                 'key': i.toString(),
                 'message': cleanMsg,
@@ -1860,7 +1845,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
       _ordersRef?.onValue.listen((DatabaseEvent event) {
         final data = event.snapshot.value;
-
         if (!mounted) return;
 
         List<Map<dynamic, dynamic>> newOrders = [];
@@ -1904,13 +1888,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     try {
       if (_logsRef != null) {
         await _logsRef!.remove();
-
         if (mounted) {
           setState(() {
             _botLogs.clear();
           });
         }
-
         _sendOverlayData();
       }
     } catch (e) {
@@ -1947,7 +1929,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         accountLogin: currentLogin,
         onAlertsRead: () {
           if (!mounted) return;
-
           setState(() {
             unreadAlertsCount = 0;
           });
@@ -1957,18 +1938,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
     final double totalOrdersProfit = activeOrders.fold(
       0.0,
-      (sum, item) {
-        return sum +
-            (double.tryParse(item['profit']?.toString() ?? '0.0') ?? 0.0);
-      },
+      (sum, item) =>
+          sum + (double.tryParse(item['profit']?.toString() ?? '0.0') ?? 0.0),
     );
 
     final double totalLots = activeOrders.fold(
       0.0,
-      (sum, item) {
-        return sum +
-            (double.tryParse(item['lot']?.toString() ?? '0.0') ?? 0.0);
-      },
+      (sum, item) =>
+          sum + (double.tryParse(item['lot']?.toString() ?? '0.0') ?? 0.0),
     );
 
     final bool isTotalProfit = totalOrdersProfit >= 0;
@@ -2325,6 +2302,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 ),
               ),
 
+            // บอลลูนลอย (พร้อมให้กดและลากได้ปกติ)
             Positioned(
               left: _robotBubbleOffset.dx,
               top: _robotBubbleOffset.dy,
@@ -2745,6 +2723,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
 
 
 
