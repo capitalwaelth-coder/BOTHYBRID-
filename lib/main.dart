@@ -106,7 +106,7 @@ void overlayMain() {
 }
 
 // ==========================================
-// FULL OVERLAY CONTENT
+// FULL OVERLAY CONTENT (ฉบับแก้ไขเชื่อมต่อ Firebase และ Logs สมบูรณ์)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -132,8 +132,10 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   List<Map<String, dynamic>> _botLogs = [];
 
   DatabaseReference? _logsRef;
+  DatabaseReference? _statusRef;
 
   StreamSubscription<DatabaseEvent>? _logsSubscription;
+  StreamSubscription<DatabaseEvent>? _statusSubscription;
   StreamSubscription<DatabaseEvent>? _connectionSubscription;
   StreamSubscription? _overlaySubscription;
 
@@ -162,74 +164,33 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   @override
   void initState() {
     super.initState();
-
     _initFirebaseForOverlay();
 
+    // ฟังข้อมูลที่ส่งมาจากแอปหลัก (ถ้ามี)
     _overlaySubscription =
         FlutterOverlayWindow.overlayListener.listen((event) {
       if (!mounted || event == null) return;
 
       try {
         dynamic decoded = event;
-
         if (decoded is String) {
           decoded = jsonDecode(decoded);
         }
-
         if (decoded is! Map) return;
 
         final data = Map<String, dynamic>.from(decoded);
-
         final String? newLogin =
             (data['login'] ?? data['currentLogin'])?.toString();
 
-        final dynamic runningValue = data['isRunning'] ??
-            data['running'];
-
-        final dynamic connectedValue = data['isConnected'] ??
-            data['connected'];
-
         setState(() {
-          if (newLogin != null && newLogin.isNotEmpty) {
+          if (newLogin != null && newLogin.isNotEmpty && newLogin != currentLogin) {
             currentLogin = newLogin;
-          }
-
-          if (runningValue is bool) {
-            isRunning = runningValue;
-          }
-
-          if (connectedValue is bool) {
-            isConnected = connectedValue;
-          }
-
-          final dynamic logsValue = data['logs'];
-
-          if (logsValue is List) {
-            _botLogs = logsValue.map((item) {
-              if (item is Map) {
-                return Map<String, dynamic>.from(item);
-              }
-
-              return <String, dynamic>{
-                'message': item.toString(),
-              };
-            }).toList();
+            _switchAccount(currentLogin);
           }
         });
-
-        if (newLogin != null &&
-            newLogin.isNotEmpty &&
-            _logsRef?.key != newLogin) {
-          _watchLogs(newLogin);
-        }
       } catch (e) {
         debugPrint('Overlay data error: $e');
       }
-    });
-
-    FlutterOverlayWindow.shareData({
-      'type': 'command',
-      'command': 'request_snapshot',
     });
   }
 
@@ -245,36 +206,26 @@ class _FullOverlayContentState extends State<FullOverlayContent>
             'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
 
+      // 1. เช็คสถานะอินเทอร์เน็ต/การเชื่อมต่อ Firebase
       await _connectionSubscription?.cancel();
-
       _connectionSubscription = database
           .ref('.info/connected')
           .onValue
           .listen((event) {
         if (!mounted) return;
-
         final bool online = event.snapshot.value == true;
-
         if (isConnected != online) {
           setState(() {
             isConnected = online;
           });
         }
-      }, onError: (error) {
-        debugPrint('Firebase connection error: $error');
-
-        if (mounted) {
-          setState(() {
-            isConnected = false;
-          });
-        }
       });
 
-      _watchLogs(currentLogin, database: database);
+      // 2. เริ่มต้นผูกข้อมูลกับบัญชีปัจจุบัน
+      _switchAccount(currentLogin, database: database);
     } catch (e, stackTrace) {
       debugPrint('Overlay Firebase initialization error: $e');
       debugPrint('$stackTrace');
-
       if (mounted) {
         setState(() {
           isConnected = false;
@@ -283,91 +234,78 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  void _watchLogs(
-    String login, {
-    FirebaseDatabase? database,
-  }) {
+  void _switchAccount(String login, {FirebaseDatabase? database}) {
     if (login.isEmpty) return;
 
+    final db = database ??
+        FirebaseDatabase.instanceFor(
+          app: Firebase.app(),
+          databaseURL:
+              'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/**',
+        );
+
+    // ยกเลิก Listener เก่าก่อน
     _logsSubscription?.cancel();
+    _statusSubscription?.cancel();
 
-    try {
-      final db = database ??
-          FirebaseDatabase.instanceFor(
-            app: Firebase.app(),
-            databaseURL:
-                'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-          );
-
-      _logsRef = db.ref('accounts/$login/logs');
-
-      _logsSubscription = _logsRef!.onValue.listen((event) {
-        if (!mounted) return;
-
-        final dynamic value = event.snapshot.value;
-        final List<Map<String, dynamic>> parsedLogs = [];
-
-        if (value is Map) {
-          for (final entry in value.entries) {
-            final dynamic item = entry.value;
-
-            if (item is Map) {
-              final map = Map<String, dynamic>.from(item);
-
-              final dynamic message = map['message'] ??
-                  map['text'] ??
-                  map['log'] ??
-                  map['msg'] ??
-                  item.toString();
-
-              parsedLogs.add({
-                ...map,
-                'message': message.toString(),
-              });
-            } else {
-              parsedLogs.add({
-                'message': item.toString(),
-              });
-            }
-          }
-        } else if (value is List) {
-          for (final item in value) {
-            if (item == null) continue;
-
-            if (item is Map) {
-              final map = Map<String, dynamic>.from(item);
-
-              final dynamic message = map['message'] ??
-                  map['text'] ??
-                  map['log'] ??
-                  map['msg'] ??
-                  item.toString();
-
-              parsedLogs.add({
-                ...map,
-                'message': message.toString(),
-              });
-            } else {
-              parsedLogs.add({
-                'message': item.toString(),
-              });
-            }
-          }
-        } else if (value != null) {
-          parsedLogs.add({
-            'message': value.toString(),
-          });
-        }
-
+    // ฟังสถานะการทำงานของบ็อต (isRunning)
+    _statusRef = db.ref('accounts/$login/status');
+    _statusSubscription = _statusRef!.onValue.listen((event) {
+      if (!mounted) return;
+      final data = event.snapshot.value;
+      if (data is Map) {
         setState(() {
-          _botLogs = parsedLogs;
+          isRunning = data['is_running'] == true;
         });
-      }, onError: (error) {
-        debugPrint('Firebase LOG error: $error');
+      }
+    });
+
+    // ฟังข้อมูล Logs โดยตรงจากพาท accounts/$login/logs
+    _logsRef = db.ref('accounts/$login/logs');
+    _logsSubscription = _logsRef!.onValue.listen((event) {
+      if (!mounted) return;
+
+      final dynamic value = event.snapshot.value;
+      final List<Map<String, dynamic>> parsedLogs = [];
+
+      if (value is Map) {
+        value.forEach((key, item) {
+          if (item is Map) {
+            final map = Map<String, dynamic>.from(item);
+            final String msg = map['message']?.toString() ??
+                map['text']?.toString() ??
+                map['log']?.toString() ??
+                map['msg']?.toString() ??
+                item.toString();
+            parsedLogs.add({...map, 'message': msg});
+          } else if (item != null) {
+            parsedLogs.add({'message': item.toString()});
+          }
+        });
+      } else if (value is List) {
+        for (final item in value) {
+          if (item != null) {
+            if (item is Map) {
+              final map = Map<String, dynamic>.from(item);
+              final String msg = map['message']?.toString() ??
+                  map['text']?.toString() ??
+                  map['log']?.toString() ??
+                  map['msg']?.toString() ??
+                  item.toString();
+              parsedLogs.add({...map, 'message': msg});
+            } else {
+              parsedLogs.add({'message': item.toString()});
+            }
+          }
+        }
+      }
+
+      setState(() {
+        _botLogs = parsedLogs;
       });
-    } catch (e) {
-      debugPrint('Watch LOG error: $e');
-    }
+    }, onError: (error) {
+      debugPrint('Firebase LOG error: $error');
+    });
   }
 
   Future<void> _setExpanded(bool expanded) async {
@@ -379,17 +317,9 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
     try {
       if (expanded) {
-        await FlutterOverlayWindow.resizeOverlay(
-          330,
-          420,
-          true,
-        );
+        await FlutterOverlayWindow.resizeOverlay(320, 400, true);
       } else {
-        await FlutterOverlayWindow.resizeOverlay(
-          90,
-          90,
-          true,
-        );
+        await FlutterOverlayWindow.resizeOverlay(90, 90, true);
       }
     } catch (e) {
       debugPrint('Resize overlay error: $e');
@@ -406,7 +336,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
   Future<void> _moveBalloon(DragUpdateDetails details) async {
     if (_isExpanded || _isMoving) return;
-
     _isMoving = true;
 
     try {
@@ -415,7 +344,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
       if (_overlayX < -600) _overlayX = -600;
       if (_overlayX > 600) _overlayX = 600;
-
       if (_overlayY < -1200) _overlayY = -1200;
       if (_overlayY > 1200) _overlayY = 1200;
 
@@ -429,20 +357,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  Future<void> _clearAllLogs() async {
-    try {
-      await _logsRef?.remove();
-
-      if (mounted) {
-        setState(() {
-          _botLogs.clear();
-        });
-      }
-    } catch (e) {
-      debugPrint('Clear LOG error: $e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -451,12 +365,9 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         backgroundColor: Colors.transparent,
         body: Center(
           child: _isExpanded
-              // ==========================================
-              // หน้าต่างขยายดีไซน์ใหม่ SCALPER V4+ ตามรูป
-              // ==========================================
               ? Container(
-                  width: 320,
-                  height: 400,
+                  width: 300,
+                  height: 200,
                   decoration: BoxDecoration(
                     color: _background,
                     borderRadius: BorderRadius.circular(16),
@@ -474,7 +385,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   ),
                   child: Column(
                     children: [
-                      // ส่วนหัว: แบนเนอร์รูปหุ่นยนต์ 8.png + ชื่อ + ปุ่มปิด (X)
+                      // ส่วนหัวแบนเนอร์และสถานะเซิร์ฟเวอร์
                       Stack(
                         children: [
                           Container(
@@ -555,7 +466,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               ),
                             ),
                           ),
-                          // ปุ่มปิด (X) มุมขวาบน
                           Positioned(
                             right: 8,
                             top: 8,
@@ -580,13 +490,11 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                           ),
                         ],
                       ),
-
                       const Divider(
                         color: Color(0x33FFD700),
                         height: 1,
                       ),
-
-                      // ส่วนแสดงรายการ LOG แบบพิมพ์ดีด
+                      // ส่วนแสดงรายการ Logs
                       Expanded(
                         child: Container(
                           padding: const EdgeInsets.all(8),
@@ -607,12 +515,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                   itemBuilder: (context, index) {
                                     final item = _botLogs[index];
                                     final String message =
-                                        (item['message'] ??
-                                                item['text'] ??
-                                                item['log'] ??
-                                                item['msg'] ??
-                                                item.toString())
-                                            .toString();
+                                        item['message']?.toString() ?? '';
 
                                     return Padding(
                                       padding: const EdgeInsets.only(bottom: 4),
@@ -633,9 +536,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                     ],
                   ),
                 )
-              // ==========================================
-              // บอลลูนวงกลมแบบย่อ (ลากชิดขอบจอได้อิสระ)
-              // ==========================================
               : GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _setExpanded(true),
@@ -647,16 +547,13 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                     animation: _overlayBounceAnimation,
                     builder: (context, child) {
                       return Transform.translate(
-                        offset: Offset(
-                          0,
-                          _overlayBounceAnimation.value,
-                        ),
+                        offset: Offset(0, _overlayBounceAnimation.value),
                         child: child,
                       );
                     },
                     child: Container(
-                      width: 64,
-                      height: 64,
+                      width: 55,
+                      height: 55,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: _background,
@@ -729,6 +626,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   void dispose() {
     _overlayBounceController.dispose();
     _logsSubscription?.cancel();
+    _statusSubscription?.cancel();
     _connectionSubscription?.cancel();
     _overlaySubscription?.cancel();
     super.dispose();
