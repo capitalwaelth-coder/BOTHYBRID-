@@ -418,7 +418,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 top: Radius.circular(15),
                               ),
                               image: DecorationImage(
-                                image: const AssetImage('assets/images/1.jpg'),
+                                image: const AssetImage('assets/images/2.png'),
                                 fit: BoxFit.cover,
                                 onError: (_, __) {},
                               ),
