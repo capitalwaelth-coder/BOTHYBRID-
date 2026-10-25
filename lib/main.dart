@@ -287,7 +287,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  void _watchLogs(
+    void _watchLogs(
     String login, {
     FirebaseDatabase? database,
   }) {
@@ -303,6 +303,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
           );
 
+      // ลองเชื่อมต่อตรงไปที่โหนด logs ของบัญชีปัจจุบัน
       _logsRef = db.ref('accounts/$login/logs');
 
       _logsSubscription = _logsRef!.onValue.listen((event) {
@@ -312,55 +313,40 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         final List<Map<String, dynamic>> parsedLogs = [];
 
         if (value is Map) {
-          for (final entry in value.entries) {
-            final dynamic item = entry.value;
-
-            if (item is Map) {
-              final map = Map<String, dynamic>.from(item);
-
-              final dynamic message = map['message'] ??
-                  map['text'] ??
-                  map['log'] ??
-                  map['msg'] ??
-                  item.toString();
-
-              parsedLogs.add({
-                ...map,
-                'message': message.toString(),
-              });
-            } else {
-              parsedLogs.add({
-                'message': item.toString(),
-              });
+          // เรียงลำดับ Key หรือแปลงข้อมูล Map ให้เป็น List ของ Logs
+          value.forEach((key, item) {
+            if (item != null) {
+              if (item is Map) {
+                final map = Map<String, dynamic>.from(item);
+                final String message = map['message']?.toString() ??
+                    map['text']?.toString() ??
+                    map['log']?.toString() ??
+                    map['msg']?.toString() ??
+                    item.toString();
+                parsedLogs.add({...map, 'message': message});
+              } else {
+                parsedLogs.add({'message': item.toString()});
+              }
             }
-          }
+          });
         } else if (value is List) {
           for (final item in value) {
-            if (item == null) continue;
-
-            if (item is Map) {
-              final map = Map<String, dynamic>.from(item);
-
-              final dynamic message = map['message'] ??
-                  map['text'] ??
-                  map['log'] ??
-                  map['msg'] ??
-                  item.toString();
-
-              parsedLogs.add({
-                ...map,
-                'message': message.toString(),
-              });
-            } else {
-              parsedLogs.add({
-                'message': item.toString(),
-              });
+            if (item != null) {
+              if (item is Map) {
+                final map = Map<String, dynamic>.from(item);
+                final String message = map['message']?.toString() ??
+                    map['text']?.toString() ??
+                    map['log']?.toString() ??
+                    map['msg']?.toString() ??
+                    item.toString();
+                parsedLogs.add({...map, 'message': message});
+              } else {
+                parsedLogs.add({'message': item.toString()});
+              }
             }
           }
         } else if (value != null) {
-          parsedLogs.add({
-            'message': value.toString(),
-          });
+          parsedLogs.add({'message': value.toString()});
         }
 
         setState(() {
@@ -373,6 +359,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       debugPrint('Watch LOG error: $e');
     }
   }
+
 
   Future<void> _setExpanded(bool expanded) async {
     if (!mounted) return;
