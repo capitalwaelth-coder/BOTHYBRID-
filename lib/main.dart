@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// FULL OVERLAY CONTENT (ฉบับสมบูรณ์: เพิ่มกล่องแสดงตัวเลข P/L ตรงกลางแถบเซิร์ฟเวอร์)
+// FULL OVERLAY CONTENT (ฉบับแก้ไข: กล่องเว้าดำเข้มตามธีม + อัปเดต P/L เรียลไทม์)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -127,7 +127,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
   bool isRunning = false;
   bool isConnected = false;
-  double floatingProfit = 0.0; // ตัวแปรเก็บค่ากำไร/ขาดทุน
+  double floatingProfit = 0.0; // ตัวแปรเก็บค่ากำไร/ขาดทุนเรียลไทม์
 
   double _overlayX = 0;
   double _overlayY = 0;
@@ -147,7 +147,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   static const Color _green = Color(0xFF00E676);
   static const Color _red = Color(0xFFFF1744);
 
-  // รายการรูปภาพสำหรับทำสไลด์โชว์ในสแกนเนอร์
   final List<String> _images = [
     'assets/images/2.png',
     'assets/images/4.png',
@@ -173,7 +172,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     ),
   );
 
-  // Animation สำหรับเส้นสแกนเนอร์วิ่งขึ้นลง
   late final AnimationController _scannerController =
       AnimationController(
     duration: const Duration(seconds: 3),
@@ -194,7 +192,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
     _initFirebaseForOverlay();
 
-    // ตัวสลับภาพแบนเนอร์ทุกๆ 3วินาที
     _imageTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (mounted) {
         setState(() {
@@ -221,13 +218,11 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         final String? newLogin =
             (data['login'] ?? data['currentLogin'])?.toString();
 
-        final dynamic runningValue = data['isRunning'] ??
-            data['running'];
-
-        final dynamic connectedValue = data['isConnected'] ??
-            data['connected'];
-
-        final dynamic profitValue = data['floatingProfit'] ?? data['profit'];
+        final dynamic runningValue = data['isRunning'] ?? data['running'];
+        final dynamic connectedValue = data['isConnected'] ?? data['connected'];
+        
+        // รับค่า Profit เรียลไทม์จากแอปหลัก
+        final dynamic profitValue = data['floatingProfit'] ?? data['profit'] ?? data['total_profit'];
 
         setState(() {
           if (newLogin != null && newLogin.isNotEmpty) {
@@ -313,6 +308,25 @@ class _FullOverlayContentState extends State<FullOverlayContent>
           setState(() {
             isConnected = false;
           });
+        }
+      });
+
+      // ฟังค่า Profit โดยตรงจาก Firebase เผื่อกรณีแอปหลักปิดอยู่
+      database.ref('accounts/$currentLogin/status').onValue.listen((event) {
+        if (!mounted) return;
+        final rawData = event.snapshot.value;
+        if (rawData is Map) {
+          final data = Map<dynamic, dynamic>.from(rawData);
+          final dynamic p = data['total_profit'] ?? data['profit'] ?? data['open_profit'];
+          if (p != null) {
+            setState(() {
+              if (p is num) {
+                floatingProfit = p.toDouble();
+              } else if (p is String) {
+                floatingProfit = double.tryParse(p) ?? floatingProfit;
+              }
+            });
+          }
         }
       });
 
@@ -493,7 +507,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   ),
                   child: Column(
                     children: [
-                      // ส่วนแสดงภาพสแกนเนอร์ (Scanner Banner + เปลี่ยนรูปภาพอัตโนมัติ)
+                      // ส่วนแสดงภาพสแกนเนอร์
                       SizedBox(
                         height: 130,
                         width: double.infinity,
@@ -529,7 +543,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                         },
                                       ),
                                     ),
-                                    // เส้นสแกนเนอร์สีทองเลื่อนผ่าน
                                     Positioned(
                                       top: scanValue.clamp(0.0, 127.0),
                                       left: 0,
@@ -556,10 +569,10 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                       ),
 
-                      // แถบสถานะเซิร์ฟเวอร์ + กรอบสีขาวแสดงตัวเลข P/L ตรงกลาง + ปุ่มปิด (X)
+                      // แถบสถานะเซิร์ฟเวอร์ + กล่องเว้าแสดง P/L เข้มจมเรียบหรู + ปุ่มปิด (X)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        color: kDarkCard,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        color: const Color(0xFF1E1E1E),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -581,7 +594,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  isServerActive ? 'SERVER ONLINE' : 'SERVER DISCONNECTED',
+                                  isServerActive ? 'ONLINE' : 'OFFLINE',
                                   style: TextStyle(
                                     color: isServerActive ? _green : _red,
                                     fontSize: 10,
@@ -591,15 +604,26 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               ],
                             ),
 
-                            // กรอบสีขาวสำหรับแสดงตัวเลข P/L เน้นๆ (ไม่มีเครื่องหมาย + - $)
+                            // กล่องเว้าดำเข้มเข้าธีมมืด (Inset Box) ขยายขนาดตามตัวเลขรองรับทุกหลัก
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                               decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
+                                color: Colors.black,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: _gold.withOpacity(0.4),
+                                  width: 1,
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black54,
+                                    blurRadius: 3,
+                                    offset: Offset(0, 1),
+                                  ),
+                                ],
                               ),
                               child: Text(
-                                '${floatingProfit.toStringAsFixed(2)}',
+                                floatingProfit.toStringAsFixed(2),
                                 style: TextStyle(
                                   color: floatingProfit >= 0 ? _green : _red,
                                   fontSize: 11,
@@ -616,9 +640,9 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 _setExpanded(false);
                               },
                               child: Padding(
-                                padding: const EdgeInsets.all(8.0),
+                                padding: const EdgeInsets.all(4.0),
                                 child: Container(
-                                  padding: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.all(5),
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: Colors.black.withOpacity(0.7),
@@ -627,7 +651,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                   child: const Icon(
                                     Icons.close,
                                     color: Colors.white,
-                                    size: 14,
+                                    size: 13,
                                   ),
                                 ),
                               ),
@@ -638,7 +662,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
                       const Divider(color: Color(0x33FFD700), height: 1),
 
-                      // ส่วนแสดงรายการ Logs ดันขึ้นมาเต็มพื้นที่
+                      // ส่วนแสดงรายการ Logs
                       Expanded(
                         child: Container(
                           padding: const EdgeInsets.all(8),
@@ -793,6 +817,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
+
 
 
 
@@ -1606,7 +1631,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 // ==========================================
-// #6 MainNavigationScreen (ฉบับรวมสมบูรณ์: ลบ Logs อัตโนมัติเมื่อครบ 100 ข้อความ)
+// #6 MainNavigationScreen (ฉบับสมบูรณ์: รองรับซิงค์ Profit และลบ Logs อัตโนมัติ)
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -1624,6 +1649,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   bool isRunning = false;
   bool isConnected = false;
+  double floatingProfit = 0.0; // ตัวแปรเก็บค่ากำไร/ขาดทุนเรียลไทม์
   int unreadAlertsCount = 0;
 
   bool _isLaunchingOverlay = false;
@@ -1791,6 +1817,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
           setState(() {
             isRunning = data['is_running'] == true;
+            
+            // ดึงค่ากำไร/ขาดทุนรวมจาก Firebase แบบเรียลไทม์
+            final dynamic p = data['total_profit'] ?? data['profit'] ?? data['open_profit'];
+            if (p is num) {
+              floatingProfit = p.toDouble();
+            } else if (p is String) {
+              floatingProfit = double.tryParse(p) ?? 0.0;
+            }
           });
           
           _shareSnapshotToOverlay();
@@ -1916,7 +1950,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ส่งข้อมูล Snapshot ไปยัง Overlay
+  // ส่งข้อมูล Snapshot รวมถึง floatingProfit ไปยัง Overlay
   void _shareSnapshotToOverlay() {
     try {
       FlutterOverlayWindow.shareData({
@@ -1926,6 +1960,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         'isRunning': isRunning,
         'isConnected': isConnected,
         'connected': isConnected,
+        'floatingProfit': floatingProfit, // ซิงค์ค่า Profit ไปยัง Overlay
         'logs': _botLogs,
       });
     } catch (e) {
@@ -2331,7 +2366,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
-
 
 
 
