@@ -1723,7 +1723,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 
   Future<void> _loadSavedLogin() async {
-    val prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('mt5_login');
 
     if (saved != null && saved.isNotEmpty && mounted) {
