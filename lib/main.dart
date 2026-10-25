@@ -8,7 +8,7 @@ import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // <--- เพิ่มบรรทัดนี้เข้ามาครับ เพื่อแก้ปัญหา SharedPreferences ไม่รู้จัก
+import 'package:shared_preferences/shared_preferences.dart';
 
 const Color kGoldPrimary = Color(0xFFFFD700);
 const Color kGoldAccent = Color(0xFFFFC107);
@@ -17,9 +17,8 @@ const Color kDarkCard = Color(0xFF161616);
 const Color kRedNeon = Color(0xFFFF1744);
 const Color kGreenNeon = Color(0xFF00E676);
 
-
 // ==========================================
-// #0 Widget แสดงข้อความแบบพิมพ์ดีด (Typewriter)
+// #0 Widget แสดงข้อความแบบพิมพ์ดีด (Typewriter) - มีตัวเดียวเท่านั้น
 // ==========================================
 class TypewriterText extends StatefulWidget {
   final String text;
@@ -453,7 +452,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         body: Center(
           child: _isExpanded
               // ==========================================
-              // หน้าต่างขยายดีไซน์ใหม่ตามรูปตัวอย่าง (SCALPER V13+)
+              // หน้าต่างขยายดีไซน์ใหม่ SCALPER V4+ ตามรูป
               // ==========================================
               ? Container(
                   width: 320,
@@ -475,7 +474,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   ),
                   child: Column(
                     children: [
-                      // ส่วนหัว: แบนเนอร์รูปหุ่นยนต์ทอง + ชื่อ + ปุ่มปิด (X)
+                      // ส่วนหัว: แบนเนอร์รูปหุ่นยนต์ 8.png + ชื่อ + ปุ่มปิด (X)
                       Stack(
                         children: [
                           Container(
@@ -486,7 +485,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 top: Radius.circular(15),
                               ),
                               image: DecorationImage(
-                                image: AssetImage('assets/images/8.png'),
+                                image: const AssetImage('assets/images/8.png'),
                                 fit: BoxFit.cover,
                                 onError: (_, __) {},
                               ),
@@ -735,7 +734,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
-
 
 
 // ==========================================
