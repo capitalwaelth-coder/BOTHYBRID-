@@ -19,6 +19,79 @@ const Color kDarkCard = Color(0xFF161616);
 const Color kRedNeon = Color(0xFFFF1744);
 const Color kGreenNeon = Color(0xFF00E676);
 
+
+// ==========================================
+// #0 Widget แสดงข้อความแบบพิมพ์ดีด (Typewriter)
+// ==========================================
+class TypewriterText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+  final Duration duration; // ความเร็วในการพิมพ์แต่ละตัวอักษร
+
+  const TypewriterText({
+    super.key,
+    required this.text,
+    this.style,
+    this.duration = const Duration(milliseconds: 40), // ปรับความเร็วตรงนี้ได้
+  });
+
+  @override
+  State<TypewriterText> createState() => _TypewriterTextState();
+}
+
+class _TypewriterTextState extends State<TypewriterText> {
+  String _displayedText = '';
+  int _currentIndex = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTyping();
+  }
+
+  @override
+  void didUpdateWidget(covariant TypewriterText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // ถ้าข้อความเปลี่ยน ให้เริ่มพิมพ์ใหม่ตั้งแต่ต้น
+    if (oldWidget.text != widget.text) {
+      _timer?.cancel();
+      _currentIndex = 0;
+      _displayedText = '';
+      _startTyping();
+    }
+  }
+
+  void _startTyping() {
+    _timer = Timer.periodic(widget.duration, (timer) {
+      if (_currentIndex < widget.text.length) {
+        if (mounted) {
+          setState(() {
+            _displayedText += widget.text[_currentIndex];
+            _currentIndex++;
+          });
+        }
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SelectableText(
+      _displayedText,
+      style: widget.style,
+    );
+  }
+}
+
 // ==========================================
 // #1.1 โหมดการเชื่อม ระบบ Overlay (แก้ไขแสดง Log และจัดการขนาดถูกต้อง)
 // ==========================================
@@ -64,6 +137,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   bool isRunning = false;
   bool isConnected = false;
 
+  double _overlayX = 0; // เพิ่มพิกัดแกน X สำหรับลากชิดขอบซ้าย-ขวา
   double _overlayY = 0;
 
   List<Map<String, dynamic>> _botLogs = [];
@@ -245,99 +319,92 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   // อ่าน LOG จาก Firebase
   // ==========================================
 
-  // ==========================================
-// อ่าน LOG จาก Firebase
-// ==========================================
+  void _watchLogs(
+    String login, {
+    FirebaseDatabase? database,
+  }) {
+    if (login.isEmpty) return;
 
-void _watchLogs(
-  String login, {
-  FirebaseDatabase? database,
-}) {
-  if (login.isEmpty) return;
+    _logsSubscription?.cancel();
 
-  _logsSubscription?.cancel();
+    try {
+      final db = database ??
+          FirebaseDatabase.instanceFor(
+            app: Firebase.app(),
+            databaseURL:
+                'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+          );
 
-  try {
-    final db = database ??
-        FirebaseDatabase.instanceFor(
-          app: Firebase.app(),
-          databaseURL:
-              'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-        );
+      _logsRef = db.ref('logs/$login');
 
-    // [จุดที่แก้ไข] กำหนดค่า _logsRef ให้ชี้ไปที่ path ของ log บัญชีนั้นๆ เช่น /logs/บัญชี หรือตามโครงสร้าง Database ของคุณ
-    // ตัวอย่างนี้กำหนดให้ชี้ไปที่ path: logs/$login (ปรับเปลี่ยน path ตามโครงสร้าง Firebase จริงของคุณได้เลยครับ)
-    _logsRef = db.ref('logs/$login');
+      _logsSubscription = _logsRef!.onValue.listen((event) {
+        if (!mounted) return;
 
-    _logsSubscription = _logsRef!.onValue.listen((event) {
-      if (!mounted) return;
+        final dynamic value = event.snapshot.value;
+        final List<Map<String, dynamic>> parsedLogs = [];
 
-      final dynamic value = event.snapshot.value;
-      final List<Map<String, dynamic>> parsedLogs = [];
+        if (value is Map) {
+          for (final entry in value.entries) {
+            final dynamic item = entry.value;
 
-      if (value is Map) {
-        for (final entry in value.entries) {
-          final dynamic item = entry.value;
+            if (item is Map) {
+              final map = Map<String, dynamic>.from(item);
 
-          if (item is Map) {
-            final map = Map<String, dynamic>.from(item);
+              final dynamic message = map['message'] ??
+                  map['text'] ??
+                  map['log'] ??
+                  map['msg'] ??
+                  item.toString();
 
-            final dynamic message = map['message'] ??
-                map['text'] ??
-                map['log'] ??
-                map['msg'] ??
-                item.toString();
-
-            parsedLogs.add({
-              ...map,
-              'message': message.toString(),
-            });
-          } else {
-            parsedLogs.add({
-              'message': item.toString(),
-            });
+              parsedLogs.add({
+                ...map,
+                'message': message.toString(),
+              });
+            } else {
+              parsedLogs.add({
+                'message': item.toString(),
+              });
+            }
           }
-        }
-      } else if (value is List) {
-        for (final item in value) {
-          if (item == null) continue;
+        } else if (value is List) {
+          for (final item in value) {
+            if (item == null) continue;
 
-          if (item is Map) {
-            final map = Map<String, dynamic>.from(item);
+            if (item is Map) {
+              final map = Map<String, dynamic>.from(item);
 
-            final dynamic message = map['message'] ??
-                map['text'] ??
-                map['log'] ??
-                map['msg'] ??
-                item.toString();
+              final dynamic message = map['message'] ??
+                  map['text'] ??
+                  map['log'] ??
+                  map['msg'] ??
+                  item.toString();
 
-            parsedLogs.add({
-              ...map,
-              'message': message.toString(),
-            });
-          } else {
-            parsedLogs.add({
-              'message': item.toString(),
-            });
+              parsedLogs.add({
+                ...map,
+                'message': message.toString(),
+              });
+            } else {
+              parsedLogs.add({
+                'message': item.toString(),
+              });
+            }
           }
+        } else if (value != null) {
+          parsedLogs.add({
+            'message': value.toString(),
+          });
         }
-      } else if (value != null) {
-        parsedLogs.add({
-          'message': value.toString(),
+
+        setState(() {
+          _botLogs = parsedLogs;
         });
-      }
-
-      setState(() {
-        _botLogs = parsedLogs;
+      }, onError: (error) {
+        debugPrint('Firebase LOG error: $error');
       });
-    }, onError: (error) {
-      debugPrint('Firebase LOG error: $error');
-    });
-  } catch (e) {
-    debugPrint('Watch LOG error: $e');
+    } catch (e) {
+      debugPrint('Watch LOG error: $e');
+    }
   }
-}
-
 
   // ==========================================
   // เปิด / ย่อหน้าต่าง LOG
@@ -382,22 +449,27 @@ void _watchLogs(
   }
 
   // ==========================================
-  // ลากบอลลูนขึ้นลง
+  // ลากบอลลูนชิดขอบจอ (รองรับทุกทิศทาง ทั้งแนวตั้งและแนวนอน)
   // ==========================================
 
-  Future<void> _moveBalloon(double deltaY) async {
+  Future<void> _moveBalloon(DragUpdateDetails details) async {
     if (_isExpanded || _isMoving) return;
 
     _isMoving = true;
 
     try {
-      _overlayY += deltaY;
+      _overlayX += details.delta.dx;
+      _overlayY += details.delta.dy;
+
+      // ปรับขอบเขตการลากให้กว้างขึ้น เพื่อให้ลากไปชิดขอบจอซ้าย-ขวา และบน-ล่าง ได้สุด
+      if (_overlayX < -600) _overlayX = -600;
+      if (_overlayX > 600) _overlayX = 600;
 
       if (_overlayY < -1200) _overlayY = -1200;
       if (_overlayY > 1200) _overlayY = 1200;
 
       await FlutterOverlayWindow.moveOverlay(
-        OverlayPosition(0.0, _overlayY),
+        OverlayPosition(_overlayX, _overlayY),
       );
     } catch (e) {
       debugPrint('Move overlay error: $e');
@@ -554,7 +626,6 @@ void _watchLogs(
                         height: 1,
                       ),
 
-                      
                       // สถานะ Firebase และบอท
                       Container(
                         margin: const EdgeInsets.symmetric(
@@ -684,8 +755,9 @@ void _watchLogs(
                                       borderRadius:
                                           BorderRadius.circular(7),
                                     ),
-                                    child: SelectableText(
-                                      '> $message',
+                                    child: TypewriterText(
+                                      text: '> $message',
+                                      duration: const Duration(milliseconds: 35),
                                       style: const TextStyle(
                                         color: Color(0xFFE0E0E0),
                                         fontSize: 11,
@@ -717,7 +789,7 @@ void _watchLogs(
                 )
 
               // ==========================================
-              // บอลลูนวงกลมแบบย่อ
+              // บอลลูนวงกลมแบบย่อ (ใช้ onPanUpdate เพื่อลากได้ทุกทิศทาง)
               // ==========================================
               : GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -728,9 +800,9 @@ void _watchLogs(
                   // กดค้าง: ปิดบอลลูน
                   onLongPress: _hideOverlay,
 
-                  // ลากขึ้นลง: ย้ายตำแหน่งบอลลูน
-                  onVerticalDragUpdate: (details) {
-                    _moveBalloon(details.delta.dy);
+                  // ลากอิสระทุกทิศทางเพื่อชิดขอบจอ
+                  onPanUpdate: (details) {
+                    _moveBalloon(details);
                   },
 
                   child: AnimatedBuilder(
@@ -835,6 +907,7 @@ void _watchLogs(
     super.dispose();
   }
 }
+
 
 
 // ==========================================
