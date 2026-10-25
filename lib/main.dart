@@ -106,7 +106,7 @@ void overlayMain() {
 }
 
 // ==========================================
-// FULL OVERLAY CONTENT (ฉบับอัปเดต: มีปุ่มลบแคช Logs และเลื่อนดูประวัติย้อนหลังได้)
+// FULL OVERLAY CONTENT (ฉบับอัปเดต: แก้ไขปัญหา Firebase ซ้ำซ้อน)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -199,21 +199,21 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
   Future<void> _initFirebaseForOverlay() async {
     try {
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp(
-          options: const FirebaseOptions(
-            apiKey: "AIzaSyBnKyMazopUyD1k-kcIXo3bFedWfHXN0JA",
-            appId: "1:155532929563:android:49d8a1e0040dc87ce766be",
-            messagingSenderId: "155532929563",
-            projectId: "liquidity-b8739",
-            storageBucket: "liquidity-b8739.firebasestorage.app",
-            databaseURL: _dbUrl,
-          ),
-        );
-      }
+      final FirebaseApp app = Firebase.apps.isNotEmpty
+          ? Firebase.app()
+          : await Firebase.initializeApp(
+              options: const FirebaseOptions(
+                apiKey: "AIzaSyBnKyMazopUyD1k-kcIXo3bFedWfHXN0JA",
+                appId: "1:155532929563:android:49d8a1e0040dc87ce766be",
+                messagingSenderId: "155532929563",
+                projectId: "liquidity-b8739",
+                storageBucket: "liquidity-b8739.firebasestorage.app",
+                databaseURL: _dbUrl,
+              ),
+            );
 
       final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
+        app: app,
         databaseURL: _dbUrl,
       );
 
@@ -315,7 +315,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     });
   }
 
-  // ฟังก์ชันลบข้อความ Logs ทั้งหมดจากฐานข้อมูลเพื่อล้างแคช
   Future<void> _clearAllLogs() async {
     try {
       await _logsRef?.remove();
@@ -338,7 +337,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
     try {
       if (expanded) {
-        await FlutterOverlayWindow.resizeOverlay(320, 400, true);
+        await FlutterOverlayWindow.resizeOverlay(320, 250, true);
       } else {
         await FlutterOverlayWindow.resizeOverlay(90, 90, true);
       }
@@ -486,7 +485,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               ),
                             ),
                           ),
-                          // ปุ่มล้างแคช Logs (ไอคอนถังขยะ)
                           Positioned(
                             right: 42,
                             top: 8,
@@ -509,7 +507,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               ),
                             ),
                           ),
-                          // ปุ่มปิด (X) มุมขวาบน
                           Positioned(
                             right: 8,
                             top: 8,
@@ -538,7 +535,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         color: Color(0x33FFD700),
                         height: 1,
                       ),
-                      // ส่วนแสดงรายการ Logs พร้อมระบบ Scroll เลื่อนดูย้อนหลัง
                       Expanded(
                         child: Container(
                           padding: const EdgeInsets.all(8),
@@ -679,9 +675,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
-
-
-
 
 // ==========================================
 // #2 โหมดเมนหลักของแอป
