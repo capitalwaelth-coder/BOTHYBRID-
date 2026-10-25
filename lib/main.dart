@@ -245,7 +245,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  void _switchAccount(String login, {FirebaseDatabase? database}) {
+    void _switchAccount(String login, {FirebaseDatabase? database}) {
     if (login.isEmpty) return;
 
     final db = database ??
@@ -257,7 +257,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     _logsSubscription?.cancel();
     _statusSubscription?.cancel();
 
-    _statusRef = db.ref('accounts/$currentLogin/status');
+    // ดึงสถานะ is_running จาก accounts/$login/status
+    _statusRef = db.ref('accounts/$login/status');
     _statusSubscription = _statusRef!.onValue.listen((event) {
       if (!mounted) return;
       final data = event.snapshot.value;
@@ -268,7 +269,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       }
     });
 
-    _logsRef = db.ref('accounts/$currentLogin/logs');
+    // ดึง Logs จาก accounts/$login/logs อย่างถูกต้อง
+    _logsRef = db.ref('accounts/$login/logs');
     _logsSubscription = _logsRef!.onValue.listen((event) {
       if (!mounted) return;
 
@@ -314,6 +316,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       debugPrint('Firebase LOG error: $error');
     });
   }
+
 
   Future<void> _clearAllLogs() async {
     try {
