@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// FULL OVERLAY CONTENT (ย้ายปุ่มไปแถบเซิร์ฟเวอร์ + ลบข้อมูลใน Firebase จริง)
+// FULL OVERLAY CONTENT (ฉบับรวมสมบูรณ์: ปุ่มบนแถบเซิร์ฟเวอร์ + ลบ Server จริง)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -453,12 +453,13 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // ฟังก์ชันลบข้อมูลจริงบน Firebase Database
+  // ส่งคำสั่งเคลียร์ข้อมูล Logs บน Firebase Server จริงผ่านแอปหลัก
   Future<void> _clearAllLogs() async {
     try {
-      if (_logsRef != null) {
-        await _logsRef!.remove();
-      }
+      await FlutterOverlayWindow.shareData({
+        'type': 'command',
+        'command': 'clear_logs',
+      });
 
       if (mounted) {
         setState(() {
@@ -470,7 +471,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // ส่วนขยายกล่องหลังมีข้อความเข้า 
   @override
   Widget build(BuildContext context) {
     final String currentScanImage = _images[_imageIndex];
@@ -502,9 +502,9 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   ),
                   child: Column(
                     children: [
-                      // ส่วนแสดงภาพสแกนเนอร์ (Scanner Banner + เปลี่ยนรูปภาพอัตโนมัติ) เต็มพื้นที่ด้านบน
+                      // ส่วนแสดงภาพสแกนเนอร์ (Scanner Banner + เปลี่ยนรูปภาพอัตโนมัติ)
                       SizedBox(
-                        height: 140,
+                        height: 130,
                         width: double.infinity,
                         child: ClipRRect(
                           borderRadius: const BorderRadius.vertical(
@@ -515,7 +515,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                             child: AnimatedBuilder(
                               animation: _scannerAnimation,
                               builder: (context, child) {
-                                final double scanValue = _scannerAnimation.value * 140;
+                                final double scanValue = _scannerAnimation.value * 130;
 
                                 return Stack(
                                   fit: StackFit.expand,
@@ -527,7 +527,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                         key: ValueKey<String>(currentScanImage),
                                         fit: BoxFit.cover,
                                         width: double.infinity,
-                                        height: 140,
+                                        height: 130,
                                         errorBuilder: (context, error, stackTrace) {
                                           return Container(
                                             color: Colors.black,
@@ -540,7 +540,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                     ),
                                     // เส้นสแกนเนอร์สีทองเลื่อนผ่าน
                                     Positioned(
-                                      top: scanValue.clamp(0.0, 137.0),
+                                      top: scanValue.clamp(0.0, 127.0),
                                       left: 0,
                                       right: 0,
                                       child: Container(
@@ -565,7 +565,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                       ),
 
-                      // สถานะเซิร์ฟเวอร์ย่อย พร้อมย้ายปุ่มถังขยะและปุ่มปิด (X) มาไว้ที่กรอบสีขาวด้านขวา
+                      // สถานะเซิร์ฟเวอร์ย่อย + ปุ่มถังขยะและปุ่มปิด (X)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         color: kDarkCard,
@@ -599,7 +599,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 ),
                               ],
                             ),
-                            // ปุ่มถังขยะและปุ่มปิด ย้ายมาอยู่บนกรอบสีขาวเรียบร้อย
                             Row(
                               children: [
                                 GestureDetector(
@@ -643,7 +642,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
                       const Divider(color: Color(0x33FFD700), height: 1),
 
-                      // ส่วนแสดงรายการ Logs ด้านล่าง ดันขึ้นมาเต็มพื้นที่
+                      // ส่วนแสดงรายการ Logs ดันขึ้นมาเต็มพื้นที่
                       Expanded(
                         child: Container(
                           padding: const EdgeInsets.all(8),
@@ -798,8 +797,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
-
-
 
 
 
@@ -1613,7 +1610,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 // ==========================================
-// #6 MainNavigationScreen (ฉบับเพิ่มฟังก์ชันเคลียร์ Logs บน Firebase และแก้หน่วง)
+// #6 MainNavigationScreen (ฉบับรวมสมบูรณ์: รองรับลบเซิร์ฟเวอร์จริง + ป้องกันเครื่องหน่วง)
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -1675,7 +1672,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       _listenToLogs();
     });
 
-    // เพิ่มตัวรับคำสั่งจากหน้าต่าง Overlay ภายนอก (รวมถึงคำสั่งขอ Snapshot และเคลียร์ Logs)
+    // รับคำสั่งและซิงค์ข้อมูลจากหน้าต่าง Overlay ภายนอก
     FlutterOverlayWindow.overlayListener.listen((event) {
       if (event == null) return;
 
@@ -1689,6 +1686,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           if (decoded['command'] == 'request_snapshot') {
             _shareSnapshotToOverlay();
           } else if (decoded['command'] == 'clear_logs') {
+            // สั่งลบข้อมูลบน Firebase Server จริงๆ และเคลียร์แคช
             _clearAllLogs();
           }
         }
@@ -1834,7 +1832,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ฟังก์ชันดึง Logs และเคลียร์แคชรายการเก่าเพื่อป้องกันเครื่องหน่วง
+  // ฟังข้อมูล Logs และจำกัดไม่เกิน 100 รายการเพื่อป้องกันอาการหน่วง
   void _listenToLogs() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1860,7 +1858,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   ),
             );
 
-          // จำกัดจำนวน Logs ไม่ให้เกิน 100 รายการ เพื่อป้องกันหน่วยความจำรั่วและอาการหน่วง
           int count = 0;
           for (final entry in sortedEntries) {
             if (entry.value != null && count < 100) {
@@ -1907,16 +1904,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ฟังก์ชันลบข้อมูล Logs บน Firebase Server จริงๆ และเคลียร์แคชในเครื่อง
+  // ฟังก์ชันลบข้อมูล Logs บน Firebase Server และเคลียร์แคชในเครื่อง
   Future<void> _clearAllLogs() async {
     try {
       if (_logsRef != null) {
-        await _logsRef!.remove(); // สั่งลบข้อมูลออกจาก Firebase Server ทันที
+        await _logsRef!.remove(); // ลบข้อมูลออกจาก Firebase Server จริงๆ
       }
 
       if (mounted) {
         setState(() {
-          _botLogs.clear(); // เคลียร์แคชรายการในหน่วยความจำแอป
+          _botLogs.clear(); // เคลียร์รายการในแอปหลัก
         });
       }
 
@@ -1926,7 +1923,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ส่งข้อมูล Snapshot ปัจจุบันไปให้ Overlay
+  // ส่งข้อมูล Snapshot ไปยัง Overlay
   void _shareSnapshotToOverlay() {
     try {
       FlutterOverlayWindow.shareData({
