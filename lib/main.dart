@@ -1613,7 +1613,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 // ==========================================
-// #6 MainNavigationScreen (ฉบับอัปเดตซิงค์ Logs ไปยัง Overlay)
+// #6 MainNavigationScreen (ฉบับเพิ่มฟังก์ชันเคลียร์ Logs บน Firebase และแก้หน่วง)
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -1672,13 +1672,28 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       _listenToAlertsCount();
       _initFirebaseAndListen();
       _listenToConnectionStatus();
-      _listenToLogs(); // เพิ่มการฟังข้อมูล Logs จาก Firebase
+      _listenToLogs();
     });
 
-    // เพิ่มตัวรับคำสั่งขอ Snapshot จากหน้าต่าง Overlay ภายนอก
+    // เพิ่มตัวรับคำสั่งจากหน้าต่าง Overlay ภายนอก (รวมถึงคำสั่งขอ Snapshot และเคลียร์ Logs)
     FlutterOverlayWindow.overlayListener.listen((event) {
-      if (event != null && event is Map && event['command'] == 'request_snapshot') {
-        _shareSnapshotToOverlay();
+      if (event == null) return;
+
+      try {
+        dynamic decoded = event;
+        if (decoded is String) {
+          decoded = jsonDecode(decoded);
+        }
+
+        if (decoded is Map) {
+          if (decoded['command'] == 'request_snapshot') {
+            _shareSnapshotToOverlay();
+          } else if (decoded['command'] == 'clear_logs') {
+            _clearAllLogs();
+          }
+        }
+      } catch (e) {
+        debugPrint('Overlay listener error: $e');
       }
     });
   }
@@ -1787,7 +1802,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             isRunning = data['is_running'] == true;
           });
           
-          // ส่งสถานะอัปเดตไปที่ Overlay ด้วย
           _shareSnapshotToOverlay();
         }
       });
@@ -1820,7 +1834,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ฟังก์ชันดึง Logs จาก Firebase และซิงค์ออกไปยัง Overlay ภายนอก
+  // ฟังก์ชันดึง Logs และเคลียร์แคชรายการเก่าเพื่อป้องกันเครื่องหน่วง
   void _listenToLogs() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1846,8 +1860,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   ),
             );
 
+          // จำกัดจำนวน Logs ไม่ให้เกิน 100 รายการ เพื่อป้องกันหน่วยความจำรั่วและอาการหน่วง
+          int count = 0;
           for (final entry in sortedEntries) {
-            if (entry.value != null) {
+            if (entry.value != null && count < 100) {
               final rawMsg = entry.value.toString();
               final cleanMsg = rawMsg.replaceAll(
                 RegExp(r'command\s*', caseSensitive: false),
@@ -1858,10 +1874,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 'key': entry.key.toString(),
                 'message': cleanMsg,
               });
+              count++;
             }
           }
         } else if (data is List) {
-          for (int i = data.length - 1; i >= 0; i--) {
+          int count = 0;
+          for (int i = data.length - 1; i >= 0 && count < 100; i--) {
             if (data[i] != null) {
               final rawMsg = data[i].toString();
               final cleanMsg = rawMsg.replaceAll(
@@ -1873,6 +1891,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 'key': i.toString(),
                 'message': cleanMsg,
               });
+              count++;
             }
           }
         }
@@ -1881,11 +1900,29 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           _botLogs = tempLogs;
         });
 
-        // ส่งข้อมูล Logs ล่าสุดไปแสดงที่หน้าต่าง Overlay ทันทีที่มีการเปลี่ยนแปลง
         _shareSnapshotToOverlay();
       });
     } catch (e) {
       debugPrint("Logs listen error: $e");
+    }
+  }
+
+  // ฟังก์ชันลบข้อมูล Logs บน Firebase Server จริงๆ และเคลียร์แคชในเครื่อง
+  Future<void> _clearAllLogs() async {
+    try {
+      if (_logsRef != null) {
+        await _logsRef!.remove(); // สั่งลบข้อมูลออกจาก Firebase Server ทันที
+      }
+
+      if (mounted) {
+        setState(() {
+          _botLogs.clear(); // เคลียร์แคชรายการในหน่วยความจำแอป
+        });
+      }
+
+      _shareSnapshotToOverlay();
+    } catch (e) {
+      debugPrint("Clear all logs error: $e");
     }
   }
 
@@ -1945,7 +1982,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
       if (!mounted) return;
 
-      // ส่งข้อมูล Snapshot ทันทีที่เปิด Overlay สำเร็จ
       _shareSnapshotToOverlay();
 
       await FlutterOverlayWindow.shareData({
@@ -2305,6 +2341,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
 
 
 // ==========================================
@@ -5707,4 +5744,3 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
-
