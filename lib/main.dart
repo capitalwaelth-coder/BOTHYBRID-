@@ -1,7 +1,7 @@
 // ==========================================
 // #1 โหมดการเชื่อมต่อเซิร์ฟเวอร์ & ธีมสี & ระบบ Overlay
 // ==========================================
- 
+
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -566,8 +566,9 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                       ),
 
                       // ==========================================
-                      // แก้ไขเฉพาะส่วน Container แถบเซิร์ฟเวอร์และปุ่มควบคุมใน FullOverlayContent
-                      // ==========================================             
+// แก้ไขแถบสถานะและปุ่มควบคุม (แบบชิดกันเหมือนเดิม แต่กดติด 100%)
+// ==========================================
+
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         color: kDarkCard,
@@ -647,6 +648,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                           ],
                         ),
                       ),
+
 
 
                       const Divider(color: Color(0x33FFD700), height: 1),
