@@ -257,7 +257,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     _logsSubscription?.cancel();
     _statusSubscription?.cancel();
 
-    _statusRef = db.ref('accounts/$login/status');
+    _statusRef = db.ref('accounts/$currentLogin/status');
     _statusSubscription = _statusRef!.onValue.listen((event) {
       if (!mounted) return;
       final data = event.snapshot.value;
@@ -268,7 +268,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       }
     });
 
-    _logsRef = db.ref('accounts/$login/logs');
+    _logsRef = db.ref('accounts/$currentLogin/logs');
     _logsSubscription = _logsRef!.onValue.listen((event) {
       if (!mounted) return;
 
