@@ -367,7 +367,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
           child: _isExpanded
               ? Container(
                   width: 300,
-                  height: 200,
+                  height: 250,
                   decoration: BoxDecoration(
                     color: _background,
                     borderRadius: BorderRadius.circular(16),
@@ -422,7 +422,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'SCALPER V4+',
+                                      'GOLD PRO V4+',
                                       style: TextStyle(
                                         color: _gold,
                                         fontSize: 18,
@@ -552,8 +552,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                       );
                     },
                     child: Container(
-                      width: 55,
-                      height: 55,
+                      width: 62,
+                      height: 62,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: _background,
