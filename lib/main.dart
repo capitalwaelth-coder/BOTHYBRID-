@@ -1550,7 +1550,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 // ==========================================
-// #6 MainNavigationScreen
+// #6 MainNavigationScreen (ฉบับอัปเดตซิงค์ Logs ไปยัง Overlay)
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -1574,6 +1574,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   DatabaseReference? _dbRef;
   DatabaseReference? _alertsRef;
+  DatabaseReference? _logsRef;
+
+  List<Map<String, dynamic>> _botLogs = [];
 
   Offset _robotBubbleOffset = const Offset(20, 120);
   bool _isRobotBubblePressed = false;
@@ -1606,6 +1609,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       _listenToAlertsCount();
       _initFirebaseAndListen();
       _listenToConnectionStatus();
+      _listenToLogs(); // เพิ่มการฟังข้อมูล Logs จาก Firebase
+    });
+
+    // เพิ่มตัวรับคำสั่งขอ Snapshot จากหน้าต่าง Overlay ภายนอก
+    FlutterOverlayWindow.overlayListener.listen((event) {
+      if (event != null && event is Map && event['command'] == 'request_snapshot') {
+        _shareSnapshotToOverlay();
+      }
     });
   }
 
@@ -1647,6 +1658,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
           _listenToAlertsCount();
           _initFirebaseAndListen();
+          _listenToLogs();
         }
       });
     } catch (e) {
@@ -1711,6 +1723,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           setState(() {
             isRunning = data['is_running'] == true;
           });
+          
+          // ส่งสถานะอัปเดตไปที่ Overlay ด้วย
+          _shareSnapshotToOverlay();
         }
       });
     } catch (e) {
@@ -1733,10 +1748,98 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           setState(() {
             isConnected = connected;
           });
+          
+          _shareSnapshotToOverlay();
         }
       });
     } catch (e) {
       debugPrint("Connection listen error: $e");
+    }
+  }
+
+  // ฟังก์ชันดึง Logs จาก Firebase และซิงค์ออกไปยัง Overlay ภายนอก
+  void _listenToLogs() {
+    try {
+      final database = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+      );
+
+      _logsRef = database.ref('accounts/$currentLogin/logs');
+
+      _logsRef?.onValue.listen((DatabaseEvent event) {
+        final data = event.snapshot.value;
+
+        if (!mounted) return;
+
+        List<Map<String, dynamic>> tempLogs = [];
+
+        if (data is Map) {
+          final sortedEntries = data.entries.toList()
+            ..sort(
+              (a, b) => b.key.toString().compareTo(
+                    a.key.toString(),
+                  ),
+            );
+
+          for (final entry in sortedEntries) {
+            if (entry.value != null) {
+              final rawMsg = entry.value.toString();
+              final cleanMsg = rawMsg.replaceAll(
+                RegExp(r'command\s*', caseSensitive: false),
+                '',
+              );
+
+              tempLogs.add({
+                'key': entry.key.toString(),
+                'message': cleanMsg,
+              });
+            }
+          }
+        } else if (data is List) {
+          for (int i = data.length - 1; i >= 0; i--) {
+            if (data[i] != null) {
+              final rawMsg = data[i].toString();
+              final cleanMsg = rawMsg.replaceAll(
+                RegExp(r'command\s*', caseSensitive: false),
+                '',
+              );
+
+              tempLogs.add({
+                'key': i.toString(),
+                'message': cleanMsg,
+              });
+            }
+          }
+        }
+
+        setState(() {
+          _botLogs = tempLogs;
+        });
+
+        // ส่งข้อมูล Logs ล่าสุดไปแสดงที่หน้าต่าง Overlay ทันทีที่มีการเปลี่ยนแปลง
+        _shareSnapshotToOverlay();
+      });
+    } catch (e) {
+      debugPrint("Logs listen error: $e");
+    }
+  }
+
+  // ส่งข้อมูล Snapshot ปัจจุบันไปให้ Overlay
+  void _shareSnapshotToOverlay() {
+    try {
+      FlutterOverlayWindow.shareData({
+        'type': 'snapshot',
+        'login': currentLogin,
+        'currentLogin': currentLogin,
+        'isRunning': isRunning,
+        'isConnected': isConnected,
+        'connected': isConnected,
+        'logs': _botLogs,
+      });
+    } catch (e) {
+      debugPrint('Share snapshot error: $e');
     }
   }
 
@@ -1779,14 +1882,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
       if (!mounted) return;
 
-      await FlutterOverlayWindow.shareData({
-        'type': 'snapshot',
-        'login': currentLogin,
-        'currentLogin': currentLogin,
-        'isRunning': isRunning,
-        'isConnected': isConnected,
-        'connected': isConnected,
-      });
+      // ส่งข้อมูล Snapshot ทันทีที่เปิด Overlay สำเร็จ
+      _shareSnapshotToOverlay();
 
       await FlutterOverlayWindow.shareData({
         'type': 'command',
@@ -2145,6 +2242,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
 
 // ==========================================
 // #7 HomeScreen
