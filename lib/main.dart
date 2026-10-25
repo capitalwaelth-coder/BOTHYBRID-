@@ -250,7 +250,7 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
     try {
       _isMoving = true;
       await FlutterOverlayWindow.moveOverlay(
-        OverlayPosition(0, _overlayY.round()),
+        OverlayPosition(0.0, _overlayY),
       );
     } catch (e) {
       debugPrint('Move overlay error: $e');
@@ -455,15 +455,14 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
                                       ),
                                     ),
                                     child: SelectableText(
-                                      '> $message',
-                                      softWrap: true,
-                                      style: const TextStyle(
-                                        color: _green,
-                                        fontFamily: 'monospace',
-                                        fontSize: 13,
-                                        height: 1.4,
-                                      ),
-                                    ),
+                                    '> $message',
+                                    style: const TextStyle(
+                                    color: _green,
+                                    fontFamily: 'monospace',
+                                    fontSize: 13,
+                                   height: 1.4,
+                                   ),
+                                   ),
                                   );
                                 },
                               ),
