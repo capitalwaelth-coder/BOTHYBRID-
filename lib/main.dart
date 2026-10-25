@@ -18,7 +18,7 @@ const Color kRedNeon = Color(0xFFFF1744);
 const Color kGreenNeon = Color(0xFF00E676);
 
 // ==========================================
-// #0 Widget แสดงข้อความแบบพิมพ์ดีด (Typewriter) - มีตัวเดียวเท่านั้น
+// #0 Widget แสดงข้อความแบบพิมพ์ดีด (Typewriter) - ประกาศแค่ชุดเดียวตรงนี้เท่านั้น
 // ==========================================
 class TypewriterText extends StatefulWidget {
   final String text;
@@ -761,82 +761,6 @@ void main() async {
   }
 
   runApp(const LiquiditySweepApp());
-}
-
-class TypewriterText extends StatefulWidget {
-  final String text;
-  final TextStyle style;
-  final Duration speed;
-
-  const TypewriterText({
-    super.key,
-    required this.text,
-    required this.style,
-    this.speed = const Duration(milliseconds: 65),
-  });
-
-  @override
-  State<TypewriterText> createState() => _TypewriterTextState();
-}
-
-class _TypewriterTextState extends State<TypewriterText> {
-  String _displayedText = "";
-  int _currentIndex = 0;
-  bool _completed = false;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _startTyping();
-  }
-
-  @override
-  void didUpdateWidget(covariant TypewriterText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.text != widget.text) {
-      _timer?.cancel();
-      _displayedText = "";
-      _currentIndex = 0;
-      _completed = false;
-      _startTyping();
-    }
-  }
-
-  void _startTyping() {
-    if (widget.text.isEmpty) return;
-    _timer = Timer.periodic(widget.speed, (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      if (_currentIndex < widget.text.length) {
-        setState(() {
-          _displayedText += widget.text[_currentIndex];
-          _currentIndex++;
-        });
-      } else {
-        setState(() {
-          _completed = true;
-        });
-        timer.cancel();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      _displayedText,
-      style: widget.style,
-    );
-  }
 }
 
 // ==========================================
@@ -1621,11 +1545,9 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
   }
 }
 
-
- 
- // ==========================================
- // #6 MainNavigationScreen
- // ==========================================
+// ==========================================
+// #6 MainNavigationScreen
+// ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -1644,7 +1566,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   bool isConnected = false;
   int unreadAlertsCount = 0;
 
-  // ป้องกันการกดเปิด Overlay ซ้ำระหว่างกำลังทำงาน
   bool _isLaunchingOverlay = false;
 
   DatabaseReference? _dbRef;
@@ -1690,10 +1611,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     super.dispose();
   }
 
-  // ==========================================
-  // โหลดบัญชีที่บันทึกไว้
-  // ==========================================
-
   Future<void> _loadSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('mt5_login');
@@ -1704,10 +1621,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       });
     }
   }
-
-  // ==========================================
-  // ฟังบัญชีที่ใช้งาน
-  // ==========================================
 
   void _listenToActiveAccount() {
     try {
@@ -1736,10 +1649,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       debugPrint("Account listen error: $e");
     }
   }
-
-  // ==========================================
-  // จำนวน Alerts ที่ยังไม่ได้อ่าน
-  // ==========================================
 
   void _listenToAlertsCount() {
     try {
@@ -1779,10 +1688,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ==========================================
-  // ฟังสถานะบอทจาก Firebase
-  // ==========================================
-
   void _initFirebaseAndListen() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1809,10 +1714,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ==========================================
-  // ฟังสถานะการเชื่อมต่อ Firebase
-  // ==========================================
-
   void _listenToConnectionStatus() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1835,18 +1736,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ==========================================
-  // เปิด Overlay
-  // แก้ไขเพื่อรองรับการกดเปิดใหม่หลังปิด
-  // ==========================================
-
   Future<void> _launchExternalOverlay() async {
     if (_isLaunchingOverlay || !mounted) return;
 
     _isLaunchingOverlay = true;
 
     try {
-      // ตรวจสอบสิทธิ์แสดงทับแอปอื่น
       bool granted =
           await FlutterOverlayWindow.isPermissionGranted() ?? false;
 
@@ -1862,7 +1757,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
       if (!mounted) return;
 
-      // สั่งเปิด Overlay โดยไม่ปิด Overlay เดิมก่อน
       await FlutterOverlayWindow.showOverlay(
         height: 620,
         width: 380,
@@ -1875,16 +1769,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         positionGravity: PositionGravity.none,
       );
 
-      debugPrint('Overlay launch requested');
-
-      // รอให้หน้าต่างเริ่มทำงาน
       await Future.delayed(
         const Duration(milliseconds: 1000),
       );
 
       if (!mounted) return;
 
-      // ส่งสถานะล่าสุดให้ Overlay
       await FlutterOverlayWindow.shareData({
         'type': 'snapshot',
         'login': currentLogin,
@@ -1894,13 +1784,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         'connected': isConnected,
       });
 
-      // ขอ Snapshot ผ่านระบบคำสั่งเดิม
       await FlutterOverlayWindow.shareData({
         'type': 'command',
         'command': 'request_snapshot',
       });
-
-      debugPrint('Overlay snapshot sent');
     } catch (e, stackTrace) {
       debugPrint('Error launching external overlay: $e');
       debugPrint('$stackTrace');
@@ -1908,10 +1795,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       _isLaunchingOverlay = false;
     }
   }
-
-  // ==========================================
-  // ปุ่มย้อนกลับ
-  // ==========================================
 
   Future<bool> _handleBackButton() async {
     if (_currentIndex != 2) {
@@ -1923,10 +1806,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
     return true;
   }
-
-  // ==========================================
-  // สร้างหน้าจอหลัก
-  // ==========================================
 
   @override
   Widget build(BuildContext context) {
@@ -1956,7 +1835,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         body: Stack(
           fit: StackFit.expand,
           children: [
-            // ภาพพื้นหลัง
             Image.asset(
               'assets/images/8.png',
               fit: BoxFit.cover,
@@ -1965,8 +1843,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 return Container(color: kDarkBg);
               },
             ),
-
-            // ชั้นไล่สีพื้นหลัง
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -1979,8 +1855,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 ),
               ),
             ),
-
-            // เนื้อหาแต่ละหน้า
             Padding(
               padding: const EdgeInsets.only(bottom: 65.0),
               child: IndexedStack(
@@ -1988,11 +1862,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 children: pages,
               ),
             ),
-
-            // ==========================================
-            // เมนูนำทางด้านล่าง
-            // ==========================================
-
             Positioned(
               left: 0,
               right: 0,
@@ -2023,26 +1892,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildCustomNavItem(
-                        0,
-                        Icons.tune,
-                        'Settings',
-                      ),
-                      _buildCustomNavItem(
-                        1,
-                        Icons.list_alt,
-                        'Orders',
-                      ),
-                      _buildCustomNavItem(
-                        2,
-                        Icons.home_filled,
-                        'Home',
-                      ),
-                      _buildCustomNavItem(
-                        3,
-                        Icons.history,
-                        'History',
-                      ),
+                      _buildCustomNavItem(0, Icons.tune, 'Settings'),
+                      _buildCustomNavItem(1, Icons.list_alt, 'Orders'),
+                      _buildCustomNavItem(2, Icons.home_filled, 'Home'),
+                      _buildCustomNavItem(3, Icons.history, 'History'),
                       _buildCustomNavItem(
                         4,
                         Icons.notifications_active,
@@ -2054,11 +1907,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 ),
               ),
             ),
-
-            // ==========================================
-            // บอลลูนหุ่นยนต์บนแดชบอร์ด
-            // ==========================================
-
             Positioned(
               left: _robotBubbleOffset.dx,
               top: _robotBubbleOffset.dy,
@@ -2075,8 +1923,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 },
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-
-                  // ลากเพื่อย้ายตำแหน่ง
                   onPanUpdate: (details) {
                     setState(() {
                       _robotBubbleOffset = Offset(
@@ -2095,20 +1941,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                       );
                     });
                   },
-
                   onTapDown: (_) {
                     setState(() {
                       _isRobotBubblePressed = true;
                     });
                   },
-
                   onTapCancel: () {
                     setState(() {
                       _isRobotBubblePressed = false;
                     });
                   },
-
-                  // แตะเพื่อเปิด Overlay
                   onTap: () {
                     setState(() {
                       _isRobotBubblePressed = false;
@@ -2116,7 +1958,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
                     _launchExternalOverlay();
                   },
-
                   child: AnimatedScale(
                     scale: _isRobotBubblePressed ? 0.85 : 1.0,
                     duration: const Duration(milliseconds: 100),
@@ -2130,10 +1971,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       ),
     );
   }
-
-  // ==========================================
-  // รูปหุ่นยนต์และจุดสถานะ
-  // ==========================================
 
   Widget _buildRobotBubbleWidget() {
     final bool isServerActive = isConnected && isRunning;
@@ -2198,10 +2035,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       ),
     );
   }
-
-  // ==========================================
-  // ปุ่มเมนูด้านล่าง
-  // ==========================================
 
   Widget _buildCustomNavItem(
     int index,
@@ -2309,10 +2142,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 }
 
-
-
 // ==========================================
-// #7 HomeScreen (ลบปุ่ม BUBBLE ออกแล้ว)
+// #7 HomeScreen
 // ==========================================
 
 class HomeScreen extends StatefulWidget {
@@ -2347,11 +2178,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   int _currentImageIndex = 0;
   Timer? _imageTimer;
-
-  late final AnimationController _scannerController = AnimationController(
-    duration: const Duration(seconds: 2),
-    vsync: this,
-  )..repeat(reverse: true);
 
   late final AnimationController _titleGlowController = AnimationController(
     duration: const Duration(milliseconds: 1500),
@@ -2392,7 +2218,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    _scannerController.dispose();
     _titleGlowController.dispose();
     _imageTimer?.cancel();
     super.dispose();
