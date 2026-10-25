@@ -388,7 +388,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
           child: _isExpanded
               ? Container(
                   width: 320,
-                  height: 400,
+                  height: 250,
                   decoration: BoxDecoration(
                     color: _background,
                     borderRadius: BorderRadius.circular(16),
@@ -416,7 +416,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 top: Radius.circular(15),
                               ),
                               image: DecorationImage(
-                                image: const AssetImage('assets/images/8.png'),
+                                image: const AssetImage('assets/images/1.jpg'),
                                 fit: BoxFit.cover,
                                 onError: (_, __) {},
                               ),
@@ -442,7 +442,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'SCALPER V4+',
+                                      'GOLD PRO ROBOT',
                                       style: TextStyle(
                                         color: _gold,
                                         fontSize: 18,
