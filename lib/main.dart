@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// FULL OVERLAY CONTENT (ลบข้อมูลใน Firebase จริง + เอาหัวข้อออก + ดีไซน์สแกนเนอร์สมบูรณ์)
+// FULL OVERLAY CONTENT (ย้ายปุ่มไปแถบเซิร์ฟเวอร์ + ลบข้อมูลใน Firebase จริง)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -453,11 +453,11 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // แก้ไขฟังก์ชันนี้ให้ทำการลบข้อมูลจริงบน Firebase Database
+  // ฟังก์ชันลบข้อมูลจริงบน Firebase Database
   Future<void> _clearAllLogs() async {
     try {
       if (_logsRef != null) {
-        await _logsRef!.remove(); // ลบข้อมูลทั้งหมดในโหนด logs บน Firebase ทิ้งทันที
+        await _logsRef!.remove();
       }
 
       if (mounted) {
@@ -470,6 +470,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
+  // ส่วนขยายกล่องหลังมีข้อความเข้า 
   @override
   Widget build(BuildContext context) {
     final String currentScanImage = _images[_imageIndex];
@@ -564,34 +565,77 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                       ),
 
-                      // สถานะเซิร์ฟเวอร์ย่อย
+                      // สถานะเซิร์ฟเวอร์ย่อย พร้อมย้ายปุ่มถังขยะและปุ่มปิด (X) มาไว้ที่กรอบสีขาวด้านขวา
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         color: kDarkCard,
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isServerActive ? _green : _red,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: (isServerActive ? _green : _red).withOpacity(0.8),
-                                    blurRadius: 4,
+                            Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isServerActive ? _green : _red,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: (isServerActive ? _green : _red).withOpacity(0.8),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  isServerActive ? 'SERVER ONLINE' : 'SERVER DISCONNECTED',
+                                  style: TextStyle(
+                                    color: isServerActive ? _green : _red,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 6),
-                            Text(
-                              isServerActive ? 'EA SERVER ONLINE & RUNNING' : 'SERVER DISCONNECTED',
-                              style: TextStyle(
-                                color: isServerActive ? _green : _red,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            // ปุ่มถังขยะและปุ่มปิด ย้ายมาอยู่บนกรอบสีขาวเรียบร้อย
+                            Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: _clearAllLogs,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.black.withOpacity(0.7),
+                                      border: Border.all(color: _gold.withOpacity(0.6)),
+                                    ),
+                                    child: const Icon(
+                                      Icons.delete_sweep,
+                                      color: _gold,
+                                      size: 12,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: () => _setExpanded(false),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.black.withOpacity(0.7),
+                                      border: Border.all(color: _gold.withOpacity(0.6)),
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -599,103 +643,55 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
                       const Divider(color: Color(0x33FFD700), height: 1),
 
-                      // ส่วนแสดงรายการ Logs ด้านล่าง พร้อมย้ายปุ่มควบคุมมาไว้ที่มุมขวาบนของกรอบ Log
+                      // ส่วนแสดงรายการ Logs ด้านล่าง ดันขึ้นมาเต็มพื้นที่
                       Expanded(
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           color: Colors.black.withOpacity(0.4),
-                          child: Stack(
-                            children: [
-                              // รายการ Logs
-                              _botLogs.isEmpty
-                                  ? const Center(
-                                      child: Text(
-                                        'No logs available',
-                                        style: TextStyle(
-                                          color: Colors.white54,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    )
-                                  : ListView.builder(
-                                      controller: _scrollController,
-                                      padding: const EdgeInsets.only(top: 30), // เว้นที่ให้ปุ่มด้านบนไม่ทับข้อความ
-                                      itemCount: _botLogs.length,
-                                      itemBuilder: (context, index) {
-                                        final item = _botLogs[index];
-                                        final String message =
-                                            (item['message'] ?? '').toString();
-                                        final bool isLatest = index == 0;
+                          child: _botLogs.isEmpty
+                              ? const Center(
+                                  child: Text(
+                                    'No logs available',
+                                    style: TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  controller: _scrollController,
+                                  padding: EdgeInsets.zero,
+                                  itemCount: _botLogs.length,
+                                  itemBuilder: (context, index) {
+                                    final item = _botLogs[index];
+                                    final String message =
+                                        (item['message'] ?? '').toString();
+                                    final bool isLatest = index == 0;
 
-                                        return Padding(
-                                          padding: const EdgeInsets.only(bottom: 4),
-                                          child: isLatest
-                                              ? TypewriterText(
-                                                  text: '> $message',
-                                                  duration: const Duration(milliseconds: 250), // ปรับความเร็วให้ช้าลงสุดๆ
-                                                  style: const TextStyle(
-                                                    color: Color(0xFF00E676), // สีเขียวเฉพาะข้อความล่าสุด
-                                                    fontSize: 11,
-                                                    fontFamily: 'monospace',
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                )
-                                              : Text(
-                                                  '> $message',
-                                                  style: const TextStyle(
-                                                    color: Colors.white, // สีขาวสำหรับข้อความเก่า
-                                                    fontSize: 11,
-                                                    fontFamily: 'monospace',
-                                                  ),
-                                                ),
-                                        );
-                                      },
-                                    ),
-
-                              // ไอคอนทั้ง 2 ตัว (ถังขยะและปุ่มปิด X) อยู่ในตำแหน่งกรอบสีขาวด้านบนขวาของโซน Log
-                              Positioned(
-                                right: 4,
-                                top: 0,
-                                child: Row(
-                                  children: [
-                                    GestureDetector(
-                                      onTap: _clearAllLogs,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(5),
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.black.withOpacity(0.7),
-                                          border: Border.all(color: _gold.withOpacity(0.6)),
-                                        ),
-                                        child: const Icon(
-                                          Icons.delete_sweep,
-                                          color: _gold,
-                                          size: 14,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    GestureDetector(
-                                      onTap: () => _setExpanded(false),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(5),
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.black.withOpacity(0.7),
-                                          border: Border.all(color: _gold.withOpacity(0.6)),
-                                        ),
-                                        child: const Icon(
-                                          Icons.close,
-                                          color: Colors.white,
-                                          size: 14,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: isLatest
+                                          ? TypewriterText(
+                                              text: '> $message',
+                                              duration: const Duration(milliseconds: 250),
+                                              style: const TextStyle(
+                                                color: Color(0xFF00E676),
+                                                fontSize: 11,
+                                                fontFamily: 'monospace',
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            )
+                                          : Text(
+                                              '> $message',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontFamily: 'monospace',
+                                              ),
+                                            ),
+                                    );
+                                  },
                                 ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
                     ],
@@ -802,6 +798,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
+
 
 
 
