@@ -35,18 +35,30 @@ void overlayMain() {
 }
 
 
+// ==========================================
+// FULL OVERLAY CONTENT
+// บอลลูน GOLD PRO + จุดสถานะออนไลน์ + เอฟเฟกต์เด้งขึ้นลง
+// ==========================================
+
 class FullOverlayContent extends StatefulWidget {
   const FullOverlayContent({super.key});
 
   @override
-  State<FullOverlayContent> createState() => _FullOverlayContentState();
+  State<FullOverlayContent> createState() =>
+      _FullOverlayContentState();
 }
 
-class _FullOverlayContentState extends State<FullOverlayContent> {
+class _FullOverlayContentState extends State<FullOverlayContent>
+    with SingleTickerProviderStateMixin {
+  // ==========================================
+  // สถานะและข้อมูลเดิม
+  // ==========================================
+
   bool _isExpanded = false;
   bool _isMoving = false;
 
-  String currentLogin = "235305975";
+  String currentLogin = '235305975';
+
   bool isRunning = false;
   bool isConnected = false;
 
@@ -55,13 +67,44 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
   List<Map<String, dynamic>> _botLogs = [];
 
   DatabaseReference? _logsRef;
+
   StreamSubscription<DatabaseEvent>? _logsSubscription;
+  StreamSubscription<DatabaseEvent>? _connectionSubscription;
   StreamSubscription? _overlaySubscription;
+
+  // ==========================================
+  // สีหลัก
+  // ==========================================
 
   static const Color _gold = Color(0xFFFFD700);
   static const Color _background = Color(0xFF161616);
   static const Color _green = Color(0xFF00E676);
   static const Color _red = Color(0xFFFF1744);
+
+  // ==========================================
+  // เอฟเฟกต์บอลลูนเด้งขึ้นลง
+  // ==========================================
+
+  late final AnimationController _overlayBounceController =
+      AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  late final Animation<double> _overlayBounceAnimation =
+      Tween<double>(
+    begin: -7.0,
+    end: 7.0,
+  ).animate(
+    CurvedAnimation(
+      parent: _overlayBounceController,
+      curve: Curves.easeInOut,
+    ),
+  );
+
+  // ==========================================
+  // เริ่มต้นระบบบอลลูน
+  // ==========================================
 
   @override
   void initState() {
@@ -69,51 +112,80 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
 
     _initFirebaseForOverlay();
 
+    // รับข้อมูลจากหน้าหลัก
     _overlaySubscription =
         FlutterOverlayWindow.overlayListener.listen((event) {
-      if (!mounted || event is! Map) return;
+      if (!mounted || event == null) return;
 
-      final data = Map<String, dynamic>.from(event);
+      try {
+        dynamic decoded = event;
 
-      if (data['type'] == 'snapshot') {
-        final newLogin = data['login']?.toString();
+        if (decoded is String) {
+          decoded = jsonDecode(decoded);
+        }
+
+        if (decoded is! Map) return;
+
+        final data = Map<String, dynamic>.from(decoded);
+
+        final String? newLogin =
+            (data['login'] ?? data['currentLogin'])?.toString();
+
+        final dynamic runningValue = data['isRunning'] ??
+            data['running'];
+
+        final dynamic connectedValue = data['isConnected'] ??
+            data['connected'];
 
         setState(() {
           if (newLogin != null && newLogin.isNotEmpty) {
             currentLogin = newLogin;
           }
 
-          isRunning = data['running'] == true;
-          isConnected = data['connected'] == true;
+          if (runningValue is bool) {
+            isRunning = runningValue;
+          }
 
-          if (data['logs'] is List) {
-            _botLogs = (data['logs'] as List)
-                .map((item) {
-                  if (item is Map) {
-                    return Map<String, dynamic>.from(item);
-                  }
+          // รับสถานะการเชื่อมต่อจากหน้าหลักด้วย
+          if (connectedValue is bool) {
+            isConnected = connectedValue;
+          }
 
-                  return <String, dynamic>{
-                    'message': item.toString(),
-                  };
-                })
-                .toList();
+          final dynamic logsValue = data['logs'];
+
+          if (logsValue is List) {
+            _botLogs = logsValue.map((item) {
+              if (item is Map) {
+                return Map<String, dynamic>.from(item);
+              }
+
+              return <String, dynamic>{
+                'message': item.toString(),
+              };
+            }).toList();
           }
         });
 
         if (newLogin != null &&
             newLogin.isNotEmpty &&
-            newLogin != _logsRef?.parent?.key) {
+            _logsRef?.key != newLogin) {
           _watchLogs(newLogin);
         }
+      } catch (e) {
+        debugPrint('Overlay data error: $e');
       }
     });
 
+    // ขอข้อมูลสถานะล่าสุดจากหน้าหลัก
     FlutterOverlayWindow.shareData({
       'type': 'command',
       'command': 'request_snapshot',
     });
   }
+
+  // ==========================================
+  // เชื่อมต่อ Firebase
+  // ==========================================
 
   Future<void> _initFirebaseForOverlay() async {
     try {
@@ -127,89 +199,140 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
             'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
 
+      // ตรวจสอบการเชื่อมต่อ Firebase โดยตรง
+      await _connectionSubscription?.cancel();
+
+      _connectionSubscription = database
+          .ref('.info/connected')
+          .onValue
+          .listen((event) {
+        if (!mounted) return;
+
+        final bool online = event.snapshot.value == true;
+
+        if (isConnected != online) {
+          setState(() {
+            isConnected = online;
+          });
+        }
+      }, onError: (error) {
+        debugPrint('Firebase connection error: $error');
+
+        if (mounted) {
+          setState(() {
+            isConnected = false;
+          });
+        }
+      });
+
+      // อ่าน LOG ของบัญชีปัจจุบัน
       _watchLogs(currentLogin, database: database);
-    } catch (e) {
-      debugPrint('Overlay Firebase init error: $e');
+    } catch (e, stackTrace) {
+      debugPrint('Overlay Firebase initialization error: $e');
+      debugPrint('$stackTrace');
+
+      if (mounted) {
+        setState(() {
+          isConnected = false;
+        });
+      }
     }
   }
+
+  // ==========================================
+  // อ่าน LOG จาก Firebase
+  // ==========================================
 
   void _watchLogs(
     String login, {
     FirebaseDatabase? database,
   }) {
-    if (_logsRef?.parent?.key == login) return;
+    if (login.isEmpty) return;
 
     _logsSubscription?.cancel();
 
-    final db = database ??
-        FirebaseDatabase.instanceFor(
-          app: Firebase.app(),
-          databaseURL:
-              'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-        );
+    try {
+      final db = database ??
+          FirebaseDatabase.instanceFor(
+            app: Firebase.app(),
+            databaseURL:
+                'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+          );
 
-    _logsRef = db.ref('accounts/$login/logs');
+      _logsRef = db.ref('accounts/$login/logs');
 
-    _logsSubscription = _logsRef!.onValue.listen(
-      (event) {
+      _logsSubscription = _logsRef!.onValue.listen((event) {
         if (!mounted) return;
 
-        final value = event.snapshot.value;
+        final dynamic value = event.snapshot.value;
         final List<Map<String, dynamic>> parsedLogs = [];
 
         if (value is Map) {
-          value.forEach((key, item) {
-            if (item == null) return;
-
-            String message;
+          for (final entry in value.entries) {
+            final dynamic item = entry.value;
 
             if (item is Map) {
-              message = (item['message'] ??
-                      item['text'] ??
-                      item['log'] ??
-                      item['msg'] ??
-                      item.toString())
-                  .toString();
-            } else {
-              message = item.toString();
-            }
+              final map = Map<String, dynamic>.from(item);
 
-            parsedLogs.add({
-              'key': key.toString(),
-              'message': message,
-            });
-          });
+              final dynamic message = map['message'] ??
+                  map['text'] ??
+                  map['log'] ??
+                  map['msg'] ??
+                  item.toString();
+
+              parsedLogs.add({
+                ...map,
+                'message': message.toString(),
+              });
+            } else {
+              parsedLogs.add({
+                'message': item.toString(),
+              });
+            }
+          }
         } else if (value is List) {
-          for (int i = 0; i < value.length; i++) {
-            final item = value[i];
+          for (final item in value) {
             if (item == null) continue;
 
-            parsedLogs.add({
-              'key': '$i',
-              'message': item is Map
-                  ? (item['message'] ??
-                          item['text'] ??
-                          item['log'] ??
-                          item.toString())
-                      .toString()
-                  : item.toString(),
-            });
+            if (item is Map) {
+              final map = Map<String, dynamic>.from(item);
+
+              final dynamic message = map['message'] ??
+                  map['text'] ??
+                  map['log'] ??
+                  map['msg'] ??
+                  item.toString();
+
+              parsedLogs.add({
+                ...map,
+                'message': message.toString(),
+              });
+            } else {
+              parsedLogs.add({
+                'message': item.toString(),
+              });
+            }
           }
         } else if (value != null) {
-          parsedLogs.add({'message': value.toString()});
+          parsedLogs.add({
+            'message': value.toString(),
+          });
         }
-
-        if (!mounted) return;
 
         setState(() {
           _botLogs = parsedLogs;
         });
-      },
-      onError: (Object error) {
-        debugPrint('Overlay log listener error: $error');
-      },
-    );
+      }, onError: (error) {
+        debugPrint('Firebase LOG error: $error');
+      });
+    } catch (e) {
+      debugPrint('Watch LOG error: $e');
+    }
   }
+
+  // ==========================================
+  // เปิด / ย่อหน้าต่าง LOG
+  // ==========================================
 
   Future<void> _setExpanded(bool expanded) async {
     if (!mounted) return;
@@ -219,16 +342,27 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
     });
 
     try {
-      // ปรับขนาดหน้าต่าง Overlay ตามสถานะ
-      await FlutterOverlayWindow.resizeOverlay(
-        expanded ? 380 : 90,
-        expanded ? 620 : 90,
-        true,
-      );
+      if (expanded) {
+        await FlutterOverlayWindow.resizeOverlay(
+          380,
+          620,
+          true,
+        );
+      } else {
+        await FlutterOverlayWindow.resizeOverlay(
+          90,
+          90,
+          true,
+        );
+      }
     } catch (e) {
-      debugPrint('Overlay resize error: $e');
+      debugPrint('Resize overlay error: $e');
     }
   }
+
+  // ==========================================
+  // ปิดบอลลูน
+  // ==========================================
 
   Future<void> _hideOverlay() async {
     try {
@@ -238,17 +372,21 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
     }
   }
 
+  // ==========================================
+  // ลากบอลลูนขึ้นลง
+  // ==========================================
+
   Future<void> _moveBalloon(double deltaY) async {
     if (_isExpanded || _isMoving) return;
 
-    _overlayY += deltaY;
-
-    // จำกัดการเคลื่อนที่ในแนวตั้งเบื้องต้น
-    if (_overlayY < -1200) _overlayY = -1200;
-    if (_overlayY > 1200) _overlayY = 1200;
+    _isMoving = true;
 
     try {
-      _isMoving = true;
+      _overlayY += deltaY;
+
+      if (_overlayY < -1200) _overlayY = -1200;
+      if (_overlayY > 1200) _overlayY = 1200;
+
       await FlutterOverlayWindow.moveOverlay(
         OverlayPosition(0.0, _overlayY),
       );
@@ -259,269 +397,463 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
     }
   }
 
+  // ==========================================
+  // ลบ LOG ทั้งหมด
+  // ==========================================
+
   Future<void> _clearAllLogs() async {
     try {
-      if (_logsRef == null) return;
+      await _logsRef?.remove();
 
-      await _logsRef!.remove();
-
-      if (!mounted) return;
-
-      setState(() {
-        _botLogs.clear();
-      });
+      if (mounted) {
+        setState(() {
+          _botLogs.clear();
+        });
+      }
     } catch (e) {
-      debugPrint('Overlay clear logs error: $e');
+      debugPrint('Clear LOG error: $e');
     }
   }
 
+  // ==========================================
+  // ปุ่มวงกลม
+  // ==========================================
+
   Widget _circleButton({
     required IconData icon,
-    required Color color,
     required VoidCallback onTap,
+    Color color = _gold,
+    double size = 38,
   }) {
     return Material(
-      color: Colors.black.withOpacity(0.8),
-      shape: CircleBorder(
-        side: BorderSide(color: color, width: 1.5),
-      ),
+      color: Colors.transparent,
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(7),
-          child: Icon(icon, color: color, size: 19),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _background,
+            border: Border.all(
+              color: color.withOpacity(0.8),
+              width: 1.2,
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: size * 0.55,
+          ),
         ),
       ),
     );
   }
 
+  // ==========================================
+  // สร้างหน้าจอบอลลูน
+  // ==========================================
+
   @override
   Widget build(BuildContext context) {
     final bool isServerActive = isConnected && isRunning;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Center(
-        child: _isExpanded
-            ? Container(
-                width: 360,
-                height: 600,
-                decoration: BoxDecoration(
-                  color: _background,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: _gold, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black87,
-                      blurRadius: 18,
-                      spreadRadius: 2,
+    return Material(
+      color: Colors.transparent,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: _isExpanded
+              // ==========================================
+              // หน้าต่าง LOG แบบขยาย
+              // ==========================================
+              ? Container(
+                  width: 360,
+                  height: 600,
+                  decoration: BoxDecoration(
+                    color: _background.withOpacity(0.97),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: _gold,
+                      width: 1.8,
                     ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _gold.withOpacity(0.25),
+                        blurRadius: 18,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
                   child: Column(
                     children: [
-                      // ส่วนหัว
-                      SizedBox(
-                        height: 100,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Image.asset(
-                              'assets/images/6.png',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  const ColoredBox(color: _background),
-                            ),
-                            Positioned(
-                              top: 8,
-                              right: 48,
-                              child: _circleButton(
-                                icon: Icons.delete_sweep,
-                                color: _red,
-                                onTap: _clearAllLogs,
-                              ),
-                            ),
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: _circleButton(
-                                icon: Icons.keyboard_arrow_down,
-                                color: _gold,
-                                onTap: () => _setExpanded(false),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 5,
-                              left: 10,
-                              child: Text(
-                                'HYBRID PRO  •  $currentLogin',
-                                style: const TextStyle(
-                                  color: _gold,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black,
-                                      blurRadius: 5,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // สถานะเซิร์ฟเวอร์
+                      // หัวหน้าต่าง
                       Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
+                        padding: const EdgeInsets.fromLTRB(
+                          12,
+                          12,
+                          8,
+                          8,
                         ),
                         child: Row(
                           children: [
-                            Container(
-                              width: 9,
-                              height: 9,
-                              decoration: BoxDecoration(
-                                color: isServerActive ? _green : _red,
-                                shape: BoxShape.circle,
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.asset(
+                                'assets/images/6.png',
+                                width: 44,
+                                height: 44,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) {
+                                  return const Icon(
+                                    Icons.smart_toy,
+                                    color: _gold,
+                                    size: 40,
+                                  );
+                                },
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
+                            const SizedBox(width: 10),
+                            const Expanded(
                               child: Text(
-                                isServerActive
-                                    ? 'SERVER IS ONLINE'
-                                    : 'SERVER IS OFFLINE',
-                                style: const TextStyle(
+                                'STATUS & LOGS',
+                                style: TextStyle(
                                   color: _gold,
-                                  fontSize: 12,
+                                  fontSize: 17,
                                   fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.1,
                                 ),
                               ),
                             ),
-                            Text(
-                              '${_botLogs.length} LOGS',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 11,
-                              ),
+                            _circleButton(
+                              icon: Icons.delete_outline,
+                              color: _red,
+                              onTap: _clearAllLogs,
+                            ),
+                            const SizedBox(width: 6),
+                            _circleButton(
+                              icon: Icons.keyboard_arrow_down,
+                              onTap: () => _setExpanded(false),
                             ),
                           ],
                         ),
                       ),
 
                       const Divider(
-                        color: _gold,
+                        color: Color(0x55FFD700),
                         height: 1,
-                        thickness: 1,
                       ),
+
+                      // ชื่อแอปและบัญชี
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        child: Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'HYBRID PRO',
+                                style: TextStyle(
+                                  color: _gold,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Flexible(
+                              child: Text(
+                                currentLogin,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // สถานะ Firebase และบอท
+                      Container(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                        ),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.04),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isConnected ? _green : _red,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: (isConnected ? _green : _red)
+                                            .withOpacity(0.6),
+                                        blurRadius: 7,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    isConnected
+                                        ? 'FIREBASE ONLINE'
+                                        : 'FIREBASE OFFLINE',
+                                    style: TextStyle(
+                                      color:
+                                          isConnected ? _green : _red,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Icon(
+                                  isRunning
+                                      ? Icons.play_circle_fill
+                                      : Icons.pause_circle_filled,
+                                  size: 16,
+                                  color: isRunning ? _green : _red,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    isRunning
+                                        ? 'BOT RUNNING'
+                                        : 'BOT STOPPED',
+                                    style: TextStyle(
+                                      color: isRunning ? _green : _red,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  'LOG: ${_botLogs.length}',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
 
                       // รายการ LOG
                       Expanded(
                         child: _botLogs.isEmpty
                             ? const Center(
                                 child: Text(
-                                  'ยังไม่มีข้อความ LOG',
+                                  'No logs available',
                                   style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 14,
+                                    color: Colors.white54,
+                                    fontSize: 13,
                                   ),
                                 ),
                               )
                             : ListView.builder(
                                 padding: const EdgeInsets.fromLTRB(
-                                  12, 10, 12, 16,
+                                  12,
+                                  0,
+                                  12,
+                                  12,
                                 ),
                                 itemCount: _botLogs.length,
                                 itemBuilder: (context, index) {
-                                  final log = _botLogs[index];
-                                  final message =
-                                      (log['message'] ?? '').toString();
+                                  final item = _botLogs[index];
+
+                                  final String message =
+                                      (item['message'] ??
+                                              item['text'] ??
+                                              item['log'] ??
+                                              item['msg'] ??
+                                              item.toString())
+                                          .toString();
 
                                   return Container(
-                                    width: double.infinity,
-                                    margin: const EdgeInsets.only(bottom: 8),
-                                    padding: const EdgeInsets.all(10),
+                                    margin: const EdgeInsets.only(
+                                      bottom: 5,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 9,
+                                      vertical: 8,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.04),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: Colors.white12,
+                                      color: Colors.white.withOpacity(
+                                        0.035,
                                       ),
+                                      borderRadius:
+                                          BorderRadius.circular(7),
                                     ),
                                     child: SelectableText(
-                                    '> $message',
-                                    style: const TextStyle(
-                                    color: _green,
-                                    fontFamily: 'monospace',
-                                    fontSize: 13,
-                                   height: 1.4,
-                                   ),
-                                   ),
+                                      '> $message',
+                                      style: const TextStyle(
+                                        color: Color(0xFFE0E0E0),
+                                        fontSize: 11,
+                                        height: 1.35,
+                                        fontFamily: 'monospace',
+                                      ),
+                                    ),
                                   );
                                 },
                               ),
                       ),
-                    ],
-                  ),
-                ),
-              )
-            : GestureDetector(
-                behavior: HitTestBehavior.opaque,
 
-                // แตะหนึ่งครั้งเพื่อเปิดกล่อง LOG
-                onTap: () => _setExpanded(true),
-
-                // กดแช่เพื่อปิด Overlay
-                onLongPress: _hideOverlay,
-
-                // ลากขึ้นลงเพื่อย้ายบอลลูน
-                onVerticalDragUpdate: (details) {
-                  _moveBalloon(details.delta.dy);
-                },
-
-                child: Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _background,
-                    border: Border.all(color: _gold, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (isServerActive ? _green : _red)
-                            .withOpacity(0.8),
-                        blurRadius: 12,
-                        spreadRadius: 2,
+                      const Padding(
+                        padding: EdgeInsets.only(
+                          bottom: 10,
+                          top: 4,
+                        ),
+                        child: Text(
+                          'POWERED BY HYBRID PRO',
+                          style: TextStyle(
+                            color: Colors.white38,
+                            fontSize: 9,
+                            letterSpacing: 1.4,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/images/7.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.smart_toy,
-                        color: _gold,
-                        size: 34,
+                )
+
+              // ==========================================
+              // บอลลูนวงกลมแบบย่อ
+              // ==========================================
+              : GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+
+                  // แตะหนึ่งครั้ง: เปิด LOG
+                  onTap: () => _setExpanded(true),
+
+                  // กดค้าง: ปิดบอลลูน
+                  onLongPress: _hideOverlay,
+
+                  // ลากขึ้นลง: ย้ายตำแหน่งบอลลูน
+                  onVerticalDragUpdate: (details) {
+                    _moveBalloon(details.delta.dy);
+                  },
+
+                  child: AnimatedBuilder(
+                    animation: _overlayBounceAnimation,
+                    builder: (context, child) {
+                      return Transform.translate(
+                        offset: Offset(
+                          0,
+                          _overlayBounceAnimation.value,
+                        ),
+                        child: child,
+                      );
+                    },
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _background,
+                        border: Border.all(
+                          color: _gold,
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (isConnected ? _green : _red)
+                                .withOpacity(0.8),
+                            blurRadius: 12,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+
+                      // รูปหุ่นยนต์และจุดสถานะ
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          // รูปบอลลูน
+                          Positioned.fill(
+                            child: ClipOval(
+                              child: Image.asset(
+                                'assets/images/7.png',
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) {
+                                  return const Icon(
+                                    Icons.smart_toy,
+                                    color: _gold,
+                                    size: 34,
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+
+                          // จุดสถานะออนไลน์ / ออฟไลน์
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              width: 17,
+                              height: 17,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isConnected ? _green : _red,
+                                border: Border.all(
+                                  color: _background,
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (isConnected ? _green : _red)
+                                        .withOpacity(0.85),
+                                    blurRadius: 7,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-              ),
+        ),
       ),
     );
   }
 
+  // ==========================================
+  // ปิด Subscription และ Animation
+  // ==========================================
+
   @override
   void dispose() {
+    _overlayBounceController.dispose();
+
     _logsSubscription?.cancel();
+    _connectionSubscription?.cancel();
     _overlaySubscription?.cancel();
+
     super.dispose();
   }
 }
@@ -1412,15 +1744,17 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
   }
 }
 
-// ==========================================
-// #6 MainNavigationScreen
-// ==========================================
+
+ // ==========================================
+ // #6 MainNavigationScreen
+ // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  State<MainNavigationScreen> createState() =>
+      _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen>
@@ -1432,18 +1766,23 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   bool isConnected = false;
   int unreadAlertsCount = 0;
 
+  // ป้องกันการเรียกเปิด Overlay ซ้ำระหว่างกำลังทำงาน
+  bool _isLaunchingOverlay = false;
+
   DatabaseReference? _dbRef;
   DatabaseReference? _alertsRef;
 
   Offset _robotBubbleOffset = const Offset(20, 120);
   bool _isRobotBubblePressed = false;
 
-  late final AnimationController _bounceController = AnimationController(
+  late final AnimationController _bounceController =
+      AnimationController(
     duration: const Duration(milliseconds: 1200),
     vsync: this,
   )..repeat(reverse: true);
 
-  late final Animation<double> _bounceAnimation = Tween<double>(
+  late final Animation<double> _bounceAnimation =
+      Tween<double>(
     begin: 0,
     end: 5,
   ).animate(
@@ -1495,7 +1834,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       database.ref('status/login').onValue.listen((event) {
         final val = event.snapshot.value?.toString();
 
-        if (val != null && val.isNotEmpty && mounted && val != currentLogin) {
+        if (val != null &&
+            val.isNotEmpty &&
+            mounted &&
+            val != currentLogin) {
           setState(() {
             currentLogin = val;
           });
@@ -1524,6 +1866,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
         if (data != null && mounted) {
           int total = 0;
+
           if (data is Map) {
             total = data.length;
           } else if (data is List) {
@@ -1582,6 +1925,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
       database.ref('.info/connected').onValue.listen((event) {
         final connected = event.snapshot.value as bool? ?? false;
+
         if (mounted) {
           setState(() {
             isConnected = connected;
@@ -1593,30 +1937,69 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
+  // ==========================================
+  // เปิด Overlay และรองรับการเปิดซ้ำหลังปิด
+  // ==========================================
+
   Future<void> _launchExternalOverlay() async {
+    if (_isLaunchingOverlay) return;
+
+    _isLaunchingOverlay = true;
+
     try {
-      bool granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
+      bool granted =
+          await FlutterOverlayWindow.isPermissionGranted() ?? false;
+
       if (!granted) {
-        final result = await FlutterOverlayWindow.requestPermission();
-        if (result != true) return;
+        final result =
+            await FlutterOverlayWindow.requestPermission();
+
+        if (result != true) {
+          debugPrint('Overlay permission not granted');
+          return;
+        }
       }
 
-      final active = await FlutterOverlayWindow.isActive();
-      if (!active) {
-        await FlutterOverlayWindow.showOverlay(
-          height: 190,
-          width: 310,
-          enableDrag: true,
-          overlayTitle: 'GOLD PRO',
-          overlayContent: 'LOGS',
-          alignment: OverlayAlignment.topRight,
-          flag: OverlayFlag.defaultFlag,
-          visibility: NotificationVisibility.visibilityPublic,
-          positionGravity: PositionGravity.none,
+      final bool active = await FlutterOverlayWindow.isActive();
+
+      if (active) {
+        // ปิด Overlay เก่าก่อน หากระบบยังรายงานว่าทำงานอยู่
+        await FlutterOverlayWindow.closeOverlay();
+
+        await Future.delayed(
+          const Duration(milliseconds: 500),
         );
       }
-    } catch (e) {
+
+      // สร้าง Overlay ใหม่
+      await FlutterOverlayWindow.showOverlay(
+        height: 620,
+        width: 380,
+        enableDrag: true,
+        overlayTitle: 'GOLD PRO',
+        overlayContent: 'LOGS',
+        alignment: OverlayAlignment.topRight,
+        flag: OverlayFlag.defaultFlag,
+        visibility: NotificationVisibility.visibilityPublic,
+        positionGravity: PositionGravity.none,
+      );
+
+      // ขอ Snapshot หลังเริ่มเปิด Overlay
+      await Future.delayed(
+        const Duration(milliseconds: 500),
+      );
+
+      await FlutterOverlayWindow.shareData({
+        'type': 'command',
+        'command': 'request_snapshot',
+      });
+
+      debugPrint('Overlay launch requested');
+    } catch (e, stackTrace) {
       debugPrint('Error launching external overlay: $e');
+      debugPrint('$stackTrace');
+    } finally {
+      _isLaunchingOverlay = false;
     }
   }
 
@@ -1642,6 +2025,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         accountLogin: currentLogin,
         onAlertsRead: () {
           if (!mounted) return;
+
           setState(() {
             unreadAlertsCount = 0;
           });
@@ -1767,6 +2151,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     setState(() {
                       _isRobotBubblePressed = false;
                     });
+
                     _launchExternalOverlay();
                   },
                   child: AnimatedScale(
@@ -1798,7 +2183,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: (isServerActive ? kGreenNeon : kRedNeon).withOpacity(0.6),
+            color: (isServerActive ? kGreenNeon : kRedNeon)
+                .withOpacity(0.6),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -1858,6 +2244,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       onTap: () {
         setState(() {
           _currentIndex = index;
+
           if (index == 4) {
             unreadAlertsCount = 0;
           }
@@ -1870,7 +2257,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? kDarkCard.withOpacity(0.85) : Colors.transparent,
+          color: isSelected
+              ? kDarkCard.withOpacity(0.85)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isSelected ? kGoldPrimary : Colors.transparent,
@@ -1894,7 +2283,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               children: [
                 Icon(
                   icon,
-                  color: isSelected ? kGoldPrimary : Colors.white70,
+                  color: isSelected
+                      ? kGoldPrimary
+                      : Colors.white70,
                   size: 22,
                 ),
                 if (badgeCount > 0)
@@ -1928,9 +2319,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? kGoldPrimary : Colors.white70,
+                color: isSelected
+                    ? kGoldPrimary
+                    : Colors.white70,
                 fontSize: 10,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight: isSelected
+                    ? FontWeight.bold
+                    : FontWeight.normal,
                 fontFamily: 'monospace',
               ),
             ),
@@ -1940,6 +2335,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
 
 // ==========================================
 // #7 HomeScreen (ลบปุ่ม BUBBLE ออกแล้ว)
