@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// FULL OVERLAY CONTENT (ฉบับแก้ไข: กล่องเว้าดำเข้มตามธีม + อัปเดต P/L เรียลไทม์)
+//#1.2 FULL OVERLAY CONTENT (ฉบับแก้ไข: กล่องเว้าดำเข้มตามธีม + อัปเดต P/L เรียลไทม์)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -317,7 +317,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         final rawData = event.snapshot.value;
         if (rawData is Map) {
           final data = Map<dynamic, dynamic>.from(rawData);
-          final dynamic p = data['total_profit'] ?? data['profit'] ?? data['open_profit'];
+          final dynamic p = data['profit'] ?? data['open_profit'];
           if (p != null) {
             setState(() {
               if (p is num) {
@@ -626,7 +626,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 floatingProfit.toStringAsFixed(2),
                                 style: TextStyle(
                                   color: floatingProfit >= 0 ? _green : _red,
-                                  fontSize: 11,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'monospace',
                                 ),
@@ -1631,7 +1631,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 // ==========================================
-// #6 MainNavigationScreen (ฉบับแก้ไข: ดึงค่า Profit ให้ตรงกับแดชบอร์ด)
+// #6 MainNavigationScreen (ฉบับรวมสมบูรณ์: ดึง profit ตรงเป๊ะ + ลบ Logs อัตโนมัติ)
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -1657,7 +1657,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   DatabaseReference? _dbRef;
   DatabaseReference? _alertsRef;
   DatabaseReference? _logsRef;
-  DatabaseReference? _accountRef;
 
   List<Map<String, dynamic>> _botLogs = [];
 
@@ -1809,9 +1808,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       );
 
       _dbRef = database.ref('accounts/$currentLogin/status');
-      _accountRef = database.ref('accounts/$currentLogin');
 
-      // ฟังสถานะการทำงานบอท
+      // ดึงค่าจากโหนด status โดยเจาะจงฟิลด์ profit และ is_running
       _dbRef?.onValue.listen((DatabaseEvent event) {
         final rawData = event.snapshot.value;
 
@@ -1820,33 +1818,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
           setState(() {
             isRunning = data['is_running'] == true;
+            
+            // ดึงค่าจากฟิลด์ profit โดยตรงให้ตรงกับหน้า Orders
+            final dynamic p = data['profit'];
+            if (p is num) {
+              floatingProfit = p.toDouble();
+            } else if (p is String) {
+              floatingProfit = double.tryParse(p) ?? 0.0;
+            }
           });
           
           _shareSnapshotToOverlay();
-        }
-      });
-
-      // ฟังค่ากำไรสุทธิ (Profit) จากระดับบัญชีให้ตรงกับหน้า Orders
-      _accountRef?.onValue.listen((DatabaseEvent event) {
-        final rawData = event.snapshot.value;
-
-        if (rawData is Map && mounted) {
-          final data = Map<dynamic, dynamic>.from(rawData);
-          
-          // ค้นหาฟิลด์กำไรจากโครงสร้างบัญชีจริง
-          final dynamic p = data['total_profit'] ?? data['profit'] ?? data['open_profit'];
-          
-          if (p != null) {
-            setState(() {
-              if (p is num) {
-                floatingProfit = p.toDouble();
-              } else if (p is String) {
-                floatingProfit = double.tryParse(p) ?? 0.0;
-              }
-            });
-            
-            _shareSnapshotToOverlay();
-          }
         }
       });
     } catch (e) {
@@ -1903,7 +1885,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           }
 
           if (totalCount >= 100) {
-            _logsRef?.remove();
+            _logsRef?.remove(); // ลบข้อมูลบน Firebase ทันที
             setState(() {
               _botLogs.clear();
             });
@@ -1978,7 +1960,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         'isRunning': isRunning,
         'isConnected': isConnected,
         'connected': isConnected,
-        'floatingProfit': floatingProfit, // ส่งค่ากำไรที่ถูกต้องไปซิงค์
+        'floatingProfit': floatingProfit, // ส่งค่า Profit ที่ถูกต้องไปซิงค์
         'logs': _botLogs,
       });
     } catch (e) {
@@ -2384,6 +2366,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
 
 
 
