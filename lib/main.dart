@@ -597,7 +597,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                   isServerActive ? 'ONLINE' : 'OFFLINE',
                                   style: TextStyle(
                                     color: isServerActive ? _green : _red,
-                                    fontSize: 10,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -626,7 +626,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 floatingProfit.toStringAsFixed(2),
                                 style: TextStyle(
                                   color: floatingProfit >= 0 ? _green : _red,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'monospace',
                                 ),
