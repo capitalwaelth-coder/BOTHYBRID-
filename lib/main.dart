@@ -405,7 +405,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       if (expanded) {
         await FlutterOverlayWindow.resizeOverlay(
           285,
-          180,
+          285,
           true,
         );
       } else {
@@ -483,7 +483,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
           child: _isExpanded
               ? Container(
                   width: 285,
-                  height: 180,
+                  height: 285,
                   decoration: BoxDecoration(
                     color: _background,
                     borderRadius: BorderRadius.circular(16),
