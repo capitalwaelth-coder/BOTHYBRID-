@@ -3,12 +3,14 @@
 // ==========================================
 
 import 'dart:async';  
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
+
 
 const Color kGoldPrimary = Color(0xFFFFD700);
 const Color kGoldAccent = Color(0xFFFFC107);
@@ -470,7 +472,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
               // ==========================================
               ? Container(
                   width: 360,
-                  height: 600,
+                  height: 450,
                   decoration: BoxDecoration(
                     color: _background.withOpacity(0.97),
                     borderRadius: BorderRadius.circular(22),
@@ -555,7 +557,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                           children: [
                             const Expanded(
                               child: Text(
-                                'HYBRID PRO',
+                                'GOLD PRO',
                                 style: TextStyle(
                                   color: _gold,
                                   fontSize: 15,
@@ -726,7 +728,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                           top: 4,
                         ),
                         child: Text(
-                          'POWERED BY HYBRID PRO',
+                          'POWERED BY GOLD PRO',
                           style: TextStyle(
                             color: Colors.white38,
                             fontSize: 9,
