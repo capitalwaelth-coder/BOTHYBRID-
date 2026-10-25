@@ -107,13 +107,6 @@ void overlayMain() {
 
 
 
-
- 
- // ==========================================
- // FULL OVERLAY CONTENT - GOLD PRO
- // FIX: FIREBASE STATUS + CLEAR LOGS
- // ==========================================
-
 class FullOverlayContent extends StatefulWidget {
   const FullOverlayContent({super.key});
 
@@ -172,10 +165,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   )..repeat(reverse: true);
 
   late final Animation<double> _overlayBounceAnimation =
-      Tween<double>(
-    begin: -7.0,
-    end: 7.0,
-  ).animate(
+      Tween<double>(begin: -7.0, end: 7.0).animate(
     CurvedAnimation(
       parent: _overlayBounceController,
       curve: Curves.easeInOut,
@@ -189,10 +179,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   )..repeat(reverse: true);
 
   late final Animation<double> _scannerAnimation =
-      Tween<double>(
-    begin: 0.0,
-    end: 1.0,
-  ).animate(
+      Tween<double>(begin: 0.0, end: 1.0).animate(
     CurvedAnimation(
       parent: _scannerController,
       curve: Curves.easeInOut,
@@ -207,9 +194,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
     _imageTimer = Timer.periodic(
       const Duration(seconds: 3),
-      (timer) {
+      (_) {
         if (!mounted) return;
-
         setState(() {
           _imageIndex = (_imageIndex + 1) % _images.length;
         });
@@ -222,53 +208,34 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
       try {
         dynamic decoded = event;
-
         if (decoded is String) {
           decoded = jsonDecode(decoded);
         }
-
         if (decoded is! Map) return;
 
         final data = Map<String, dynamic>.from(decoded);
 
+        // Overlay รับเฉพาะข้อมูลสถานะและบัญชีจาก Snapshot
+        // ไม่รับ Logs จาก Snapshot เพื่อไม่ให้ข้อมูลเก่าทับ Firebase
         final String? newLogin =
             (data['login'] ?? data['currentLogin'])?.toString();
 
         final dynamic runningValue =
             data['isRunning'] ?? data['running'];
 
-        // IMPORTANT:
-        // ไม่รับ isConnected จากแอปหลัก
-        // ให้ Firebase .info/connected เป็นผู้กำหนดสถานะเท่านั้น
-
-        final dynamic logsValue = data['logs'];
-
-        setState(() {
-          if (newLogin != null && newLogin.isNotEmpty) {
-            currentLogin = newLogin;
-          }
-
-          if (runningValue is bool) {
-            isRunning = runningValue;
-          }
-
-          if (logsValue is List) {
-            _botLogs = logsValue.map((item) {
-              if (item is Map) {
-                return Map<String, dynamic>.from(item);
-              }
-
-              return <String, dynamic>{
-                'message': item.toString(),
-              };
-            }).toList();
-          }
-        });
-
         if (newLogin != null &&
             newLogin.isNotEmpty &&
-            _watchingLogin != newLogin) {
+            newLogin != currentLogin) {
+          setState(() {
+            currentLogin = newLogin;
+          });
           _watchLogs(newLogin);
+        }
+
+        if (runningValue is bool && isRunning != runningValue) {
+          setState(() {
+            isRunning = runningValue;
+          });
         }
       } catch (e) {
         debugPrint('Overlay data error: $e');
@@ -280,10 +247,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       'command': 'request_snapshot',
     });
   }
-
-  // ==========================================
-  // FIREBASE INITIALIZATION
-  // ==========================================
 
   Future<void> _initFirebaseForOverlay() async {
     try {
@@ -298,18 +261,13 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
       _database = database;
 
-      await _connectionSubscription?.cancel();
-
-      _connectionSubscription = database
-          .ref('.info/connected')
-          .onValue
-          .listen(
+      _connectionSubscription =
+          database.ref('.info/connected').onValue.listen(
         (event) {
           if (!mounted) return;
 
-          final bool online = event.snapshot.value == true;
+          final online = event.snapshot.value == true;
 
-          // สถานะจริงจาก Firebase เท่านั้น
           if (isConnected != online) {
             setState(() {
               isConnected = online;
@@ -318,7 +276,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         },
         onError: (error) {
           debugPrint('Firebase connection error: $error');
-
           if (mounted) {
             setState(() {
               isConnected = false;
@@ -340,10 +297,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // ==========================================
-  // WATCH LOGS
-  // ==========================================
-
   void _watchLogs(
     String login, {
     FirebaseDatabase? database,
@@ -351,7 +304,10 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     if (login.isEmpty || _watchingLogin == login) return;
 
     _watchingLogin = login;
-    _logsSubscription?.cancel();
+
+    final oldSubscription = _logsSubscription;
+    _logsSubscription = null;
+    oldSubscription?.cancel();
 
     try {
       final db = database ??
@@ -361,11 +317,12 @@ class _FullOverlayContentState extends State<FullOverlayContent>
             databaseURL: _databaseUrl,
           );
 
-      _logsRef = db.ref('accounts/$login/logs');
+      final ref = db.ref('accounts/$login/logs');
+      _logsRef = ref;
 
-      _logsSubscription = _logsRef!.onValue.listen(
+      _logsSubscription = ref.onValue.listen(
         (event) {
-          if (!mounted) return;
+          if (!mounted || _watchingLogin != login) return;
 
           final dynamic value = event.snapshot.value;
           final List<Map<String, dynamic>> parsedLogs = [];
@@ -384,8 +341,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
               if (item is Map) {
                 final map = Map<String, dynamic>.from(item);
-
-                final String message =
+                final message =
                     map['message']?.toString() ??
                     map['text']?.toString() ??
                     map['log']?.toString() ??
@@ -410,8 +366,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
               if (item is Map) {
                 final map = Map<String, dynamic>.from(item);
-
-                final String message =
+                final message =
                     map['message']?.toString() ??
                     map['text']?.toString() ??
                     map['log']?.toString() ??
@@ -445,48 +400,24 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // ==========================================
-  // CLEAR ALL LOGS ON FIREBASE
-  // ==========================================
-
-  Future<void> _clearAllLogs() async {
+  // ส่งคำสั่งให้ MainNavigationScreen ลบ Logs
+  Future<void> _requestClearLogsFromMain() async {
     if (_isClearingLogs) return;
-
-    final DatabaseReference? ref = _logsRef;
-
-    if (ref == null) {
-      debugPrint('Clear LOG failed: logs reference is null');
-      return;
-    }
 
     setState(() {
       _isClearingLogs = true;
-      _botLogs.clear();
     });
 
     try {
-      debugPrint('Clearing Firebase logs: ${ref.path}');
+      debugPrint('Sending clear_logs command to main');
 
-      await ref.remove();
-
-      final snapshot = await ref.get();
-
-      if (snapshot.exists) {
-        debugPrint(
-          'Clear LOG warning: data still exists at ${ref.path}',
-        );
-      } else {
-        debugPrint('Clear LOG success: ${ref.path}');
-
-        if (mounted) {
-          setState(() {
-            _botLogs.clear();
-          });
-        }
-      }
-    } catch (e, stackTrace) {
-      debugPrint('Clear LOG error: $e');
-      debugPrint('$stackTrace');
+      await FlutterOverlayWindow.shareData({
+        'type': 'command',
+        'command': 'clear_logs',
+        'login': currentLogin,
+      });
+    } catch (e) {
+      debugPrint('Send clear_logs command failed: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -495,10 +426,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       }
     }
   }
-
-  // ==========================================
-  // EXPAND / COLLAPSE
-  // ==========================================
 
   Future<void> _setExpanded(bool expanded) async {
     if (!mounted) return;
@@ -518,10 +445,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // ==========================================
-  // CLOSE OVERLAY
-  // ==========================================
-
   Future<void> _hideOverlay() async {
     try {
       await FlutterOverlayWindow.closeOverlay();
@@ -529,10 +452,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       debugPrint('Close overlay error: $e');
     }
   }
-
-  // ==========================================
-  // MOVE BALLOON
-  // ==========================================
 
   Future<void> _moveBalloon(DragUpdateDetails details) async {
     if (_isExpanded || _isMoving) return;
@@ -543,11 +462,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       _overlayX += details.delta.dx;
       _overlayY += details.delta.dy;
 
-      if (_overlayX < -600) _overlayX = -600;
-      if (_overlayX > 600) _overlayX = 600;
-
-      if (_overlayY < -1200) _overlayY = -1200;
-      if (_overlayY > 1200) _overlayY = 1200;
+      _overlayX = _overlayX.clamp(-600.0, 600.0);
+      _overlayY = _overlayY.clamp(-1200.0, 1200.0);
 
       await FlutterOverlayWindow.moveOverlay(
         OverlayPosition(_overlayX, _overlayY),
@@ -559,14 +475,9 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // ==========================================
-  // BUILD UI
-  // ==========================================
-
   @override
   Widget build(BuildContext context) {
     final String currentScanImage = _images[_imageIndex];
-
     final bool isServerActive = isConnected && isRunning;
 
     return Material(
@@ -595,7 +506,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   ),
                   child: Column(
                     children: [
-                      // SCANNER IMAGE
                       SizedBox(
                         height: 130,
                         width: double.infinity,
@@ -670,17 +580,15 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                       ),
 
-                      
-                      // SERVER STATUS + BUTTONS
+                      // สถานะ + ปุ่มถังขยะ + ปุ่มกากบาท
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
+                          horizontal: 8,
+                          vertical: 3,
                         ),
                         color: kDarkCard,
                         child: Row(
                           children: [
-                            // SERVER STATUS
                             Expanded(
                               child: Row(
                                 children: [
@@ -689,21 +597,10 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                     height: 8,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: isServerActive
-                                          ? _green
-                                          : _red,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: (isServerActive
-                                                  ? _green
-                                                  : _red)
-                                              .withOpacity(0.8),
-                                          blurRadius: 4,
-                                        ),
-                                      ],
+                                      color: isServerActive ? _green : _red,
                                     ),
                                   ),
-                                  const SizedBox(width: 6),
+                                  const SizedBox(width: 5),
                                   Flexible(
                                     child: Text(
                                       isServerActive
@@ -712,10 +609,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        color: isServerActive
-                                            ? _green
-                                            : _red,
-                                        fontSize: 10,
+                                        color: isServerActive ? _green : _red,
+                                        fontSize: 9,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -723,23 +618,14 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 ],
                               ),
                             ),
-
-                            // เว้นระยะให้ถังขยะห่างจากกากบาท
                             const SizedBox(width: 12),
-
-                            // DELETE BUTTON — ขยับซ้ายและเพิ่มพื้นที่กด
                             Material(
                               color: Colors.transparent,
                               child: InkWell(
+                                customBorder: const CircleBorder(),
                                 onTap: _isClearingLogs
                                     ? null
-                                    : () {
-                                        debugPrint(
-                                          'DELETE LOG BUTTON PRESSED',
-                                        );
-                                        _clearAllLogs();
-                                      },
-                                customBorder: const CircleBorder(),
+                                    : _requestClearLogsFromMain,
                                 child: Container(
                                   width: 42,
                                   height: 42,
@@ -768,10 +654,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 ),
                               ),
                             ),
-
                             const SizedBox(width: 4),
-
-                            // CLOSE BUTTON — คงตำแหน่งด้านขวา
                             GestureDetector(
                               behavior: HitTestBehavior.opaque,
                               onTap: () => _setExpanded(false),
@@ -799,13 +682,11 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                       ),
 
-
                       const Divider(
                         color: Color(0x33FFD700),
                         height: 1,
                       ),
 
-                      // LOG LIST
                       Expanded(
                         child: Container(
                           padding: const EdgeInsets.all(8),
@@ -826,37 +707,41 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                   itemCount: _botLogs.length,
                                   itemBuilder: (context, index) {
                                     final item = _botLogs[index];
-
                                     final String message =
                                         (item['message'] ?? '').toString();
 
-                                    final bool isLatest = index == 0;
+                                    if (index == 0) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 4,
+                                        ),
+                                        child: TypewriterText(
+                                          text: '> $message',
+                                          duration: const Duration(
+                                            milliseconds: 250,
+                                          ),
+                                          style: const TextStyle(
+                                            color: Color(0xFF00E676),
+                                            fontSize: 11,
+                                            fontFamily: 'monospace',
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      );
+                                    }
 
                                     return Padding(
                                       padding: const EdgeInsets.only(
                                         bottom: 4,
                                       ),
-                                      child: isLatest
-                                          ? TypewriterText(
-                                              text: '> $message',
-                                              duration: const Duration(
-                                                milliseconds: 250,
-                                              ),
-                                              style: const TextStyle(
-                                                color: Color(0xFF00E676),
-                                                fontSize: 11,
-                                                fontFamily: 'monospace',
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            )
-                                          : Text(
-                                              '> $message',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 11,
-                                                fontFamily: 'monospace',
-                                              ),
-                                            ),
+                                      child: Text(
+                                        '> $message',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontFamily: 'monospace',
+                                        ),
+                                      ),
                                     );
                                   },
                                 ),
@@ -874,10 +759,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                     animation: _overlayBounceAnimation,
                     builder: (context, child) {
                       return Transform.translate(
-                        offset: Offset(
-                          0,
-                          _overlayBounceAnimation.value,
-                        ),
+                        offset: Offset(0, _overlayBounceAnimation.value),
                         child: child,
                       );
                     },
@@ -887,10 +769,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: _background,
-                        border: Border.all(
-                          color: _gold,
-                          width: 2,
-                        ),
+                        border: Border.all(color: _gold, width: 2),
                         boxShadow: [
                           BoxShadow(
                             color: (isConnected ? _green : _red)
@@ -931,14 +810,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                   color: _background,
                                   width: 2,
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: (isConnected ? _green : _red)
-                                        .withOpacity(0.85),
-                                    blurRadius: 7,
-                                    spreadRadius: 1,
-                                  ),
-                                ],
                               ),
                             ),
                           ),
@@ -952,22 +823,15 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     );
   }
 
-  // ==========================================
-  // DISPOSE
-  // ==========================================
-
   @override
   void dispose() {
     _imageTimer?.cancel();
-
     _scannerController.dispose();
     _scrollController.dispose();
     _overlayBounceController.dispose();
-
     _logsSubscription?.cancel();
     _connectionSubscription?.cancel();
     _overlaySubscription?.cancel();
-
     super.dispose();
   }
 }
@@ -1785,9 +1649,6 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
   }
 }
 
-// ==========================================
-// #6 MainNavigationScreen (ฉบับรวมสมบูรณ์: รองรับลบเซิร์ฟเวอร์จริง + ป้องกันเครื่องหน่วง)
-// ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -1807,15 +1668,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   int unreadAlertsCount = 0;
 
   bool _isLaunchingOverlay = false;
+  bool _isDeletingLogs = false;
 
   DatabaseReference? _dbRef;
   DatabaseReference? _alertsRef;
   DatabaseReference? _logsRef;
 
+  StreamSubscription<DatabaseEvent>? _activeAccountSubscription;
+  StreamSubscription<DatabaseEvent>? _alertsSubscription;
+  StreamSubscription<DatabaseEvent>? _statusSubscription;
+  StreamSubscription<DatabaseEvent>? _connectionSubscription;
+  StreamSubscription<DatabaseEvent>? _mainLogsSubscription;
+  StreamSubscription? _overlayCommandSubscription;
+
   List<Map<String, dynamic>> _botLogs = [];
 
   Offset _robotBubbleOffset = const Offset(20, 120);
   bool _isRobotBubblePressed = false;
+
+  static const String _databaseUrl =
+      'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/';
 
   late final AnimationController _bounceController =
       AnimationController(
@@ -1824,15 +1696,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   )..repeat(reverse: true);
 
   late final Animation<double> _bounceAnimation =
-      Tween<double>(
-    begin: 0,
-    end: 5,
-  ).animate(
+      Tween<double>(begin: 0, end: 5).animate(
     CurvedAnimation(
       parent: _bounceController,
       curve: Curves.easeInOut,
     ),
   );
+
+  FirebaseDatabase get _database => FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL: _databaseUrl,
+      );
 
   @override
   void initState() {
@@ -1848,26 +1722,46 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       _listenToLogs();
     });
 
-    // รับคำสั่งและซิงค์ข้อมูลจากหน้าต่าง Overlay ภายนอก
-    FlutterOverlayWindow.overlayListener.listen((event) {
-      if (event == null) return;
+    _overlayCommandSubscription =
+        FlutterOverlayWindow.overlayListener.listen((event) {
+      if (!mounted || event == null) return;
 
       try {
         dynamic decoded = event;
+
         if (decoded is String) {
           decoded = jsonDecode(decoded);
         }
 
-        if (decoded is Map) {
-          if (decoded['command'] == 'request_snapshot') {
+        if (decoded is! Map) return;
+
+        final data = Map<String, dynamic>.from(decoded);
+        final command = data['command']?.toString();
+
+        if (command == 'request_snapshot') {
+          _shareSnapshotToOverlay();
+        } else if (command == 'clear_logs') {
+          final requestedLogin = data['login']?.toString();
+
+          // ป้องกันคำสั่งจากบัญชีที่ไม่ตรงกับบัญชีปัจจุบัน
+          if (requestedLogin != null &&
+              requestedLogin.isNotEmpty &&
+              requestedLogin != currentLogin) {
+            debugPrint(
+              'Clear logs rejected: login mismatch '
+              '(requested=$requestedLogin, current=$currentLogin)',
+            );
+
+            // ส่งบัญชีปัจจุบันกลับไปให้ Overlay ซิงก์ใหม่
             _shareSnapshotToOverlay();
-          } else if (decoded['command'] == 'clear_logs') {
-            // สั่งลบข้อมูลบน Firebase Server จริงๆ และเคลียร์แคช
-            _clearAllLogs();
+            return;
           }
+
+          debugPrint('Received clear_logs command');
+          _clearAllLogs();
         }
       } catch (e) {
-        debugPrint('Overlay listener error: $e');
+        debugPrint('Overlay command listener error: $e');
       }
     });
   }
@@ -1875,6 +1769,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   @override
   void dispose() {
     _bounceController.dispose();
+
+    _activeAccountSubscription?.cancel();
+    _alertsSubscription?.cancel();
+    _statusSubscription?.cancel();
+    _connectionSubscription?.cancel();
+    _mainLogsSubscription?.cancel();
+    _overlayCommandSubscription?.cancel();
+
     super.dispose();
   }
 
@@ -1891,13 +1793,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   void _listenToActiveAccount() {
     try {
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-      );
-
-      database.ref('status/login').onValue.listen((event) {
+      _activeAccountSubscription =
+          _database.ref('status/login').onValue.listen((event) {
         final val = event.snapshot.value?.toString();
 
         if (val != null &&
@@ -1911,62 +1808,49 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           _listenToAlertsCount();
           _initFirebaseAndListen();
           _listenToLogs();
+          _shareSnapshotToOverlay();
         }
       });
     } catch (e) {
-      debugPrint("Account listen error: $e");
+      debugPrint('Account listen error: $e');
     }
   }
 
   void _listenToAlertsCount() {
+    _alertsSubscription?.cancel();
+
     try {
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-      );
+      _alertsRef = _database.ref('accounts/$currentLogin/alerts');
 
-      _alertsRef = database.ref('accounts/$currentLogin/alerts');
-
-      _alertsRef?.onValue.listen((DatabaseEvent event) {
+      _alertsSubscription = _alertsRef!.onValue.listen((event) {
         final data = event.snapshot.value;
 
-        if (data != null && mounted) {
-          int total = 0;
+        if (!mounted) return;
 
-          if (data is Map) {
-            total = data.length;
-          } else if (data is List) {
-            total = data.where((e) => e != null).length;
-          }
+        int total = 0;
 
-          setState(() {
-            if (_currentIndex != 4) {
-              unreadAlertsCount = total;
-            }
-          });
-        } else if (data == null && mounted) {
-          setState(() {
-            unreadAlertsCount = 0;
-          });
+        if (data is Map) {
+          total = data.length;
+        } else if (data is List) {
+          total = data.where((e) => e != null).length;
         }
+
+        setState(() {
+          unreadAlertsCount = _currentIndex == 4 ? 0 : total;
+        });
       });
     } catch (e) {
-      debugPrint("Alerts count error: $e");
+      debugPrint('Alerts count error: $e');
     }
   }
 
   void _initFirebaseAndListen() {
+    _statusSubscription?.cancel();
+
     try {
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-      );
+      _dbRef = _database.ref('accounts/$currentLogin/status');
 
-      _dbRef = database.ref('accounts/$currentLogin/status');
-
-      _dbRef?.onValue.listen((DatabaseEvent event) {
+      _statusSubscription = _dbRef!.onValue.listen((event) {
         final rawData = event.snapshot.value;
 
         if (rawData is Map && mounted) {
@@ -1975,97 +1859,110 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           setState(() {
             isRunning = data['is_running'] == true;
           });
-          
+
           _shareSnapshotToOverlay();
         }
       });
     } catch (e) {
-      debugPrint("Database listen error: $e");
+      debugPrint('Database listen error: $e');
     }
   }
 
   void _listenToConnectionStatus() {
     try {
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-      );
-
-      database.ref('.info/connected').onValue.listen((event) {
-        final connected = event.snapshot.value as bool? ?? false;
+      _connectionSubscription =
+          _database.ref('.info/connected').onValue.listen((event) {
+        final connected = event.snapshot.value == true;
 
         if (mounted) {
           setState(() {
             isConnected = connected;
           });
-          
+
           _shareSnapshotToOverlay();
         }
       });
     } catch (e) {
-      debugPrint("Connection listen error: $e");
+      debugPrint('Connection listen error: $e');
     }
   }
 
-  // ฟังข้อมูล Logs และจำกัดไม่เกิน 100 รายการเพื่อป้องกันอาการหน่วง
+  // ฟัง Logs จากบัญชีปัจจุบัน
   void _listenToLogs() {
+    _mainLogsSubscription?.cancel();
+
     try {
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-      );
+      _logsRef = _database.ref('accounts/$currentLogin/logs');
+      final loginAtSubscriptionStart = currentLogin;
 
-      _logsRef = database.ref('accounts/$currentLogin/logs');
+      _mainLogsSubscription = _logsRef!.onValue.listen((event) {
+        if (!mounted || currentLogin != loginAtSubscriptionStart) return;
 
-      _logsRef?.onValue.listen((DatabaseEvent event) {
         final data = event.snapshot.value;
-
-        if (!mounted) return;
-
-        List<Map<String, dynamic>> tempLogs = [];
+        final List<Map<String, dynamic>> tempLogs = [];
 
         if (data is Map) {
-          final sortedEntries = data.entries.toList()
+          final entries = data.entries.toList()
             ..sort(
               (a, b) => b.key.toString().compareTo(
                     a.key.toString(),
                   ),
             );
 
-          int count = 0;
-          for (final entry in sortedEntries) {
-            if (entry.value != null && count < 100) {
-              final rawMsg = entry.value.toString();
-              final cleanMsg = rawMsg.replaceAll(
-                RegExp(r'command\s*', caseSensitive: false),
-                '',
-              );
+          for (final entry in entries.take(100)) {
+            if (entry.value == null) continue;
 
-              tempLogs.add({
-                'key': entry.key.toString(),
-                'message': cleanMsg,
-              });
-              count++;
+            final raw = entry.value;
+            String message;
+
+            if (raw is Map) {
+              message = raw['message']?.toString() ??
+                  raw['text']?.toString() ??
+                  raw['log']?.toString() ??
+                  raw['msg']?.toString() ??
+                  raw.toString();
+            } else {
+              message = raw.toString();
             }
+
+            message = message.replaceAll(
+              RegExp(r'command\s*', caseSensitive: false),
+              '',
+            );
+
+            tempLogs.add({
+              'key': entry.key.toString(),
+              'message': message,
+            });
           }
         } else if (data is List) {
-          int count = 0;
-          for (int i = data.length - 1; i >= 0 && count < 100; i--) {
-            if (data[i] != null) {
-              final rawMsg = data[i].toString();
-              final cleanMsg = rawMsg.replaceAll(
-                RegExp(r'command\s*', caseSensitive: false),
-                '',
-              );
+          for (int i = data.length - 1;
+              i >= 0 && tempLogs.length < 100;
+              i--) {
+            final raw = data[i];
+            if (raw == null) continue;
 
-              tempLogs.add({
-                'key': i.toString(),
-                'message': cleanMsg,
-              });
-              count++;
+            String message;
+
+            if (raw is Map) {
+              message = raw['message']?.toString() ??
+                  raw['text']?.toString() ??
+                  raw['log']?.toString() ??
+                  raw['msg']?.toString() ??
+                  raw.toString();
+            } else {
+              message = raw.toString();
             }
+
+            message = message.replaceAll(
+              RegExp(r'command\s*', caseSensitive: false),
+              '',
+            );
+
+            tempLogs.add({
+              'key': i.toString(),
+              'message': message,
+            });
           }
         }
 
@@ -2074,32 +1971,58 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         });
 
         _shareSnapshotToOverlay();
+      }, onError: (error) {
+        debugPrint('Logs listen error: $error');
       });
     } catch (e) {
-      debugPrint("Logs listen error: $e");
+      debugPrint('Logs listen setup error: $e');
     }
   }
 
-  // ฟังก์ชันลบข้อมูล Logs บน Firebase Server และเคลียร์แคชในเครื่อง
+  // MainNavigationScreen เป็นผู้ลบ Logs บน Firebase
   Future<void> _clearAllLogs() async {
-    try {
-      if (_logsRef != null) {
-        await _logsRef!.remove(); // ลบข้อมูลออกจาก Firebase Server จริงๆ
-      }
+    if (_isDeletingLogs) return;
 
+    final ref = _logsRef;
+    if (ref == null) {
+      debugPrint('Clear logs failed: logs reference is null');
+      return;
+    }
+
+    final String loginBeingDeleted = currentLogin;
+
+    setState(() {
+      _isDeletingLogs = true;
+    });
+
+    try {
+      debugPrint('Deleting logs for account: $loginBeingDeleted');
+
+      await ref.remove();
+
+      // ห้ามลบแคชของบัญชีใหม่ หากผู้ใช้เปลี่ยนบัญชีระหว่างรอ
+      if (!mounted || currentLogin != loginBeingDeleted) return;
+
+      setState(() {
+        _botLogs.clear();
+      });
+
+      // แจ้ง Overlay ให้ซิงก์บัญชี/สถานะและ Logs หลังลบ
+      _shareSnapshotToOverlay();
+
+      debugPrint('Clear logs completed for $loginBeingDeleted');
+    } catch (e, stackTrace) {
+      debugPrint('Clear all logs error: $e');
+      debugPrint('$stackTrace');
+    } finally {
       if (mounted) {
         setState(() {
-          _botLogs.clear(); // เคลียร์รายการในแอปหลัก
+          _isDeletingLogs = false;
         });
       }
-
-      _shareSnapshotToOverlay();
-    } catch (e) {
-      debugPrint("Clear all logs error: $e");
     }
   }
 
-  // ส่งข้อมูล Snapshot ไปยัง Overlay
   void _shareSnapshotToOverlay() {
     try {
       FlutterOverlayWindow.shareData({
@@ -2126,9 +2049,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           await FlutterOverlayWindow.isPermissionGranted() ?? false;
 
       if (!granted) {
-        final result =
-            await FlutterOverlayWindow.requestPermission();
-
+        final result = await FlutterOverlayWindow.requestPermission();
         if (result != true) {
           debugPrint('Overlay permission not granted');
           return;
@@ -2149,9 +2070,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         positionGravity: PositionGravity.none,
       );
 
-      await Future.delayed(
-        const Duration(milliseconds: 1000),
-      );
+      await Future.delayed(const Duration(milliseconds: 1000));
 
       if (!mounted) return;
 
@@ -2191,7 +2110,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         accountLogin: currentLogin,
         onAlertsRead: () {
           if (!mounted) return;
-
           setState(() {
             unreadAlertsCount = 0;
           });
@@ -2287,10 +2205,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 animation: _bounceAnimation,
                 builder: (context, child) {
                   return Transform.translate(
-                    offset: Offset(
-                      0,
-                      _bounceAnimation.value,
-                    ),
+                    offset: Offset(0, _bounceAnimation.value),
                     child: child,
                   );
                 },
@@ -2299,18 +2214,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   onPanUpdate: (details) {
                     setState(() {
                       _robotBubbleOffset = Offset(
-                        (_robotBubbleOffset.dx +
-                                details.delta.dx)
-                            .clamp(
-                              0.0,
-                              screenSize.width - 60,
-                            ),
-                        (_robotBubbleOffset.dy +
-                                details.delta.dy)
-                            .clamp(
-                              0.0,
-                              screenSize.height - 60,
-                            ),
+                        (_robotBubbleOffset.dx + details.delta.dx)
+                            .clamp(0.0, screenSize.width - 60),
+                        (_robotBubbleOffset.dy + details.delta.dy)
+                            .clamp(0.0, screenSize.height - 60),
                       );
                     });
                   },
@@ -2328,7 +2235,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     setState(() {
                       _isRobotBubblePressed = false;
                     });
-
                     _launchExternalOverlay();
                   },
                   child: AnimatedScale(
@@ -2354,10 +2260,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: kDarkCard,
-        border: Border.all(
-          color: kGoldPrimary,
-          width: 2.0,
-        ),
+        border: Border.all(color: kGoldPrimary, width: 2.0),
         boxShadow: [
           BoxShadow(
             color: (isServerActive ? kGreenNeon : kRedNeon)
@@ -2397,10 +2300,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               decoration: BoxDecoration(
                 color: isServerActive ? kGreenNeon : kRedNeon,
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.black,
-                  width: 2,
-                ),
+                border: Border.all(color: Colors.black, width: 2),
               ),
             ),
           ),
@@ -2421,7 +2321,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       onTap: () {
         setState(() {
           _currentIndex = index;
-
           if (index == 4) {
             unreadAlertsCount = 0;
           }
@@ -2439,9 +2338,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected
-                ? kGoldPrimary
-                : Colors.transparent,
+            color: isSelected ? kGoldPrimary : Colors.transparent,
             width: isSelected ? 1.5 : 0,
           ),
           boxShadow: isSelected
@@ -2462,9 +2359,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               children: [
                 Icon(
                   icon,
-                  color: isSelected
-                      ? kGoldPrimary
-                      : Colors.white70,
+                  color: isSelected ? kGoldPrimary : Colors.white70,
                   size: 22,
                 ),
                 if (badgeCount > 0)
@@ -2498,13 +2393,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             Text(
               label,
               style: TextStyle(
-                color: isSelected
-                    ? kGoldPrimary
-                    : Colors.white70,
+                color: isSelected ? kGoldPrimary : Colors.white70,
                 fontSize: 10,
-                fontWeight: isSelected
-                    ? FontWeight.bold
-                    : FontWeight.normal,
+                fontWeight:
+                    isSelected ? FontWeight.bold : FontWeight.normal,
                 fontFamily: 'monospace',
               ),
             ),
@@ -2514,6 +2406,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
 
 
 
