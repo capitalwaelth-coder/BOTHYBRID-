@@ -347,7 +347,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       if (expanded) {
         await FlutterOverlayWindow.resizeOverlay(
           380,
-          620,
+          350,
           true,
         );
       } else {
@@ -1747,6 +1747,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 
+ 
  // ==========================================
  // #6 MainNavigationScreen
  // ==========================================
@@ -1768,7 +1769,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   bool isConnected = false;
   int unreadAlertsCount = 0;
 
-  // ป้องกันการเรียกเปิด Overlay ซ้ำระหว่างกำลังทำงาน
+  // ป้องกันการกดเปิด Overlay ซ้ำระหว่างกำลังทำงาน
   bool _isLaunchingOverlay = false;
 
   DatabaseReference? _dbRef;
@@ -1814,6 +1815,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     super.dispose();
   }
 
+  // ==========================================
+  // โหลดบัญชีที่บันทึกไว้
+  // ==========================================
+
   Future<void> _loadSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('mt5_login');
@@ -1824,6 +1829,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       });
     }
   }
+
+  // ==========================================
+  // ฟังบัญชีที่ใช้งาน
+  // ==========================================
 
   void _listenToActiveAccount() {
     try {
@@ -1852,6 +1861,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       debugPrint("Account listen error: $e");
     }
   }
+
+  // ==========================================
+  // จำนวน Alerts ที่ยังไม่ได้อ่าน
+  // ==========================================
 
   void _listenToAlertsCount() {
     try {
@@ -1891,6 +1904,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
+  // ==========================================
+  // ฟังสถานะบอทจาก Firebase
+  // ==========================================
+
   void _initFirebaseAndListen() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1917,6 +1934,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
+  // ==========================================
+  // ฟังสถานะการเชื่อมต่อ Firebase
+  // ==========================================
+
   void _listenToConnectionStatus() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1940,15 +1961,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 
   // ==========================================
-  // เปิด Overlay และรองรับการเปิดซ้ำหลังปิด
+  // เปิด Overlay
+  // แก้ไขเพื่อรองรับการกดเปิดใหม่หลังปิด
   // ==========================================
 
   Future<void> _launchExternalOverlay() async {
-    if (_isLaunchingOverlay) return;
+    if (_isLaunchingOverlay || !mounted) return;
 
     _isLaunchingOverlay = true;
 
     try {
+      // ตรวจสอบสิทธิ์แสดงทับแอปอื่น
       bool granted =
           await FlutterOverlayWindow.isPermissionGranted() ?? false;
 
@@ -1962,18 +1985,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         }
       }
 
-      final bool active = await FlutterOverlayWindow.isActive();
+      if (!mounted) return;
 
-      if (active) {
-        // ปิด Overlay เก่าก่อน หากระบบยังรายงานว่าทำงานอยู่
-        await FlutterOverlayWindow.closeOverlay();
-
-        await Future.delayed(
-          const Duration(milliseconds: 500),
-        );
-      }
-
-      // สร้าง Overlay ใหม่
+      // สั่งเปิด Overlay โดยไม่ปิด Overlay เดิมก่อน
       await FlutterOverlayWindow.showOverlay(
         height: 620,
         width: 380,
@@ -1986,17 +2000,32 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         positionGravity: PositionGravity.none,
       );
 
-      // ขอ Snapshot หลังเริ่มเปิด Overlay
+      debugPrint('Overlay launch requested');
+
+      // รอให้หน้าต่างเริ่มทำงาน
       await Future.delayed(
-        const Duration(milliseconds: 500),
+        const Duration(milliseconds: 1000),
       );
 
+      if (!mounted) return;
+
+      // ส่งสถานะล่าสุดให้ Overlay
+      await FlutterOverlayWindow.shareData({
+        'type': 'snapshot',
+        'login': currentLogin,
+        'currentLogin': currentLogin,
+        'isRunning': isRunning,
+        'isConnected': isConnected,
+        'connected': isConnected,
+      });
+
+      // ขอ Snapshot ผ่านระบบคำสั่งเดิม
       await FlutterOverlayWindow.shareData({
         'type': 'command',
         'command': 'request_snapshot',
       });
 
-      debugPrint('Overlay launch requested');
+      debugPrint('Overlay snapshot sent');
     } catch (e, stackTrace) {
       debugPrint('Error launching external overlay: $e');
       debugPrint('$stackTrace');
@@ -2004,6 +2033,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       _isLaunchingOverlay = false;
     }
   }
+
+  // ==========================================
+  // ปุ่มย้อนกลับ
+  // ==========================================
 
   Future<bool> _handleBackButton() async {
     if (_currentIndex != 2) {
@@ -2015,6 +2048,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
     return true;
   }
+
+  // ==========================================
+  // สร้างหน้าจอหลัก
+  // ==========================================
 
   @override
   Widget build(BuildContext context) {
@@ -2044,6 +2081,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         body: Stack(
           fit: StackFit.expand,
           children: [
+            // ภาพพื้นหลัง
             Image.asset(
               'assets/images/8.png',
               fit: BoxFit.cover,
@@ -2052,6 +2090,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 return Container(color: kDarkBg);
               },
             ),
+
+            // ชั้นไล่สีพื้นหลัง
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -2064,6 +2104,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 ),
               ),
             ),
+
+            // เนื้อหาแต่ละหน้า
             Padding(
               padding: const EdgeInsets.only(bottom: 65.0),
               child: IndexedStack(
@@ -2071,6 +2113,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 children: pages,
               ),
             ),
+
+            // ==========================================
+            // เมนูนำทางด้านล่าง
+            // ==========================================
+
             Positioned(
               left: 0,
               right: 0,
@@ -2101,10 +2148,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildCustomNavItem(0, Icons.tune, 'Settings'),
-                      _buildCustomNavItem(1, Icons.list_alt, 'Orders'),
-                      _buildCustomNavItem(2, Icons.home_filled, 'Home'),
-                      _buildCustomNavItem(3, Icons.history, 'History'),
+                      _buildCustomNavItem(
+                        0,
+                        Icons.tune,
+                        'Settings',
+                      ),
+                      _buildCustomNavItem(
+                        1,
+                        Icons.list_alt,
+                        'Orders',
+                      ),
+                      _buildCustomNavItem(
+                        2,
+                        Icons.home_filled,
+                        'Home',
+                      ),
+                      _buildCustomNavItem(
+                        3,
+                        Icons.history,
+                        'History',
+                      ),
                       _buildCustomNavItem(
                         4,
                         Icons.notifications_active,
@@ -2116,6 +2179,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 ),
               ),
             ),
+
+            // ==========================================
+            // บอลลูนหุ่นยนต์บนแดชบอร์ด
+            // ==========================================
+
             Positioned(
               left: _robotBubbleOffset.dx,
               top: _robotBubbleOffset.dy,
@@ -2123,32 +2191,49 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 animation: _bounceAnimation,
                 builder: (context, child) {
                   return Transform.translate(
-                    offset: Offset(0, _bounceAnimation.value),
+                    offset: Offset(
+                      0,
+                      _bounceAnimation.value,
+                    ),
                     child: child,
                   );
                 },
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
+
+                  // ลากเพื่อย้ายตำแหน่ง
                   onPanUpdate: (details) {
                     setState(() {
                       _robotBubbleOffset = Offset(
-                        (_robotBubbleOffset.dx + details.delta.dx)
-                            .clamp(0.0, screenSize.width - 60),
-                        (_robotBubbleOffset.dy + details.delta.dy)
-                            .clamp(0.0, screenSize.height - 60),
+                        (_robotBubbleOffset.dx +
+                                details.delta.dx)
+                            .clamp(
+                              0.0,
+                              screenSize.width - 60,
+                            ),
+                        (_robotBubbleOffset.dy +
+                                details.delta.dy)
+                            .clamp(
+                              0.0,
+                              screenSize.height - 60,
+                            ),
                       );
                     });
                   },
+
                   onTapDown: (_) {
                     setState(() {
                       _isRobotBubblePressed = true;
                     });
                   },
+
                   onTapCancel: () {
                     setState(() {
                       _isRobotBubblePressed = false;
                     });
                   },
+
+                  // แตะเพื่อเปิด Overlay
                   onTap: () {
                     setState(() {
                       _isRobotBubblePressed = false;
@@ -2156,6 +2241,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
                     _launchExternalOverlay();
                   },
+
                   child: AnimatedScale(
                     scale: _isRobotBubblePressed ? 0.85 : 1.0,
                     duration: const Duration(milliseconds: 100),
@@ -2169,6 +2255,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       ),
     );
   }
+
+  // ==========================================
+  // รูปหุ่นยนต์และจุดสถานะ
+  // ==========================================
 
   Widget _buildRobotBubbleWidget() {
     final bool isServerActive = isConnected && isRunning;
@@ -2234,6 +2324,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 
+  // ==========================================
+  // ปุ่มเมนูด้านล่าง
+  // ==========================================
+
   Widget _buildCustomNavItem(
     int index,
     IconData icon,
@@ -2264,7 +2358,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? kGoldPrimary : Colors.transparent,
+            color: isSelected
+                ? kGoldPrimary
+                : Colors.transparent,
             width: isSelected ? 1.5 : 0,
           ),
           boxShadow: isSelected
@@ -2337,6 +2433,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
 
 
 // ==========================================
