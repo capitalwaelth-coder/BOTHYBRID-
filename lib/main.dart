@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // <--- เพิ่มบรรทัดนี้เข้ามาครับ เพื่อแก้ปัญหา SharedPreferences ไม่รู้จัก
 
 const Color kGoldPrimary = Color(0xFFFFD700);
 const Color kGoldAccent = Color(0xFFFFC107);
@@ -18,7 +19,7 @@ const Color kGreenNeon = Color(0xFF00E676);
 
 
 // ==========================================
-// #0 Widget แสดงข้อความแบบพิมพ์ดีด (Typewriter) - มีตัวเดียวเท่านั้น
+// #0 Widget แสดงข้อความแบบพิมพ์ดีด (Typewriter)
 // ==========================================
 class TypewriterText extends StatefulWidget {
   final String text;
@@ -138,7 +139,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   StreamSubscription? _overlaySubscription;
 
   static const Color _gold = Color(0xFFFFD700);
-  static const Color _background = Color(0xFF161616);
+  static const Color _background = Color(0xFF121212);
   static const Color _green = Color(0xFF00E676);
   static const Color _red = Color(0xFFFF1744);
 
@@ -380,8 +381,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     try {
       if (expanded) {
         await FlutterOverlayWindow.resizeOverlay(
-          300,
-          220,
+          330,
+          420,
           true,
         );
       } else {
@@ -443,38 +444,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  Widget _circleButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    Color color = _gold,
-    double size = 38,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: _background,
-            border: Border.all(
-              color: color.withOpacity(0.8),
-              width: 1.2,
-            ),
-          ),
-          child: Icon(
-            icon,
-            color: color,
-            size: size * 0.55,
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -483,236 +452,191 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         backgroundColor: Colors.transparent,
         body: Center(
           child: _isExpanded
+              // ==========================================
+              // หน้าต่างขยายดีไซน์ใหม่ตามรูปตัวอย่าง (SCALPER V13+)
+              // ==========================================
               ? Container(
-                  width: 300,
-                  height: 250,
+                  width: 320,
+                  height: 400,
                   decoration: BoxDecoration(
-                    color: _background.withOpacity(0.97),
-                    borderRadius: BorderRadius.circular(22),
+                    color: _background,
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: _gold,
-                      width: 1.8,
+                      color: _gold.withOpacity(0.6),
+                      width: 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: _gold.withOpacity(0.25),
-                        blurRadius: 18,
+                        color: _gold.withOpacity(0.2),
+                        blurRadius: 20,
                         spreadRadius: 2,
                       ),
                     ],
                   ),
                   child: Column(
                     children: [
-                      // หัวหน้าต่าง
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          12,
-                          12,
-                          8,
-                          8,
-                        ),
-                        child: Row(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.asset(
-                                'assets/images/G.png',
-                                width: 55,
-                                height: 55,
+                      // ส่วนหัว: แบนเนอร์รูปหุ่นยนต์ทอง + ชื่อ + ปุ่มปิด (X)
+                      Stack(
+                        children: [
+                          Container(
+                            height: 130,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(15),
+                              ),
+                              image: DecorationImage(
+                                image: AssetImage('assets/images/8.png'),
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) {
-                                  return const Icon(
-                                    Icons.smart_toy,
-                                    color: _gold,
-                                    size: 55,
-                                  );
-                                },
+                                onError: (_, __) {},
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            const Expanded(
-                              child: Text(
-                                'STATUS & LOG',
-                                style: TextStyle(
-                                  color: _gold,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.1,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(15),
+                                ),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withOpacity(0.3),
+                                    Colors.black.withOpacity(0.85),
+                                  ],
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'SCALPER V4+',
+                                      style: TextStyle(
+                                        color: _gold,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          width: 9,
+                                          height: 9,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: isConnected ? _green : _red,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: (isConnected ? _green : _red)
+                                                    .withOpacity(0.8),
+                                                blurRadius: 6,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          isConnected
+                                              ? 'SERVER CONNECTED'
+                                              : 'SERVER DISCONNECTED',
+                                          style: TextStyle(
+                                            color: isConnected ? _green : _red,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                            _circleButton(
-                              icon: Icons.delete_outline,
-                              color: _red,
-                              onTap: _clearAllLogs,
-                            ),
-                            const SizedBox(width: 6),
-                            _circleButton(
-                              icon: Icons.keyboard_arrow_down,
+                          ),
+                          // ปุ่มปิด (X) มุมขวาบน
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: GestureDetector(
                               onTap: () => _setExpanded(false),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.black.withOpacity(0.6),
+                                  border: Border.all(
+                                    color: _gold.withOpacity(0.5),
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
 
                       const Divider(
-                        color: Color(0x55FFD700),
+                        color: Color(0x33FFD700),
                         height: 1,
                       ),
 
-                      // สถานะ บอท
-                      Container(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                        ),
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.04),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isConnected ? _green : _red,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: (isConnected ? _green : _red)
-                                            .withOpacity(0.6),
-                                        blurRadius: 7,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    isConnected
-                                        ? 'FIREBASE ONLINE'
-                                        : 'FIREBASE OFFLINE',
-                                    style: TextStyle(
-                                      color: isConnected ? _green : _red,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Icon(
-                                  isRunning
-                                      ? Icons.play_circle_fill
-                                      : Icons.pause_circle_filled,
-                                  size: 16,
-                                  color: isRunning ? _green : _red,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    isRunning
-                                        ? 'BOT RUNNING'
-                                        : 'BOT STOPPED',
-                                    style: TextStyle(
-                                      color: isRunning ? _green : _red,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      // รายการ LOG
+                      // ส่วนแสดงรายการ LOG แบบพิมพ์ดีด
                       Expanded(
-                        child: _botLogs.isEmpty
-                            ? const Center(
-                                child: Text(
-                                  'No logs available',
-                                  style: TextStyle(
-                                    color: Colors.white54,
-                                    fontSize: 13,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          color: Colors.black.withOpacity(0.4),
+                          child: _botLogs.isEmpty
+                              ? const Center(
+                                  child: Text(
+                                    'No logs available',
+                                    style: TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 12,
+                                    ),
                                   ),
-                                ),
-                              )
-                            : ListView.builder(
-                                padding: const EdgeInsets.fromLTRB(
-                                  12,
-                                  0,
-                                  12,
-                                  12,
-                                ),
-                                itemCount: _botLogs.length,
-                                itemBuilder: (context, index) {
-                                  final item = _botLogs[index];
+                                )
+                              : ListView.builder(
+                                  padding: EdgeInsets.zero,
+                                  itemCount: _botLogs.length,
+                                  itemBuilder: (context, index) {
+                                    final item = _botLogs[index];
+                                    final String message =
+                                        (item['message'] ??
+                                                item['text'] ??
+                                                item['log'] ??
+                                                item['msg'] ??
+                                                item.toString())
+                                            .toString();
 
-                                  final String message =
-                                      (item['message'] ??
-                                              item['text'] ??
-                                              item['log'] ??
-                                              item['msg'] ??
-                                              item.toString())
-                                          .toString();
-
-                                  return Container(
-                                    margin: const EdgeInsets.only(
-                                      bottom: 5,
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 9,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(
-                                        0.035,
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: TypewriterText(
+                                        text: '> $message',
+                                        duration: const Duration(milliseconds: 30),
+                                        style: const TextStyle(
+                                          color: Color(0xFF00E676),
+                                          fontSize: 11,
+                                          fontFamily: 'monospace',
+                                        ),
                                       ),
-                                      borderRadius:
-                                          BorderRadius.circular(7),
-                                    ),
-                                    child: TypewriterText(
-                                      text: '> $message',
-                                      duration: const Duration(milliseconds: 35),
-                                      style: const TextStyle(
-                                        color: Color(0xFFE0E0E0),
-                                        fontSize: 11,
-                                        height: 1.35,
-                                        fontFamily: 'monospace',
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                      ),
-
-                      const Padding(
-                        padding: EdgeInsets.only(
-                          bottom: 10,
-                          top: 4,
-                        ),
-                        child: Text(
-                          'POWERED BY GOLD PRO',
-                          style: TextStyle(
-                            color: Colors.white38,
-                            fontSize: 9,
-                            letterSpacing: 1.4,
-                          ),
+                                    );
+                                  },
+                                ),
                         ),
                       ),
                     ],
                   ),
                 )
+              // ==========================================
+              // บอลลูนวงกลมแบบย่อ (ลากชิดขอบจอได้อิสระ)
+              // ==========================================
               : GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _setExpanded(true),
@@ -811,6 +735,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
+
 
 
 // ==========================================
