@@ -19,8 +19,9 @@ const Color kDarkCard = Color(0xFF161616);
 const Color kRedNeon = Color(0xFFFF1744);
 const Color kGreenNeon = Color(0xFF00E676);
 
+
 // ==========================================
-// #0 Widget แสดงข้อความแบบพิมพ์ดีด (Typewriter)
+// #0 Widget แสดงข้อความแบบพิมพ์ดีด (Typewriter) - ประกาศแค่จุดเดียวตรงนี้
 // ==========================================
 class TypewriterText extends StatefulWidget {
   final String text;
@@ -562,7 +563,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         height: 1,
                       ),
 
-                      // สถานะ บอท (ลบ LOG: count ออกแล้ว)
+                      // สถานะ บอท
                       Container(
                         margin: const EdgeInsets.symmetric(
                           horizontal: 12,
