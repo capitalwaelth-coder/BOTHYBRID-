@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// FULL OVERLAY CONTENT (ดีไซน์สแกนเนอร์ + โลโก้เปลี่ยนรูป + ดึง Logs อัตโนมัติ)
+// FULL OVERLAY CONTENT (ฉบับสมบูรณ์: ย้ายปุ่มลงกรอบขาว + ปรับความเร็ว/สี Log)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -403,7 +403,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
     try {
       if (expanded) {
-        // ขยายขนาดหน้าต่าง Overlay ให้กว้างและสูงขึ้นเพื่อรองรับ Scanner และ Logs
         await FlutterOverlayWindow.resizeOverlay(
           350,
           480,
@@ -499,11 +498,11 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   ),
                   child: Column(
                     children: [
-                      // ส่วนหัวและปุ่มควบคุม
+                      // ส่วนหัว: ชื่อระบบและสถานะเซิร์ฟเวอร์
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
                               'GOLD PRO ROBOT',
@@ -514,39 +513,30 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 letterSpacing: 1.2,
                               ),
                             ),
+                            const SizedBox(height: 4),
                             Row(
                               children: [
-                                GestureDetector(
-                                  onTap: _clearAllLogs,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(5),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.black.withOpacity(0.7),
-                                      border: Border.all(color: _gold.withOpacity(0.6)),
-                                    ),
-                                    child: const Icon(
-                                      Icons.delete_sweep,
-                                      color: _gold,
-                                      size: 14,
-                                    ),
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isServerActive ? _green : _red,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: (isServerActive ? _green : _red).withOpacity(0.8),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                GestureDetector(
-                                  onTap: () => _setExpanded(false),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(5),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.black.withOpacity(0.7),
-                                      border: Border.all(color: _gold.withOpacity(0.6)),
-                                    ),
-                                    child: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 14,
-                                    ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  isServerActive ? 'EA SERVER ONLINE & RUNNING' : 'SERVER DISCONNECTED',
+                                  style: TextStyle(
+                                    color: isServerActive ? _green : _red,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ],
@@ -558,13 +548,13 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
                       // ส่วนแสดงภาพสแกนเนอร์ (Scanner Banner + เปลี่ยนรูปภาพอัตโนมัติ)
                       Container(
-                        height: 140,
+                        height: 130,
                         width: double.infinity,
                         color: Colors.black,
                         child: AnimatedBuilder(
                           animation: _scannerAnimation,
                           builder: (context, child) {
-                            final double scanValue = _scannerAnimation.value * 140;
+                            final double scanValue = _scannerAnimation.value * 130;
 
                             return Stack(
                               fit: StackFit.expand,
@@ -576,7 +566,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                     key: ValueKey<String>(currentScanImage),
                                     fit: BoxFit.cover,
                                     width: double.infinity,
-                                    height: 140,
+                                    height: 130,
                                     errorBuilder: (context, error, stackTrace) {
                                       return Container(
                                         color: Colors.black,
@@ -589,7 +579,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 ),
                                 // เส้นสแกนเนอร์สีทองเลื่อนผ่าน
                                 Positioned(
-                                  top: scanValue.clamp(0.0, 137.0),
+                                  top: scanValue.clamp(0.0, 127.0),
                                   left: 0,
                                   right: 0,
                                   child: Container(
@@ -612,79 +602,105 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                       ),
 
-                      // สถานะเซิร์ฟเวอร์ย่อย
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        color: kDarkCard,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isServerActive ? _green : _red,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: (isServerActive ? _green : _red).withOpacity(0.8),
-                                    blurRadius: 4,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              isServerActive ? 'EA SERVER ONLINE & RUNNING' : 'SERVER DISCONNECTED',
-                              style: TextStyle(
-                                color: isServerActive ? _green : _red,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
                       const Divider(color: Color(0x33FFD700), height: 1),
 
-                      // ส่วนแสดงรายการ Logs ด้านล่าง
+                      // ส่วนแสดงรายการ Logs ด้านล่าง พร้อมย้ายปุ่มควบคุมมาไว้ที่มุมขวาบนของกรอบ Log
                       Expanded(
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           color: Colors.black.withOpacity(0.4),
-                          child: _botLogs.isEmpty
-                              ? const Center(
-                                  child: Text(
-                                    'No logs available',
-                                    style: TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                )
-                              : ListView.builder(
-                                  controller: _scrollController,
-                                  padding: EdgeInsets.zero,
-                                  itemCount: _botLogs.length,
-                                  itemBuilder: (context, index) {
-                                    final item = _botLogs[index];
-                                    final String message =
-                                        (item['message'] ?? '').toString();
-
-                                    return Padding(
-                                      padding: const EdgeInsets.only(bottom: 4),
-                                      child: TypewriterText(
-                                        text: '> $message',
-                                        duration: const Duration(milliseconds: 30),
-                                        style: const TextStyle(
-                                          color: Color(0xFF00E676),
-                                          fontSize: 11,
-                                          fontFamily: 'monospace',
+                          child: Stack(
+                            children: [
+                              // รายการ Logs
+                              _botLogs.isEmpty
+                                  ? const Center(
+                                      child: Text(
+                                        'No logs available',
+                                        style: TextStyle(
+                                          color: Colors.white54,
+                                          fontSize: 12,
                                         ),
                                       ),
-                                    );
-                                  },
+                                    )
+                                  : ListView.builder(
+                                      controller: _scrollController,
+                                      padding: const EdgeInsets.only(top: 30), // เว้นที่ให้ปุ่มด้านบนไม่ทับข้อความ
+                                      itemCount: _botLogs.length,
+                                      itemBuilder: (context, index) {
+                                        final item = _botLogs[index];
+                                        final String message =
+                                            (item['message'] ?? '').toString();
+                                        final bool isLatest = index == 0;
+
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 4),
+                                          child: isLatest
+                                              ? TypewriterText(
+                                                  text: '> $message',
+                                                  duration: const Duration(milliseconds: 250), // ปรับความเร็วให้ช้าลงสุดๆ
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF00E676), // สีเขียวเฉพาะข้อความล่าสุด
+                                                    fontSize: 11,
+                                                    fontFamily: 'monospace',
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                )
+                                              : Text(
+                                                  '> $message',
+                                                  style: const TextStyle(
+                                                    color: Colors.white, // สีขาวสำหรับข้อความเก่า
+                                                    fontSize: 11,
+                                                    fontFamily: 'monospace',
+                                                  ),
+                                                ),
+                                        );
+                                      },
+                                    ),
+
+                              // ย้ายไอคอนทั้ง 2 ตัว (ถังขยะและปุ่มปิด X) มาไว้ในตำแหน่งกรอบสีขาวด้านบนขวาของโซน Log
+                              Positioned(
+                                right: 4,
+                                top: 0,
+                                child: Row(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: _clearAllLogs,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(5),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.black.withOpacity(0.7),
+                                          border: Border.all(color: _gold.withOpacity(0.6)),
+                                        ),
+                                        child: const Icon(
+                                          Icons.delete_sweep,
+                                          color: _gold,
+                                          size: 14,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    GestureDetector(
+                                      onTap: () => _setExpanded(false),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(5),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.black.withOpacity(0.7),
+                                          border: Border.all(color: _gold.withOpacity(0.6)),
+                                        ),
+                                        child: const Icon(
+                                          Icons.close,
+                                          color: Colors.white,
+                                          size: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -791,8 +807,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
-
-
 
 
 
@@ -5700,3 +5714,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
+
