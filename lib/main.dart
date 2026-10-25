@@ -105,8 +105,10 @@ void overlayMain() {
   );
 }
 
+
+
 // ==========================================
-// FULL OVERLAY CONTENT (ฉบับอัปเดต: แก้ไขปัญหา Firebase ซ้ำซ้อน)
+// FULL OVERLAY CONTENT (ฉบับอัปเดตแก้ไขการเชื่อมต่อสมบูรณ์)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -146,7 +148,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   static const Color _green = Color(0xFF00E676);
   static const Color _red = Color(0xFFFF1744);
 
-  static const String _dbUrl = 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app';
+  static const String _dbUrl = 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/';
 
   late final AnimationController _overlayBounceController =
       AnimationController(
@@ -245,7 +247,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-    void _switchAccount(String login, {FirebaseDatabase? database}) {
+  void _switchAccount(String login, {FirebaseDatabase? database}) {
     if (login.isEmpty) return;
 
     final db = database ??
@@ -257,7 +259,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     _logsSubscription?.cancel();
     _statusSubscription?.cancel();
 
-    // ดึงสถานะ is_running จาก accounts/$login/status
     _statusRef = db.ref('accounts/$login/status');
     _statusSubscription = _statusRef!.onValue.listen((event) {
       if (!mounted) return;
@@ -269,7 +270,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       }
     });
 
-    // ดึง Logs จาก accounts/$login/logs อย่างถูกต้อง
     _logsRef = db.ref('accounts/$login/logs');
     _logsSubscription = _logsRef!.onValue.listen((event) {
       if (!mounted) return;
@@ -316,7 +316,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       debugPrint('Firebase LOG error: $error');
     });
   }
-
 
   Future<void> _clearAllLogs() async {
     try {
@@ -678,6 +677,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
+
+
 
 // ==========================================
 // #2 โหมดเมนหลักของแอป
