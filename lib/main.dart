@@ -32,7 +32,7 @@ class TypewriterText extends StatefulWidget {
     super.key,
     required this.text,
     this.style,
-    this.duration = const Duration(milliseconds: 40), // ปรับความเร็วตรงนี้ได้
+    this.duration = const Duration(milliseconds: 35), // ความเร็วพิมพ์กำลังอ่านสบายตา
   });
 
   @override
@@ -132,13 +132,14 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   bool _isExpanded = false;
   bool _isMoving = false;
 
-  String currentLogin = '235305975';
+  // ปรับเลขบัญชีให้ตรงกับใน Firebase (ตามรูปตัวอย่างของคุณคือ 53049695)
+  String currentLogin = '53049695';
 
   bool isRunning = false;
   bool isConnected = false;
 
-  double _overlayX = 0; // เพิ่มพิกัดแกน X สำหรับลากชิดขอบซ้าย-ขวา
-  double _overlayY = 0;
+  double _overlayX = 0; // พิกัดแกน X สำหรับลากชิดขอบซ้าย-ขวา
+  double _overlayY = 0; // พิกัดแกน Y สำหรับลากขึ้น-ลง
 
   List<Map<String, dynamic>> _botLogs = [];
 
@@ -316,7 +317,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   }
 
   // ==========================================
-  // อ่าน LOG จาก Firebase
+  // อ่าน LOG จาก Firebase (แก้ไข Path ให้ตรงกับ accounts/$login/logs)
   // ==========================================
 
   void _watchLogs(
@@ -335,7 +336,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
           );
 
-      _logsRef = db.ref('logs/$login');
+      // แก้ไข Path ให้ตรงกับโครงสร้างจริงใน Firebase ของคุณ
+      _logsRef = db.ref('accounts/$login/logs');
 
       _logsSubscription = _logsRef!.onValue.listen((event) {
         if (!mounted) return;
@@ -421,7 +423,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       if (expanded) {
         await FlutterOverlayWindow.resizeOverlay(
           300,
-          200,
+          180,
           true,
         );
       } else {
@@ -461,7 +463,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       _overlayX += details.delta.dx;
       _overlayY += details.delta.dy;
 
-      // ปรับขอบเขตการลากให้กว้างขึ้น เพื่อให้ลากไปชิดขอบจอซ้าย-ขวา และบน-ล่าง ได้สุด
       if (_overlayX < -600) _overlayX = -600;
       if (_overlayX > 600) _overlayX = 600;
 
@@ -596,10 +597,10 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               ),
                             ),
                             const SizedBox(width: 10),
-                            const Expanded(
+                            Expanded(
                               child: Text(
-                                'GOLD PRO',
-                                style: TextStyle(
+                                'STATUS & LOG',
+                                style: const TextStyle(
                                   color: _gold,
                                   fontSize: 17,
                                   fontWeight: FontWeight.bold,
@@ -626,7 +627,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         height: 1,
                       ),
 
-                      // สถานะ Firebase และบอท
+                      // สถานะ บอท
                       Container(
                         margin: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -654,23 +655,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                       ),
                                     ],
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    isConnected
-                                        ? 'FIREBASE ONLINE'
-                                        : 'FIREBASE OFFLINE',
-                                    style: TextStyle(
-                                      color:
-                                          isConnected ? _green : _red,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                                ),                              
                             const SizedBox(height: 8),
                             Row(
                               children: [
@@ -706,10 +691,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 10),
-
-                      // รายการ LOG
+                      // รายการ LOG (ใช้ TypewriterText พิมพ์ดีดข้อความ)
                       Expanded(
                         child: _botLogs.isEmpty
                             ? const Center(
@@ -789,7 +772,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                 )
 
               // ==========================================
-              // บอลลูนวงกลมแบบย่อ (ใช้ onPanUpdate เพื่อลากได้ทุกทิศทาง)
+              // บอลลูนวงกลมแบบย่อ (ลากชิดขอบจอด้วย onPanUpdate)
               // ==========================================
               : GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -907,6 +890,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
+
 
 
 
