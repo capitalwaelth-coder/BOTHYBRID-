@@ -106,7 +106,7 @@ void overlayMain() {
 }
 
 // ==========================================
-// FULL OVERLAY CONTENT (ฉบับแก้ไขเชื่อมต่อ Firebase และ Logs สมบูรณ์)
+// FULL OVERLAY CONTENT (ฉบับอัปเดต: มีปุ่มลบแคช Logs และเลื่อนดูประวัติย้อนหลังได้)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -139,10 +139,14 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   StreamSubscription<DatabaseEvent>? _connectionSubscription;
   StreamSubscription? _overlaySubscription;
 
+  final ScrollController _scrollController = ScrollController();
+
   static const Color _gold = Color(0xFFFFD700);
   static const Color _background = Color(0xFF121212);
   static const Color _green = Color(0xFF00E676);
   static const Color _red = Color(0xFFFF1744);
+
+  static const String _dbUrl = 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app';
 
   late final AnimationController _overlayBounceController =
       AnimationController(
@@ -166,7 +170,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.initState();
     _initFirebaseForOverlay();
 
-    // ฟังข้อมูลที่ส่งมาจากแอปหลัก (ถ้ามี)
     _overlaySubscription =
         FlutterOverlayWindow.overlayListener.listen((event) {
       if (!mounted || event == null) return;
@@ -197,16 +200,23 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   Future<void> _initFirebaseForOverlay() async {
     try {
       if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
+        await Firebase.initializeApp(
+          options: const FirebaseOptions(
+            apiKey: "AIzaSyBnKyMazopUyD1k-kcIXo3bFedWfHXN0JA",
+            appId: "1:155532929563:android:49d8a1e0040dc87ce766be",
+            messagingSenderId: "155532929563",
+            projectId: "liquidity-b8739",
+            storageBucket: "liquidity-b8739.firebasestorage.app",
+            databaseURL: _dbUrl,
+          ),
+        );
       }
 
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        databaseURL: _dbUrl,
       );
 
-      // 1. เช็คสถานะอินเทอร์เน็ต/การเชื่อมต่อ Firebase
       await _connectionSubscription?.cancel();
       _connectionSubscription = database
           .ref('.info/connected')
@@ -219,9 +229,10 @@ class _FullOverlayContentState extends State<FullOverlayContent>
             isConnected = online;
           });
         }
+      }, onError: (error) {
+        debugPrint('Overlay connection error: $error');
       });
 
-      // 2. เริ่มต้นผูกข้อมูลกับบัญชีปัจจุบัน
       _switchAccount(currentLogin, database: database);
     } catch (e, stackTrace) {
       debugPrint('Overlay Firebase initialization error: $e');
@@ -240,15 +251,12 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     final db = database ??
         FirebaseDatabase.instanceFor(
           app: Firebase.app(),
-          databaseURL:
-              'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/**',
+          databaseURL: _dbUrl,
         );
 
-    // ยกเลิก Listener เก่าก่อน
     _logsSubscription?.cancel();
     _statusSubscription?.cancel();
 
-    // ฟังสถานะการทำงานของบ็อต (isRunning)
     _statusRef = db.ref('accounts/$login/status');
     _statusSubscription = _statusRef!.onValue.listen((event) {
       if (!mounted) return;
@@ -260,7 +268,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       }
     });
 
-    // ฟังข้อมูล Logs โดยตรงจากพาท accounts/$login/logs
     _logsRef = db.ref('accounts/$login/logs');
     _logsSubscription = _logsRef!.onValue.listen((event) {
       if (!mounted) return;
@@ -306,6 +313,20 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }, onError: (error) {
       debugPrint('Firebase LOG error: $error');
     });
+  }
+
+  // ฟังก์ชันลบข้อความ Logs ทั้งหมดจากฐานข้อมูลเพื่อล้างแคช
+  Future<void> _clearAllLogs() async {
+    try {
+      await _logsRef?.remove();
+      if (mounted) {
+        setState(() {
+          _botLogs.clear();
+        });
+      }
+    } catch (e) {
+      debugPrint('Clear logs error: $e');
+    }
   }
 
   Future<void> _setExpanded(bool expanded) async {
@@ -366,8 +387,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         body: Center(
           child: _isExpanded
               ? Container(
-                  width: 300,
-                  height: 250,
+                  width: 320,
+                  height: 400,
                   decoration: BoxDecoration(
                     color: _background,
                     borderRadius: BorderRadius.circular(16),
@@ -385,7 +406,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   ),
                   child: Column(
                     children: [
-                      // ส่วนหัวแบนเนอร์และสถานะเซิร์ฟเวอร์
                       Stack(
                         children: [
                           Container(
@@ -422,7 +442,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'GOLD PRO V4+',
+                                      'SCALPER V4+',
                                       style: TextStyle(
                                         color: _gold,
                                         fontSize: 18,
@@ -466,6 +486,30 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               ),
                             ),
                           ),
+                          // ปุ่มล้างแคช Logs (ไอคอนถังขยะ)
+                          Positioned(
+                            right: 42,
+                            top: 8,
+                            child: GestureDetector(
+                              onTap: _clearAllLogs,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.black.withOpacity(0.6),
+                                  border: Border.all(
+                                    color: _gold.withOpacity(0.5),
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.delete_sweep,
+                                  color: _gold,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                          // ปุ่มปิด (X) มุมขวาบน
                           Positioned(
                             right: 8,
                             top: 8,
@@ -494,7 +538,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         color: Color(0x33FFD700),
                         height: 1,
                       ),
-                      // ส่วนแสดงรายการ Logs
+                      // ส่วนแสดงรายการ Logs พร้อมระบบ Scroll เลื่อนดูย้อนหลัง
                       Expanded(
                         child: Container(
                           padding: const EdgeInsets.all(8),
@@ -510,6 +554,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                   ),
                                 )
                               : ListView.builder(
+                                  controller: _scrollController,
+                                  physics: const AlwaysScrollableScrollPhysics(),
                                   padding: EdgeInsets.zero,
                                   itemCount: _botLogs.length,
                                   itemBuilder: (context, index) {
@@ -521,7 +567,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                       padding: const EdgeInsets.only(bottom: 4),
                                       child: TypewriterText(
                                         text: '> $message',
-                                        duration: const Duration(milliseconds: 30),
+                                        duration: const Duration(milliseconds: 35),
                                         style: const TextStyle(
                                           color: Color(0xFF00E676),
                                           fontSize: 11,
@@ -552,8 +598,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                       );
                     },
                     child: Container(
-                      width: 62,
-                      height: 62,
+                      width: 64,
+                      height: 64,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: _background,
@@ -576,7 +622,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                           Positioned.fill(
                             child: ClipOval(
                               child: Image.asset(
-                                'assets/images/1.jpg',
+                                'assets/images/7.png',
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) {
                                   return const Icon(
@@ -624,6 +670,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _overlayBounceController.dispose();
     _logsSubscription?.cancel();
     _statusSubscription?.cancel();
@@ -632,6 +679,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
+
+
 
 
 // ==========================================
