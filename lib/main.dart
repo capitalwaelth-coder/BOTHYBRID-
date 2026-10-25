@@ -1631,7 +1631,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 // ==========================================
-// #6 MainNavigationScreen (ฉบับสมบูรณ์: รองรับซิงค์ Profit และลบ Logs อัตโนมัติ)
+// #6 MainNavigationScreen (ฉบับแก้ไข: ดึงค่า Profit ให้ตรงกับแดชบอร์ด)
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -1657,6 +1657,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   DatabaseReference? _dbRef;
   DatabaseReference? _alertsRef;
   DatabaseReference? _logsRef;
+  DatabaseReference? _accountRef;
 
   List<Map<String, dynamic>> _botLogs = [];
 
@@ -1722,7 +1723,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 
   Future<void> _loadSavedLogin() async {
-    final prefs = await SharedPreferences.getInstance();
+    val prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('mt5_login');
 
     if (saved != null && saved.isNotEmpty && mounted) {
@@ -1808,7 +1809,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       );
 
       _dbRef = database.ref('accounts/$currentLogin/status');
+      _accountRef = database.ref('accounts/$currentLogin');
 
+      // ฟังสถานะการทำงานบอท
       _dbRef?.onValue.listen((DatabaseEvent event) {
         final rawData = event.snapshot.value;
 
@@ -1817,17 +1820,33 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
           setState(() {
             isRunning = data['is_running'] == true;
-            
-            // ดึงค่ากำไร/ขาดทุนรวมจาก Firebase แบบเรียลไทม์
-            final dynamic p = data['total_profit'] ?? data['profit'] ?? data['open_profit'];
-            if (p is num) {
-              floatingProfit = p.toDouble();
-            } else if (p is String) {
-              floatingProfit = double.tryParse(p) ?? 0.0;
-            }
           });
           
           _shareSnapshotToOverlay();
+        }
+      });
+
+      // ฟังค่ากำไรสุทธิ (Profit) จากระดับบัญชีให้ตรงกับหน้า Orders
+      _accountRef?.onValue.listen((DatabaseEvent event) {
+        final rawData = event.snapshot.value;
+
+        if (rawData is Map && mounted) {
+          final data = Map<dynamic, dynamic>.from(rawData);
+          
+          // ค้นหาฟิลด์กำไรจากโครงสร้างบัญชีจริง
+          final dynamic p = data['total_profit'] ?? data['profit'] ?? data['open_profit'];
+          
+          if (p != null) {
+            setState(() {
+              if (p is num) {
+                floatingProfit = p.toDouble();
+              } else if (p is String) {
+                floatingProfit = double.tryParse(p) ?? 0.0;
+              }
+            });
+            
+            _shareSnapshotToOverlay();
+          }
         }
       });
     } catch (e) {
@@ -1875,7 +1894,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
         if (!mounted) return;
 
-        // เช็คจำนวน หากสะสมถึง 100 ข้อความ ให้สั่งลบทิ้งจากเซิร์ฟเวอร์อัตโนมัติ
         if (data != null) {
           int totalCount = 0;
           if (data is Map) {
@@ -1885,7 +1903,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           }
 
           if (totalCount >= 100) {
-            _logsRef?.remove(); // ลบข้อมูลบน Firebase ทันที
+            _logsRef?.remove();
             setState(() {
               _botLogs.clear();
             });
@@ -1960,7 +1978,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         'isRunning': isRunning,
         'isConnected': isConnected,
         'connected': isConnected,
-        'floatingProfit': floatingProfit, // ซิงค์ค่า Profit ไปยัง Overlay
+        'floatingProfit': floatingProfit, // ส่งค่ากำไรที่ถูกต้องไปซิงค์
         'logs': _botLogs,
       });
     } catch (e) {
