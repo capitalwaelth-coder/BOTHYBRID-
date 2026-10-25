@@ -245,92 +245,99 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   // อ่าน LOG จาก Firebase
   // ==========================================
 
-  void _watchLogs(
-    String login, {
-    FirebaseDatabase? database,
-  }) {
-    if (login.isEmpty) return;
+  // ==========================================
+// อ่าน LOG จาก Firebase
+// ==========================================
 
-    _logsSubscription?.cancel();
+void _watchLogs(
+  String login, {
+  FirebaseDatabase? database,
+}) {
+  if (login.isEmpty) return;
 
-    try {
-      final db = database ??
-          FirebaseDatabase.instanceFor(
-            app: Firebase.app(),
-            databaseURL:
-                'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-          );
+  _logsSubscription?.cancel();
 
-      _logsRef = db.ref('accounts/$login/logs');
+  try {
+    final db = database ??
+        FirebaseDatabase.instanceFor(
+          app: Firebase.app(),
+          databaseURL:
+              'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        );
 
-      _logsSubscription = _logsRef!.onValue.listen((event) {
-        if (!mounted) return;
+    // [จุดที่แก้ไข] กำหนดค่า _logsRef ให้ชี้ไปที่ path ของ log บัญชีนั้นๆ เช่น /logs/บัญชี หรือตามโครงสร้าง Database ของคุณ
+    // ตัวอย่างนี้กำหนดให้ชี้ไปที่ path: logs/$login (ปรับเปลี่ยน path ตามโครงสร้าง Firebase จริงของคุณได้เลยครับ)
+    _logsRef = db.ref('logs/$login');
 
-        final dynamic value = event.snapshot.value;
-        final List<Map<String, dynamic>> parsedLogs = [];
+    _logsSubscription = _logsRef!.onValue.listen((event) {
+      if (!mounted) return;
 
-        if (value is Map) {
-          for (final entry in value.entries) {
-            final dynamic item = entry.value;
+      final dynamic value = event.snapshot.value;
+      final List<Map<String, dynamic>> parsedLogs = [];
 
-            if (item is Map) {
-              final map = Map<String, dynamic>.from(item);
+      if (value is Map) {
+        for (final entry in value.entries) {
+          final dynamic item = entry.value;
 
-              final dynamic message = map['message'] ??
-                  map['text'] ??
-                  map['log'] ??
-                  map['msg'] ??
-                  item.toString();
+          if (item is Map) {
+            final map = Map<String, dynamic>.from(item);
 
-              parsedLogs.add({
-                ...map,
-                'message': message.toString(),
-              });
-            } else {
-              parsedLogs.add({
-                'message': item.toString(),
-              });
-            }
+            final dynamic message = map['message'] ??
+                map['text'] ??
+                map['log'] ??
+                map['msg'] ??
+                item.toString();
+
+            parsedLogs.add({
+              ...map,
+              'message': message.toString(),
+            });
+          } else {
+            parsedLogs.add({
+              'message': item.toString(),
+            });
           }
-        } else if (value is List) {
-          for (final item in value) {
-            if (item == null) continue;
-
-            if (item is Map) {
-              final map = Map<String, dynamic>.from(item);
-
-              final dynamic message = map['message'] ??
-                  map['text'] ??
-                  map['log'] ??
-                  map['msg'] ??
-                  item.toString();
-
-              parsedLogs.add({
-                ...map,
-                'message': message.toString(),
-              });
-            } else {
-              parsedLogs.add({
-                'message': item.toString(),
-              });
-            }
-          }
-        } else if (value != null) {
-          parsedLogs.add({
-            'message': value.toString(),
-          });
         }
+      } else if (value is List) {
+        for (final item in value) {
+          if (item == null) continue;
 
-        setState(() {
-          _botLogs = parsedLogs;
+          if (item is Map) {
+            final map = Map<String, dynamic>.from(item);
+
+            final dynamic message = map['message'] ??
+                map['text'] ??
+                map['log'] ??
+                map['msg'] ??
+                item.toString();
+
+            parsedLogs.add({
+              ...map,
+              'message': message.toString(),
+            });
+          } else {
+            parsedLogs.add({
+              'message': item.toString(),
+            });
+          }
+        }
+      } else if (value != null) {
+        parsedLogs.add({
+          'message': value.toString(),
         });
-      }, onError: (error) {
-        debugPrint('Firebase LOG error: $error');
+      }
+
+      setState(() {
+        _botLogs = parsedLogs;
       });
-    } catch (e) {
-      debugPrint('Watch LOG error: $e');
-    }
+    }, onError: (error) {
+      debugPrint('Firebase LOG error: $error');
+    });
+  } catch (e) {
+    debugPrint('Watch LOG error: $e');
   }
+}
+
 
   // ==========================================
   // เปิด / ย่อหน้าต่าง LOG
@@ -346,8 +353,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     try {
       if (expanded) {
         await FlutterOverlayWindow.resizeOverlay(
-          380,
-          350,
+          300,
+          200,
           true,
         );
       } else {
@@ -471,8 +478,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
               // หน้าต่าง LOG แบบขยาย
               // ==========================================
               ? Container(
-                  width: 360,
-                  height: 450,
+                  width: 300,
+                  height: 250,
                   decoration: BoxDecoration(
                     color: _background.withOpacity(0.97),
                     borderRadius: BorderRadius.circular(22),
@@ -503,15 +510,15 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                             ClipRRect(
                               borderRadius: BorderRadius.circular(10),
                               child: Image.asset(
-                                'assets/images/6.png',
-                                width: 44,
-                                height: 44,
+                                'assets/images/G.png',
+                                width: 55,
+                                height: 55,
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) {
                                   return const Icon(
                                     Icons.smart_toy,
                                     color: _gold,
-                                    size: 40,
+                                    size: 55,
                                   );
                                 },
                               ),
@@ -519,7 +526,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                             const SizedBox(width: 10),
                             const Expanded(
                               child: Text(
-                                'STATUS & LOGS',
+                                'GOLD PRO',
                                 style: TextStyle(
                                   color: _gold,
                                   fontSize: 17,
@@ -547,38 +554,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         height: 1,
                       ),
 
-                      // ชื่อแอปและบัญชี
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        child: Row(
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                'GOLD PRO',
-                                style: TextStyle(
-                                  color: _gold,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            Flexible(
-                              child: Text(
-                                currentLogin,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
+                      
                       // สถานะ Firebase และบอท
                       Container(
                         margin: const EdgeInsets.symmetric(
