@@ -108,9 +108,10 @@ void overlayMain() {
 
 
 
+ 
  // ==========================================
  // FULL OVERLAY CONTENT - GOLD PRO
- // แก้ระบบลบ LOG + ป้องกัน Listener ซ้ำ
+ // FIX: FIREBASE STATUS + CLEAR LOGS
  // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -139,6 +140,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   List<Map<String, dynamic>> _botLogs = [];
 
   DatabaseReference? _logsRef;
+  FirebaseDatabase? _database;
 
   StreamSubscription<DatabaseEvent>? _logsSubscription;
   StreamSubscription<DatabaseEvent>? _connectionSubscription;
@@ -197,8 +199,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     ),
   );
 
-  FirebaseDatabase? _database;
-
   @override
   void initState() {
     super.initState();
@@ -237,8 +237,9 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         final dynamic runningValue =
             data['isRunning'] ?? data['running'];
 
-        final dynamic connectedValue =
-            data['isConnected'] ?? data['connected'];
+        // IMPORTANT:
+        // ไม่รับ isConnected จากแอปหลัก
+        // ให้ Firebase .info/connected เป็นผู้กำหนดสถานะเท่านั้น
 
         final dynamic logsValue = data['logs'];
 
@@ -249,10 +250,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
           if (runningValue is bool) {
             isRunning = runningValue;
-          }
-
-          if (connectedValue is bool) {
-            isConnected = connectedValue;
           }
 
           if (logsValue is List) {
@@ -312,6 +309,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
           final bool online = event.snapshot.value == true;
 
+          // สถานะจริงจาก Firebase เท่านั้น
           if (isConnected != online) {
             setState(() {
               isConnected = online;
@@ -343,7 +341,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   }
 
   // ==========================================
-  // WATCH LOGS - ป้องกัน Listener ซ้ำ
+  // WATCH LOGS
   // ==========================================
 
   void _watchLogs(
@@ -353,7 +351,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     if (login.isEmpty || _watchingLogin == login) return;
 
     _watchingLogin = login;
-
     _logsSubscription?.cancel();
 
     try {
@@ -371,7 +368,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
           if (!mounted) return;
 
           final dynamic value = event.snapshot.value;
-
           final List<Map<String, dynamic>> parsedLogs = [];
 
           if (value is Map) {
@@ -384,7 +380,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
             for (final entry in entries) {
               final item = entry.value;
-
               if (item == null) continue;
 
               if (item is Map) {
@@ -411,7 +406,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
           } else if (value is List) {
             for (int i = value.length - 1; i >= 0; i--) {
               final item = value[i];
-
               if (item == null) continue;
 
               if (item is Map) {
@@ -452,7 +446,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   }
 
   // ==========================================
-  // CLEAR LOGS - ลบข้อมูลจาก Firebase จริง
+  // CLEAR ALL LOGS ON FIREBASE
   // ==========================================
 
   Future<void> _clearAllLogs() async {
@@ -481,22 +475,14 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         debugPrint(
           'Clear LOG warning: data still exists at ${ref.path}',
         );
+      } else {
+        debugPrint('Clear LOG success: ${ref.path}');
 
         if (mounted) {
           setState(() {
-            _isClearingLogs = false;
+            _botLogs.clear();
           });
         }
-
-        return;
-      }
-
-      debugPrint('Clear LOG success: ${ref.path}');
-
-      if (mounted) {
-        setState(() {
-          _botLogs.clear();
-        });
       }
     } catch (e, stackTrace) {
       debugPrint('Clear LOG error: $e');
@@ -511,7 +497,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   }
 
   // ==========================================
-  // EXPAND / COLLAPSE OVERLAY
+  // EXPAND / COLLAPSE
   // ==========================================
 
   Future<void> _setExpanded(bool expanded) async {
@@ -523,17 +509,9 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
     try {
       if (expanded) {
-        await FlutterOverlayWindow.resizeOverlay(
-          285,
-          285,
-          true,
-        );
+        await FlutterOverlayWindow.resizeOverlay(285, 285, true);
       } else {
-        await FlutterOverlayWindow.resizeOverlay(
-          90,
-          90,
-          true,
-        );
+        await FlutterOverlayWindow.resizeOverlay(90, 90, true);
       }
     } catch (e) {
       debugPrint('Resize overlay error: $e');
@@ -692,6 +670,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                       ),
 
+                      
                       // SERVER STATUS + BUTTONS
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -700,9 +679,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                         color: kDarkCard,
                         child: Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
                           children: [
+                            // SERVER STATUS
                             Expanded(
                               child: Row(
                                 children: [
@@ -746,17 +724,26 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               ),
                             ),
 
-                            // DELETE LOG BUTTON
-                            GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: _isClearingLogs
-                                  ? null
-                                  : _clearAllLogs,
-                              child: Padding(
-                                padding: const EdgeInsets.all(5),
+                            // เว้นระยะให้ถังขยะห่างจากกากบาท
+                            const SizedBox(width: 12),
+
+                            // DELETE BUTTON — ขยับซ้ายและเพิ่มพื้นที่กด
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: _isClearingLogs
+                                    ? null
+                                    : () {
+                                        debugPrint(
+                                          'DELETE LOG BUTTON PRESSED',
+                                        );
+                                        _clearAllLogs();
+                                      },
+                                customBorder: const CircleBorder(),
                                 child: Container(
-                                  width: 32,
-                                  height: 32,
+                                  width: 42,
+                                  height: 42,
+                                  alignment: Alignment.center,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: Colors.black.withOpacity(0.7),
@@ -764,30 +751,27 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                       color: _gold.withOpacity(0.8),
                                     ),
                                   ),
-                                  child: Center(
-                                    child: _isClearingLogs
-                                        ? const SizedBox(
-                                            width: 14,
-                                            height: 14,
-                                            child:
-                                                CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: _gold,
-                                            ),
-                                          )
-                                        : const Icon(
-                                            Icons.delete_sweep,
+                                  child: _isClearingLogs
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
                                             color: _gold,
-                                            size: 18,
                                           ),
-                                  ),
+                                        )
+                                      : const Icon(
+                                          Icons.delete_sweep,
+                                          color: _gold,
+                                          size: 20,
+                                        ),
                                 ),
                               ),
                             ),
 
-                            const SizedBox(width: 3),
+                            const SizedBox(width: 4),
 
-                            // CLOSE BUTTON
+                            // CLOSE BUTTON — คงตำแหน่งด้านขวา
                             GestureDetector(
                               behavior: HitTestBehavior.opaque,
                               onTap: () => _setExpanded(false),
@@ -814,6 +798,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                           ],
                         ),
                       ),
+
 
                       const Divider(
                         color: Color(0x33FFD700),
@@ -843,31 +828,25 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                     final item = _botLogs[index];
 
                                     final String message =
-                                        (item['message'] ?? '')
-                                            .toString();
+                                        (item['message'] ?? '').toString();
 
                                     final bool isLatest = index == 0;
 
                                     return Padding(
-                                      padding:
-                                          const EdgeInsets.only(
+                                      padding: const EdgeInsets.only(
                                         bottom: 4,
                                       ),
                                       child: isLatest
                                           ? TypewriterText(
                                               text: '> $message',
-                                              duration:
-                                                  const Duration(
+                                              duration: const Duration(
                                                 milliseconds: 250,
                                               ),
                                               style: const TextStyle(
-                                                color: Color(
-                                                  0xFF00E676,
-                                                ),
+                                                color: Color(0xFF00E676),
                                                 fontSize: 11,
                                                 fontFamily: 'monospace',
-                                                fontWeight:
-                                                    FontWeight.bold,
+                                                fontWeight: FontWeight.bold,
                                               ),
                                             )
                                           : Text(
@@ -954,9 +933,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: (isConnected
-                                            ? _green
-                                            : _red)
+                                    color: (isConnected ? _green : _red)
                                         .withOpacity(0.85),
                                     blurRadius: 7,
                                     spreadRadius: 1,
@@ -994,6 +971,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
+
 
 
 
