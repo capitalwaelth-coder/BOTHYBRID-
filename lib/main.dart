@@ -107,22 +107,23 @@ void overlayMain() {
 
 
 
+// ==========================================
+// FULL OVERLAY CONTENT (ฉบับรวมสมบูรณ์: ปุ่มบนแถบเซิร์ฟเวอร์ + ลบ Server จริง)
+// ==========================================
+
 class FullOverlayContent extends StatefulWidget {
   const FullOverlayContent({super.key});
 
   @override
-  State<FullOverlayContent> createState() =>
-      _FullOverlayContentState();
+  State<FullOverlayContent> createState() => _FullOverlayContentState();
 }
 
 class _FullOverlayContentState extends State<FullOverlayContent>
     with TickerProviderStateMixin {
   bool _isExpanded = false;
   bool _isMoving = false;
-  bool _isClearingLogs = false;
 
   String currentLogin = '53049695';
-  String? _watchingLogin;
 
   bool isRunning = false;
   bool isConnected = false;
@@ -133,7 +134,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   List<Map<String, dynamic>> _botLogs = [];
 
   DatabaseReference? _logsRef;
-  FirebaseDatabase? _database;
 
   StreamSubscription<DatabaseEvent>? _logsSubscription;
   StreamSubscription<DatabaseEvent>? _connectionSubscription;
@@ -146,15 +146,12 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   static const Color _green = Color(0xFF00E676);
   static const Color _red = Color(0xFFFF1744);
 
-  static const String _databaseUrl =
-      'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/';
-
+  // รายการรูปภาพสำหรับทำสไลด์โชว์ในสแกนเนอร์
   final List<String> _images = [
     'assets/images/2.png',
     'assets/images/4.png',
     'assets/images/6.png',
   ];
-
   int _imageIndex = 0;
   Timer? _imageTimer;
 
@@ -165,13 +162,17 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   )..repeat(reverse: true);
 
   late final Animation<double> _overlayBounceAnimation =
-      Tween<double>(begin: -7.0, end: 7.0).animate(
+      Tween<double>(
+    begin: -7.0,
+    end: 7.0,
+  ).animate(
     CurvedAnimation(
       parent: _overlayBounceController,
       curve: Curves.easeInOut,
     ),
   );
 
+  // Animation สำหรับเส้นสแกนเนอร์วิ่งขึ้นลง
   late final AnimationController _scannerController =
       AnimationController(
     duration: const Duration(seconds: 3),
@@ -192,15 +193,14 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
     _initFirebaseForOverlay();
 
-    _imageTimer = Timer.periodic(
-      const Duration(seconds: 3),
-      (_) {
-        if (!mounted) return;
+    // ตัวสลับภาพแบนเนอร์ทุกๆ 3วินาที
+    _imageTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (mounted) {
         setState(() {
           _imageIndex = (_imageIndex + 1) % _images.length;
         });
-      },
-    );
+      }
+    });
 
     _overlaySubscription =
         FlutterOverlayWindow.overlayListener.listen((event) {
@@ -208,34 +208,56 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
       try {
         dynamic decoded = event;
+
         if (decoded is String) {
           decoded = jsonDecode(decoded);
         }
+
         if (decoded is! Map) return;
 
         final data = Map<String, dynamic>.from(decoded);
 
-        // Overlay รับเฉพาะข้อมูลสถานะและบัญชีจาก Snapshot
-        // ไม่รับ Logs จาก Snapshot เพื่อไม่ให้ข้อมูลเก่าทับ Firebase
         final String? newLogin =
             (data['login'] ?? data['currentLogin'])?.toString();
 
-        final dynamic runningValue =
-            data['isRunning'] ?? data['running'];
+        final dynamic runningValue = data['isRunning'] ??
+            data['running'];
+
+        final dynamic connectedValue = data['isConnected'] ??
+            data['connected'];
+
+        setState(() {
+          if (newLogin != null && newLogin.isNotEmpty) {
+            currentLogin = newLogin;
+          }
+
+          if (runningValue is bool) {
+            isRunning = runningValue;
+          }
+
+          if (connectedValue is bool) {
+            isConnected = connectedValue;
+          }
+
+          final dynamic logsValue = data['logs'];
+
+          if (logsValue is List) {
+            _botLogs = logsValue.map((item) {
+              if (item is Map) {
+                return Map<String, dynamic>.from(item);
+              }
+
+              return <String, dynamic>{
+                'message': item.toString(),
+              };
+            }).toList();
+          }
+        });
 
         if (newLogin != null &&
             newLogin.isNotEmpty &&
-            newLogin != currentLogin) {
-          setState(() {
-            currentLogin = newLogin;
-          });
+            _logsRef?.key != newLogin) {
           _watchLogs(newLogin);
-        }
-
-        if (runningValue is bool && isRunning != runningValue) {
-          setState(() {
-            isRunning = runningValue;
-          });
         }
       } catch (e) {
         debugPrint('Overlay data error: $e');
@@ -256,33 +278,34 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL: _databaseUrl,
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
 
-      _database = database;
+      await _connectionSubscription?.cancel();
 
-      _connectionSubscription =
-          database.ref('.info/connected').onValue.listen(
-        (event) {
-          if (!mounted) return;
+      _connectionSubscription = database
+          .ref('.info/connected')
+          .onValue
+          .listen((event) {
+        if (!mounted) return;
 
-          final online = event.snapshot.value == true;
+        final bool online = event.snapshot.value == true;
 
-          if (isConnected != online) {
-            setState(() {
-              isConnected = online;
-            });
-          }
-        },
-        onError: (error) {
-          debugPrint('Firebase connection error: $error');
-          if (mounted) {
-            setState(() {
-              isConnected = false;
-            });
-          }
-        },
-      );
+        if (isConnected != online) {
+          setState(() {
+            isConnected = online;
+          });
+        }
+      }, onError: (error) {
+        debugPrint('Firebase connection error: $error');
+
+        if (mounted) {
+          setState(() {
+            isConnected = false;
+          });
+        }
+      });
 
       _watchLogs(currentLogin, database: database);
     } catch (e, stackTrace) {
@@ -301,129 +324,73 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     String login, {
     FirebaseDatabase? database,
   }) {
-    if (login.isEmpty || _watchingLogin == login) return;
+    if (login.isEmpty) return;
 
-    _watchingLogin = login;
-
-    final oldSubscription = _logsSubscription;
-    _logsSubscription = null;
-    oldSubscription?.cancel();
+    _logsSubscription?.cancel();
 
     try {
       final db = database ??
-          _database ??
           FirebaseDatabase.instanceFor(
             app: Firebase.app(),
-            databaseURL: _databaseUrl,
+            databaseURL:
+                'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
           );
 
-      final ref = db.ref('accounts/$login/logs');
-      _logsRef = ref;
+      _logsRef = db.ref('accounts/$login/logs');
 
-      _logsSubscription = ref.onValue.listen(
-        (event) {
-          if (!mounted || _watchingLogin != login) return;
+      _logsSubscription = _logsRef!.onValue.listen((event) {
+        if (!mounted) return;
 
-          final dynamic value = event.snapshot.value;
-          final List<Map<String, dynamic>> parsedLogs = [];
+        final dynamic value = event.snapshot.value;
+        final List<Map<String, dynamic>> parsedLogs = [];
 
-          if (value is Map) {
-            final entries = value.entries.toList()
-              ..sort(
-                (a, b) => b.key.toString().compareTo(
-                      a.key.toString(),
-                    ),
-              );
+        if (value is Map) {
+          final sortedEntries = value.entries.toList()
+            ..sort((a, b) => b.key.toString().compareTo(a.key.toString()));
 
-            for (final entry in entries) {
-              final item = entry.value;
-              if (item == null) continue;
-
+          for (final entry in sortedEntries) {
+            final item = entry.value;
+            if (item != null) {
               if (item is Map) {
                 final map = Map<String, dynamic>.from(item);
-                final message =
-                    map['message']?.toString() ??
+                final String message = map['message']?.toString() ??
                     map['text']?.toString() ??
                     map['log']?.toString() ??
                     map['msg']?.toString() ??
                     item.toString();
-
-                parsedLogs.add({
-                  'key': entry.key.toString(),
-                  'message': message,
-                });
+                parsedLogs.add({'key': entry.key.toString(), 'message': message});
               } else {
-                parsedLogs.add({
-                  'key': entry.key.toString(),
-                  'message': item.toString(),
-                });
-              }
-            }
-          } else if (value is List) {
-            for (int i = value.length - 1; i >= 0; i--) {
-              final item = value[i];
-              if (item == null) continue;
-
-              if (item is Map) {
-                final map = Map<String, dynamic>.from(item);
-                final message =
-                    map['message']?.toString() ??
-                    map['text']?.toString() ??
-                    map['log']?.toString() ??
-                    map['msg']?.toString() ??
-                    item.toString();
-
-                parsedLogs.add({
-                  'key': i.toString(),
-                  'message': message,
-                });
-              } else {
-                parsedLogs.add({
-                  'key': i.toString(),
-                  'message': item.toString(),
-                });
+                parsedLogs.add({'key': entry.key.toString(), 'message': item.toString()});
               }
             }
           }
+        } else if (value is List) {
+          for (int i = value.length - 1; i >= 0; i--) {
+            final item = value[i];
+            if (item != null) {
+              if (item is Map) {
+                final map = Map<String, dynamic>.from(item);
+                final String message = map['message']?.toString() ??
+                    map['text']?.toString() ??
+                    map['log']?.toString() ??
+                    map['msg']?.toString() ??
+                    item.toString();
+                parsedLogs.add({'key': i.toString(), 'message': message});
+              } else {
+                parsedLogs.add({'key': i.toString(), 'message': item.toString()});
+              }
+            }
+          }
+        }
 
-          setState(() {
-            _botLogs = parsedLogs;
-          });
-        },
-        onError: (error) {
-          debugPrint('Firebase LOG error: $error');
-        },
-      );
-    } catch (e) {
-      _watchingLogin = null;
-      debugPrint('Watch LOG error: $e');
-    }
-  }
-
-  // ส่งคำสั่งให้ MainNavigationScreen ลบ Logs
-  Future<void> _requestClearLogsFromMain() async {
-    if (_isClearingLogs) return;
-
-    setState(() {
-      _isClearingLogs = true;
-    });
-
-    try {
-      debugPrint('Sending clear_logs command to main');
-
-      await FlutterOverlayWindow.shareData({
-        'type': 'command',
-        'command': 'clear_logs',
-        'login': currentLogin,
+        setState(() {
+          _botLogs = parsedLogs;
+        });
+      }, onError: (error) {
+        debugPrint('Firebase LOG error: $error');
       });
     } catch (e) {
-      debugPrint('Send clear_logs command failed: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isClearingLogs = false;
-        });
-      }
+      debugPrint('Watch LOG error: $e');
     }
   }
 
@@ -436,9 +403,17 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
     try {
       if (expanded) {
-        await FlutterOverlayWindow.resizeOverlay(285, 285, true);
+        await FlutterOverlayWindow.resizeOverlay(
+          285,
+          285,
+          true,
+        );
       } else {
-        await FlutterOverlayWindow.resizeOverlay(90, 90, true);
+        await FlutterOverlayWindow.resizeOverlay(
+          90,
+          90,
+          true,
+        );
       }
     } catch (e) {
       debugPrint('Resize overlay error: $e');
@@ -462,8 +437,11 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       _overlayX += details.delta.dx;
       _overlayY += details.delta.dy;
 
-      _overlayX = _overlayX.clamp(-600.0, 600.0);
-      _overlayY = _overlayY.clamp(-1200.0, 1200.0);
+      if (_overlayX < -600) _overlayX = -600;
+      if (_overlayX > 600) _overlayX = 600;
+
+      if (_overlayY < -1200) _overlayY = -1200;
+      if (_overlayY > 1200) _overlayY = 1200;
 
       await FlutterOverlayWindow.moveOverlay(
         OverlayPosition(_overlayX, _overlayY),
@@ -472,6 +450,24 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       debugPrint('Move overlay error: $e');
     } finally {
       _isMoving = false;
+    }
+  }
+
+  // ส่งคำสั่งเคลียร์ข้อมูล Logs บน Firebase Server จริงผ่านแอปหลัก
+  Future<void> _clearAllLogs() async {
+    try {
+      await FlutterOverlayWindow.shareData({
+        'type': 'command',
+        'command': 'clear_logs',
+      });
+
+      if (mounted) {
+        setState(() {
+          _botLogs.clear();
+        });
+      }
+    } catch (e) {
+      debugPrint('Clear LOG error: $e');
     }
   }
 
@@ -506,6 +502,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   ),
                   child: Column(
                     children: [
+                      // ส่วนแสดงภาพสแกนเนอร์ (Scanner Banner + เปลี่ยนรูปภาพอัตโนมัติ)
                       SizedBox(
                         height: 130,
                         width: double.infinity,
@@ -518,42 +515,30 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                             child: AnimatedBuilder(
                               animation: _scannerAnimation,
                               builder: (context, child) {
-                                final double scanValue =
-                                    _scannerAnimation.value * 130;
+                                final double scanValue = _scannerAnimation.value * 130;
 
                                 return Stack(
                                   fit: StackFit.expand,
                                   children: [
                                     AnimatedSwitcher(
-                                      duration: const Duration(
-                                        milliseconds: 800,
-                                      ),
+                                      duration: const Duration(milliseconds: 800),
                                       child: Image.asset(
                                         currentScanImage,
-                                        key: ValueKey<String>(
-                                          currentScanImage,
-                                        ),
+                                        key: ValueKey<String>(currentScanImage),
                                         fit: BoxFit.cover,
                                         width: double.infinity,
                                         height: 130,
-                                        errorBuilder: (
-                                          context,
-                                          error,
-                                          stackTrace,
-                                        ) {
+                                        errorBuilder: (context, error, stackTrace) {
                                           return Container(
                                             color: Colors.black,
                                             child: const Center(
-                                              child: Icon(
-                                                Icons.smart_toy,
-                                                color: _gold,
-                                                size: 40,
-                                              ),
+                                              child: Icon(Icons.smart_toy, color: _gold, size: 40),
                                             ),
                                           );
                                         },
                                       ),
                                     ),
+                                    // เส้นสแกนเนอร์สีทองเลื่อนผ่าน
                                     Positioned(
                                       top: scanValue.clamp(0.0, 127.0),
                                       left: 0,
@@ -580,113 +565,93 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                       ),
 
-                      // สถานะ + ปุ่มถังขยะ + ปุ่มกากบาท
+                      // ==========================================
+                      // แก้ไขเฉพาะส่วน Container แถบเซิร์ฟเวอร์และปุ่มควบคุมใน FullOverlayContent
+                      // ==========================================             
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         color: kDarkCard,
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
+                            Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isServerActive ? _green : _red,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: (isServerActive ? _green : _red).withOpacity(0.8),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  isServerActive ? 'SERVER ONLINE' : 'SERVER DISCONNECTED',
+                                  style: TextStyle(
+                                    color: isServerActive ? _green : _red,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () {
+                                    _clearAllLogs();
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(5),
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: isServerActive ? _green : _red,
+                                      color: Colors.black.withOpacity(0.7),
+                                      border: Border.all(color: _gold.withOpacity(0.6)),
                                     ),
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Flexible(
-                                    child: Text(
-                                      isServerActive
-                                          ? 'SERVER ONLINE'
-                                          : 'SERVER DISCONNECTED',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: isServerActive ? _green : _red,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    child: const Icon(
+                                      Icons.delete_sweep,
+                                      color: _gold,
+                                      size: 14,
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                customBorder: const CircleBorder(),
-                                onTap: _isClearingLogs
-                                    ? null
-                                    : _requestClearLogsFromMain,
-                                child: Container(
-                                  width: 42,
-                                  height: 42,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.black.withOpacity(0.7),
-                                    border: Border.all(
-                                      color: _gold.withOpacity(0.8),
-                                    ),
-                                  ),
-                                  child: _isClearingLogs
-                                      ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: _gold,
-                                          ),
-                                        )
-                                      : const Icon(
-                                          Icons.delete_sweep,
-                                          color: _gold,
-                                          size: 20,
-                                        ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => _setExpanded(false),
-                              child: Padding(
-                                padding: const EdgeInsets.all(5),
-                                child: Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.black.withOpacity(0.7),
-                                    border: Border.all(
-                                      color: _gold.withOpacity(0.6),
-                                    ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 18,
                                   ),
                                 ),
-                              ),
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () {
+                                    _setExpanded(false);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(5),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.black.withOpacity(0.7),
+                                      border: Border.all(color: _gold.withOpacity(0.6)),
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
 
-                      const Divider(
-                        color: Color(0x33FFD700),
-                        height: 1,
-                      ),
 
+                      const Divider(color: Color(0x33FFD700), height: 1),
+
+                      // ส่วนแสดงรายการ Logs ดันขึ้นมาเต็มพื้นที่
                       Expanded(
                         child: Container(
                           padding: const EdgeInsets.all(8),
@@ -709,39 +674,29 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                     final item = _botLogs[index];
                                     final String message =
                                         (item['message'] ?? '').toString();
-
-                                    if (index == 0) {
-                                      return Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 4,
-                                        ),
-                                        child: TypewriterText(
-                                          text: '> $message',
-                                          duration: const Duration(
-                                            milliseconds: 250,
-                                          ),
-                                          style: const TextStyle(
-                                            color: Color(0xFF00E676),
-                                            fontSize: 11,
-                                            fontFamily: 'monospace',
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      );
-                                    }
+                                    final bool isLatest = index == 0;
 
                                     return Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 4,
-                                      ),
-                                      child: Text(
-                                        '> $message',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 11,
-                                          fontFamily: 'monospace',
-                                        ),
-                                      ),
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: isLatest
+                                          ? TypewriterText(
+                                              text: '> $message',
+                                              duration: const Duration(milliseconds: 250),
+                                              style: const TextStyle(
+                                                color: Color(0xFF00E676),
+                                                fontSize: 11,
+                                                fontFamily: 'monospace',
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            )
+                                          : Text(
+                                              '> $message',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontFamily: 'monospace',
+                                              ),
+                                            ),
                                     );
                                   },
                                 ),
@@ -754,12 +709,17 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _setExpanded(true),
                   onLongPress: _hideOverlay,
-                  onPanUpdate: _moveBalloon,
+                  onPanUpdate: (details) {
+                    _moveBalloon(details);
+                  },
                   child: AnimatedBuilder(
                     animation: _overlayBounceAnimation,
                     builder: (context, child) {
                       return Transform.translate(
-                        offset: Offset(0, _overlayBounceAnimation.value),
+                        offset: Offset(
+                          0,
+                          _overlayBounceAnimation.value,
+                        ),
                         child: child,
                       );
                     },
@@ -769,7 +729,10 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: _background,
-                        border: Border.all(color: _gold, width: 2),
+                        border: Border.all(
+                          color: _gold,
+                          width: 2,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: (isConnected ? _green : _red)
@@ -810,6 +773,14 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                   color: _background,
                                   width: 2,
                                 ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (isConnected ? _green : _red)
+                                        .withOpacity(0.85),
+                                    blurRadius: 7,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -835,8 +806,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
-
-
 
 
 
@@ -1649,6 +1618,9 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
   }
 }
 
+// ==========================================
+// #6 MainNavigationScreen (ฉบับรวมสมบูรณ์: รองรับลบเซิร์ฟเวอร์จริง + ป้องกันเครื่องหน่วง)
+// ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -1668,26 +1640,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   int unreadAlertsCount = 0;
 
   bool _isLaunchingOverlay = false;
-  bool _isDeletingLogs = false;
 
   DatabaseReference? _dbRef;
   DatabaseReference? _alertsRef;
   DatabaseReference? _logsRef;
 
-  StreamSubscription<DatabaseEvent>? _activeAccountSubscription;
-  StreamSubscription<DatabaseEvent>? _alertsSubscription;
-  StreamSubscription<DatabaseEvent>? _statusSubscription;
-  StreamSubscription<DatabaseEvent>? _connectionSubscription;
-  StreamSubscription<DatabaseEvent>? _mainLogsSubscription;
-  StreamSubscription? _overlayCommandSubscription;
-
   List<Map<String, dynamic>> _botLogs = [];
 
   Offset _robotBubbleOffset = const Offset(20, 120);
   bool _isRobotBubblePressed = false;
-
-  static const String _databaseUrl =
-      'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/';
 
   late final AnimationController _bounceController =
       AnimationController(
@@ -1696,17 +1657,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   )..repeat(reverse: true);
 
   late final Animation<double> _bounceAnimation =
-      Tween<double>(begin: 0, end: 5).animate(
+      Tween<double>(
+    begin: 0,
+    end: 5,
+  ).animate(
     CurvedAnimation(
       parent: _bounceController,
       curve: Curves.easeInOut,
     ),
   );
-
-  FirebaseDatabase get _database => FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: _databaseUrl,
-      );
 
   @override
   void initState() {
@@ -1722,46 +1681,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       _listenToLogs();
     });
 
-    _overlayCommandSubscription =
-        FlutterOverlayWindow.overlayListener.listen((event) {
-      if (!mounted || event == null) return;
+    // รับคำสั่งและซิงค์ข้อมูลจากหน้าต่าง Overlay ภายนอก
+    FlutterOverlayWindow.overlayListener.listen((event) {
+      if (event == null) return;
 
       try {
         dynamic decoded = event;
-
         if (decoded is String) {
           decoded = jsonDecode(decoded);
         }
 
-        if (decoded is! Map) return;
-
-        final data = Map<String, dynamic>.from(decoded);
-        final command = data['command']?.toString();
-
-        if (command == 'request_snapshot') {
-          _shareSnapshotToOverlay();
-        } else if (command == 'clear_logs') {
-          final requestedLogin = data['login']?.toString();
-
-          // ป้องกันคำสั่งจากบัญชีที่ไม่ตรงกับบัญชีปัจจุบัน
-          if (requestedLogin != null &&
-              requestedLogin.isNotEmpty &&
-              requestedLogin != currentLogin) {
-            debugPrint(
-              'Clear logs rejected: login mismatch '
-              '(requested=$requestedLogin, current=$currentLogin)',
-            );
-
-            // ส่งบัญชีปัจจุบันกลับไปให้ Overlay ซิงก์ใหม่
+        if (decoded is Map) {
+          if (decoded['command'] == 'request_snapshot') {
             _shareSnapshotToOverlay();
-            return;
+          } else if (decoded['command'] == 'clear_logs') {
+            // สั่งลบข้อมูลบน Firebase Server จริงๆ และเคลียร์แคช
+            _clearAllLogs();
           }
-
-          debugPrint('Received clear_logs command');
-          _clearAllLogs();
         }
       } catch (e) {
-        debugPrint('Overlay command listener error: $e');
+        debugPrint('Overlay listener error: $e');
       }
     });
   }
@@ -1769,14 +1708,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   @override
   void dispose() {
     _bounceController.dispose();
-
-    _activeAccountSubscription?.cancel();
-    _alertsSubscription?.cancel();
-    _statusSubscription?.cancel();
-    _connectionSubscription?.cancel();
-    _mainLogsSubscription?.cancel();
-    _overlayCommandSubscription?.cancel();
-
     super.dispose();
   }
 
@@ -1793,8 +1724,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   void _listenToActiveAccount() {
     try {
-      _activeAccountSubscription =
-          _database.ref('status/login').onValue.listen((event) {
+      final database = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+      );
+
+      database.ref('status/login').onValue.listen((event) {
         final val = event.snapshot.value?.toString();
 
         if (val != null &&
@@ -1808,49 +1744,62 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           _listenToAlertsCount();
           _initFirebaseAndListen();
           _listenToLogs();
-          _shareSnapshotToOverlay();
         }
       });
     } catch (e) {
-      debugPrint('Account listen error: $e');
+      debugPrint("Account listen error: $e");
     }
   }
 
   void _listenToAlertsCount() {
-    _alertsSubscription?.cancel();
-
     try {
-      _alertsRef = _database.ref('accounts/$currentLogin/alerts');
+      final database = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+      );
 
-      _alertsSubscription = _alertsRef!.onValue.listen((event) {
+      _alertsRef = database.ref('accounts/$currentLogin/alerts');
+
+      _alertsRef?.onValue.listen((DatabaseEvent event) {
         final data = event.snapshot.value;
 
-        if (!mounted) return;
+        if (data != null && mounted) {
+          int total = 0;
 
-        int total = 0;
+          if (data is Map) {
+            total = data.length;
+          } else if (data is List) {
+            total = data.where((e) => e != null).length;
+          }
 
-        if (data is Map) {
-          total = data.length;
-        } else if (data is List) {
-          total = data.where((e) => e != null).length;
+          setState(() {
+            if (_currentIndex != 4) {
+              unreadAlertsCount = total;
+            }
+          });
+        } else if (data == null && mounted) {
+          setState(() {
+            unreadAlertsCount = 0;
+          });
         }
-
-        setState(() {
-          unreadAlertsCount = _currentIndex == 4 ? 0 : total;
-        });
       });
     } catch (e) {
-      debugPrint('Alerts count error: $e');
+      debugPrint("Alerts count error: $e");
     }
   }
 
   void _initFirebaseAndListen() {
-    _statusSubscription?.cancel();
-
     try {
-      _dbRef = _database.ref('accounts/$currentLogin/status');
+      final database = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+      );
 
-      _statusSubscription = _dbRef!.onValue.listen((event) {
+      _dbRef = database.ref('accounts/$currentLogin/status');
+
+      _dbRef?.onValue.listen((DatabaseEvent event) {
         final rawData = event.snapshot.value;
 
         if (rawData is Map && mounted) {
@@ -1859,110 +1808,97 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           setState(() {
             isRunning = data['is_running'] == true;
           });
-
+          
           _shareSnapshotToOverlay();
         }
       });
     } catch (e) {
-      debugPrint('Database listen error: $e');
+      debugPrint("Database listen error: $e");
     }
   }
 
   void _listenToConnectionStatus() {
     try {
-      _connectionSubscription =
-          _database.ref('.info/connected').onValue.listen((event) {
-        final connected = event.snapshot.value == true;
+      final database = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+      );
+
+      database.ref('.info/connected').onValue.listen((event) {
+        final connected = event.snapshot.value as bool? ?? false;
 
         if (mounted) {
           setState(() {
             isConnected = connected;
           });
-
+          
           _shareSnapshotToOverlay();
         }
       });
     } catch (e) {
-      debugPrint('Connection listen error: $e');
+      debugPrint("Connection listen error: $e");
     }
   }
 
-  // ฟัง Logs จากบัญชีปัจจุบัน
+  // ฟังข้อมูล Logs และจำกัดไม่เกิน 100 รายการเพื่อป้องกันอาการหน่วง
   void _listenToLogs() {
-    _mainLogsSubscription?.cancel();
-
     try {
-      _logsRef = _database.ref('accounts/$currentLogin/logs');
-      final loginAtSubscriptionStart = currentLogin;
+      final database = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+      );
 
-      _mainLogsSubscription = _logsRef!.onValue.listen((event) {
-        if (!mounted || currentLogin != loginAtSubscriptionStart) return;
+      _logsRef = database.ref('accounts/$currentLogin/logs');
 
+      _logsRef?.onValue.listen((DatabaseEvent event) {
         final data = event.snapshot.value;
-        final List<Map<String, dynamic>> tempLogs = [];
+
+        if (!mounted) return;
+
+        List<Map<String, dynamic>> tempLogs = [];
 
         if (data is Map) {
-          final entries = data.entries.toList()
+          final sortedEntries = data.entries.toList()
             ..sort(
               (a, b) => b.key.toString().compareTo(
                     a.key.toString(),
                   ),
             );
 
-          for (final entry in entries.take(100)) {
-            if (entry.value == null) continue;
+          int count = 0;
+          for (final entry in sortedEntries) {
+            if (entry.value != null && count < 100) {
+              final rawMsg = entry.value.toString();
+              final cleanMsg = rawMsg.replaceAll(
+                RegExp(r'command\s*', caseSensitive: false),
+                '',
+              );
 
-            final raw = entry.value;
-            String message;
-
-            if (raw is Map) {
-              message = raw['message']?.toString() ??
-                  raw['text']?.toString() ??
-                  raw['log']?.toString() ??
-                  raw['msg']?.toString() ??
-                  raw.toString();
-            } else {
-              message = raw.toString();
+              tempLogs.add({
+                'key': entry.key.toString(),
+                'message': cleanMsg,
+              });
+              count++;
             }
-
-            message = message.replaceAll(
-              RegExp(r'command\s*', caseSensitive: false),
-              '',
-            );
-
-            tempLogs.add({
-              'key': entry.key.toString(),
-              'message': message,
-            });
           }
         } else if (data is List) {
-          for (int i = data.length - 1;
-              i >= 0 && tempLogs.length < 100;
-              i--) {
-            final raw = data[i];
-            if (raw == null) continue;
+          int count = 0;
+          for (int i = data.length - 1; i >= 0 && count < 100; i--) {
+            if (data[i] != null) {
+              final rawMsg = data[i].toString();
+              final cleanMsg = rawMsg.replaceAll(
+                RegExp(r'command\s*', caseSensitive: false),
+                '',
+              );
 
-            String message;
-
-            if (raw is Map) {
-              message = raw['message']?.toString() ??
-                  raw['text']?.toString() ??
-                  raw['log']?.toString() ??
-                  raw['msg']?.toString() ??
-                  raw.toString();
-            } else {
-              message = raw.toString();
+              tempLogs.add({
+                'key': i.toString(),
+                'message': cleanMsg,
+              });
+              count++;
             }
-
-            message = message.replaceAll(
-              RegExp(r'command\s*', caseSensitive: false),
-              '',
-            );
-
-            tempLogs.add({
-              'key': i.toString(),
-              'message': message,
-            });
           }
         }
 
@@ -1971,58 +1907,32 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         });
 
         _shareSnapshotToOverlay();
-      }, onError: (error) {
-        debugPrint('Logs listen error: $error');
       });
     } catch (e) {
-      debugPrint('Logs listen setup error: $e');
+      debugPrint("Logs listen error: $e");
     }
   }
 
-  // MainNavigationScreen เป็นผู้ลบ Logs บน Firebase
+  // ฟังก์ชันลบข้อมูล Logs บน Firebase Server และเคลียร์แคชในเครื่อง
   Future<void> _clearAllLogs() async {
-    if (_isDeletingLogs) return;
-
-    final ref = _logsRef;
-    if (ref == null) {
-      debugPrint('Clear logs failed: logs reference is null');
-      return;
-    }
-
-    final String loginBeingDeleted = currentLogin;
-
-    setState(() {
-      _isDeletingLogs = true;
-    });
-
     try {
-      debugPrint('Deleting logs for account: $loginBeingDeleted');
+      if (_logsRef != null) {
+        await _logsRef!.remove(); // ลบข้อมูลออกจาก Firebase Server จริงๆ
+      }
 
-      await ref.remove();
-
-      // ห้ามลบแคชของบัญชีใหม่ หากผู้ใช้เปลี่ยนบัญชีระหว่างรอ
-      if (!mounted || currentLogin != loginBeingDeleted) return;
-
-      setState(() {
-        _botLogs.clear();
-      });
-
-      // แจ้ง Overlay ให้ซิงก์บัญชี/สถานะและ Logs หลังลบ
-      _shareSnapshotToOverlay();
-
-      debugPrint('Clear logs completed for $loginBeingDeleted');
-    } catch (e, stackTrace) {
-      debugPrint('Clear all logs error: $e');
-      debugPrint('$stackTrace');
-    } finally {
       if (mounted) {
         setState(() {
-          _isDeletingLogs = false;
+          _botLogs.clear(); // เคลียร์รายการในแอปหลัก
         });
       }
+
+      _shareSnapshotToOverlay();
+    } catch (e) {
+      debugPrint("Clear all logs error: $e");
     }
   }
 
+  // ส่งข้อมูล Snapshot ไปยัง Overlay
   void _shareSnapshotToOverlay() {
     try {
       FlutterOverlayWindow.shareData({
@@ -2049,7 +1959,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           await FlutterOverlayWindow.isPermissionGranted() ?? false;
 
       if (!granted) {
-        final result = await FlutterOverlayWindow.requestPermission();
+        final result =
+            await FlutterOverlayWindow.requestPermission();
+
         if (result != true) {
           debugPrint('Overlay permission not granted');
           return;
@@ -2070,7 +1982,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         positionGravity: PositionGravity.none,
       );
 
-      await Future.delayed(const Duration(milliseconds: 1000));
+      await Future.delayed(
+        const Duration(milliseconds: 1000),
+      );
 
       if (!mounted) return;
 
@@ -2110,6 +2024,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         accountLogin: currentLogin,
         onAlertsRead: () {
           if (!mounted) return;
+
           setState(() {
             unreadAlertsCount = 0;
           });
@@ -2205,7 +2120,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 animation: _bounceAnimation,
                 builder: (context, child) {
                   return Transform.translate(
-                    offset: Offset(0, _bounceAnimation.value),
+                    offset: Offset(
+                      0,
+                      _bounceAnimation.value,
+                    ),
                     child: child,
                   );
                 },
@@ -2214,10 +2132,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   onPanUpdate: (details) {
                     setState(() {
                       _robotBubbleOffset = Offset(
-                        (_robotBubbleOffset.dx + details.delta.dx)
-                            .clamp(0.0, screenSize.width - 60),
-                        (_robotBubbleOffset.dy + details.delta.dy)
-                            .clamp(0.0, screenSize.height - 60),
+                        (_robotBubbleOffset.dx +
+                                details.delta.dx)
+                            .clamp(
+                              0.0,
+                              screenSize.width - 60,
+                            ),
+                        (_robotBubbleOffset.dy +
+                                details.delta.dy)
+                            .clamp(
+                              0.0,
+                              screenSize.height - 60,
+                            ),
                       );
                     });
                   },
@@ -2235,6 +2161,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     setState(() {
                       _isRobotBubblePressed = false;
                     });
+
                     _launchExternalOverlay();
                   },
                   child: AnimatedScale(
@@ -2260,7 +2187,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: kDarkCard,
-        border: Border.all(color: kGoldPrimary, width: 2.0),
+        border: Border.all(
+          color: kGoldPrimary,
+          width: 2.0,
+        ),
         boxShadow: [
           BoxShadow(
             color: (isServerActive ? kGreenNeon : kRedNeon)
@@ -2300,7 +2230,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               decoration: BoxDecoration(
                 color: isServerActive ? kGreenNeon : kRedNeon,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.black, width: 2),
+                border: Border.all(
+                  color: Colors.black,
+                  width: 2,
+                ),
               ),
             ),
           ),
@@ -2321,6 +2254,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       onTap: () {
         setState(() {
           _currentIndex = index;
+
           if (index == 4) {
             unreadAlertsCount = 0;
           }
@@ -2338,7 +2272,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? kGoldPrimary : Colors.transparent,
+            color: isSelected
+                ? kGoldPrimary
+                : Colors.transparent,
             width: isSelected ? 1.5 : 0,
           ),
           boxShadow: isSelected
@@ -2359,7 +2295,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               children: [
                 Icon(
                   icon,
-                  color: isSelected ? kGoldPrimary : Colors.white70,
+                  color: isSelected
+                      ? kGoldPrimary
+                      : Colors.white70,
                   size: 22,
                 ),
                 if (badgeCount > 0)
@@ -2393,10 +2331,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? kGoldPrimary : Colors.white70,
+                color: isSelected
+                    ? kGoldPrimary
+                    : Colors.white70,
                 fontSize: 10,
-                fontWeight:
-                    isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight: isSelected
+                    ? FontWeight.bold
+                    : FontWeight.normal,
                 fontFamily: 'monospace',
               ),
             ),
@@ -2406,7 +2347,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
-
 
 
 
