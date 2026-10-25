@@ -569,7 +569,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                       // แก้ไขเฉพาะส่วน Container แถบเซิร์ฟเวอร์และปุ่มควบคุมใน FullOverlayContent
                       // ==========================================
 
-                      // สถานะเซิร์ฟเวอร์ย่อย + ปุ่มถังขยะและปุ่มปิด (X) ที่แก้ไขให้กดติดแน่นอน
+                    // สถานะเซิร์ฟเวอร์ย่อย พร้อมย้ายปุ่มถังขยะและปุ่มปิด (X) มาไว้ที่กรอบสีขาวด้านขวา
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         color: kDarkCard,
@@ -603,54 +603,39 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 ),
                               ],
                             ),
-                            // ปุ่มกดควบคุม (เพิ่ม HitTestBehavior ให้กดติดทันที)
+                            // ปุ่มถังขยะและปุ่มปิด ย้ายมาอยู่บนกรอบสีขาวเรียบร้อย
                             Row(
-                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () {
-                                    debugPrint('Trash button clicked');
-                                    _clearAllLogs();
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(4.0),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: Colors.black.withOpacity(0.7),
-                                        border: Border.all(color: _gold.withOpacity(0.6)),
-                                      ),
-                                      child: const Icon(
-                                        Icons.delete_sweep,
-                                        color: _gold,
-                                        size: 14,
-                                      ),
+                                  onTap: _clearAllLogs,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.black.withOpacity(0.7),
+                                      border: Border.all(color: _gold.withOpacity(0.6)),
+                                    ),
+                                    child: const Icon(
+                                      Icons.delete_sweep,
+                                      color: _gold,
+                                      size: 15,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 6),
                                 GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () {
-                                    debugPrint('Close button clicked');
-                                    _setExpanded(false);
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(4.0),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: Colors.black.withOpacity(0.7),
-                                        border: Border.all(color: _gold.withOpacity(0.6)),
-                                      ),
-                                      child: const Icon(
-                                        Icons.close,
-                                        color: Colors.white,
-                                        size: 14,
-                                      ),
+                                  onTap: () => _setExpanded(false),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.black.withOpacity(0.7),
+                                      border: Border.all(color: _gold.withOpacity(0.6)),
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 15,
                                     ),
                                   ),
                                 ),
@@ -659,7 +644,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                           ],
                         ),
                       ),
-
 
                       const Divider(color: Color(0x33FFD700), height: 1),
 
