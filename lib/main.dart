@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// FULL OVERLAY CONTENT (ฉบับรวมสมบูรณ์: ปุ่มบนแถบเซิร์ฟเวอร์ + ลบ Server จริง)
+// FULL OVERLAY CONTENT (ฉบับรวมสมบูรณ์: ปุ่มถังขยะกดติดชัวร์ + ลบเซิร์ฟเวอร์จริง)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -453,17 +453,16 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // ส่งคำสั่งเคลียร์ข้อมูล Logs บน Firebase Server จริงผ่านแอปหลัก
+  // ฟังก์ชันลบข้อมูล Logs บน Firebase Server โดยตรงจากหน้าต่าง Overlay
   Future<void> _clearAllLogs() async {
     try {
-      await FlutterOverlayWindow.shareData({
-        'type': 'command',
-        'command': 'clear_logs',
-      });
+      if (_logsRef != null) {
+        await _logsRef!.remove(); // สั่งลบข้อมูลออกจาก Firebase Server ทันที
+      }
 
       if (mounted) {
         setState(() {
-          _botLogs.clear();
+          _botLogs.clear(); // เคลียร์ข้อความในหน้าจอ Overlay ทันที
         });
       }
     } catch (e) {
@@ -502,7 +501,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   ),
                   child: Column(
                     children: [
-                      // ส่วนแสดงภาพสแกนเนอร์ (Scanner Banner + เปลี่ยนรูปภาพอัตโนมัติ)
+                      // ส่วนแสดงภาพสแกนเนอร์
                       SizedBox(
                         height: 130,
                         width: double.infinity,
@@ -538,7 +537,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                         },
                                       ),
                                     ),
-                                    // เส้นสแกนเนอร์สีทองเลื่อนผ่าน
                                     Positioned(
                                       top: scanValue.clamp(0.0, 127.0),
                                       left: 0,
@@ -565,10 +563,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                       ),
 
-                      // ==========================================
-// แก้ไขแถบสถานะและปุ่มควบคุม (แบบชิดกันเหมือนเดิม แต่กดติด 100%)
-// ==========================================
-
+                      // แถบสถานะเซิร์ฟเวอร์ + ปุ่มถังขยะและปุ่มปิด (ขยายพื้นที่รับนิ้วให้กดติดง่าย)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         color: kDarkCard,
@@ -603,43 +598,50 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               ],
                             ),
                             Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 GestureDetector(
                                   behavior: HitTestBehavior.opaque,
                                   onTap: () {
                                     _clearAllLogs();
                                   },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(5),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.black.withOpacity(0.7),
-                                      border: Border.all(color: _gold.withOpacity(0.6)),
-                                    ),
-                                    child: const Icon(
-                                      Icons.delete_sweep,
-                                      color: _gold,
-                                      size: 14,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.black.withOpacity(0.7),
+                                        border: Border.all(color: _gold.withOpacity(0.6)),
+                                      ),
+                                      child: const Icon(
+                                        Icons.delete_sweep,
+                                        color: _gold,
+                                        size: 14,
+                                      ),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 6),
+                                const SizedBox(width: 2),
                                 GestureDetector(
                                   behavior: HitTestBehavior.opaque,
                                   onTap: () {
                                     _setExpanded(false);
                                   },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(5),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.black.withOpacity(0.7),
-                                      border: Border.all(color: _gold.withOpacity(0.6)),
-                                    ),
-                                    child: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 14,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.black.withOpacity(0.7),
+                                        border: Border.all(color: _gold.withOpacity(0.6)),
+                                      ),
+                                      child: const Icon(
+                                        Icons.close,
+                                        color: Colors.white,
+                                        size: 14,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -649,11 +651,9 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                       ),
 
-
-
                       const Divider(color: Color(0x33FFD700), height: 1),
 
-                      // ส่วนแสดงรายการ Logs ดันขึ้นมาเต็มพื้นที่
+                      // ส่วนแสดงรายการ Logs
                       Expanded(
                         child: Container(
                           padding: const EdgeInsets.all(8),
@@ -808,6 +808,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
+
 
 
 
