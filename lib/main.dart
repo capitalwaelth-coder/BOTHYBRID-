@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// FULL OVERLAY CONTENT (ฉบับรวมสมบูรณ์: ปุ่มบนแถบเซิร์ฟเวอร์ + ลบ Server จริง)
+// FULL OVERLAY CONTENT (ฉบับสมบูรณ์: ตัดไอคอนถังขยะออก เหลือเฉพาะปุ่มปิด X)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -453,24 +453,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // ส่งคำสั่งเคลียร์ข้อมูล Logs บน Firebase Server จริงผ่านแอปหลัก
-  Future<void> _clearAllLogs() async {
-    try {
-      await FlutterOverlayWindow.shareData({
-        'type': 'command',
-        'command': 'clear_logs',
-      });
-
-      if (mounted) {
-        setState(() {
-          _botLogs.clear();
-        });
-      }
-    } catch (e) {
-      debugPrint('Clear LOG error: $e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final String currentScanImage = _images[_imageIndex];
@@ -565,9 +547,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                       ),
 
-                      // ==========================================
-                      // แก้ไขเฉพาะส่วน Container แถบเซิร์ฟเวอร์และปุ่มควบคุมใน FullOverlayContent
-                      // ==========================================             
+                      // แถบสถานะเซิร์ฟเวอร์ + ปุ่มปิด (X)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         color: kDarkCard,
@@ -601,53 +581,32 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 ),
                               ],
                             ),
-                            Row(
-                              children: [
-                                GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () {
-                                    _clearAllLogs();
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(5),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.black.withOpacity(0.7),
-                                      border: Border.all(color: _gold.withOpacity(0.6)),
-                                    ),
-                                    child: const Icon(
-                                      Icons.delete_sweep,
-                                      color: _gold,
-                                      size: 14,
-                                    ),
+                            // คงเหลือเฉพาะปุ่มปิด (X)
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () {
+                                _setExpanded(false);
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.black.withOpacity(0.7),
+                                    border: Border.all(color: _gold.withOpacity(0.6)),
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 14,
                                   ),
                                 ),
-                                const SizedBox(width: 6),
-                                GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () {
-                                    _setExpanded(false);
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(5),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.black.withOpacity(0.7),
-                                      border: Border.all(color: _gold.withOpacity(0.6)),
-                                    ),
-                                    child: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 14,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ],
                         ),
                       ),
-
 
                       const Divider(color: Color(0x33FFD700), height: 1),
 
@@ -806,6 +765,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
+
 
 
 
@@ -1619,7 +1579,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 // ==========================================
-// #6 MainNavigationScreen (ฉบับรวมสมบูรณ์: รองรับลบเซิร์ฟเวอร์จริง + ป้องกันเครื่องหน่วง)
+// #6 MainNavigationScreen (ฉบับรวมสมบูรณ์: ลบ Logs อัตโนมัติเมื่อครบ 100 ข้อความ)
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -1694,9 +1654,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         if (decoded is Map) {
           if (decoded['command'] == 'request_snapshot') {
             _shareSnapshotToOverlay();
-          } else if (decoded['command'] == 'clear_logs') {
-            // สั่งลบข้อมูลบน Firebase Server จริงๆ และเคลียร์แคช
-            _clearAllLogs();
           }
         }
       } catch (e) {
@@ -1841,7 +1798,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ฟังข้อมูล Logs และจำกัดไม่เกิน 100 รายการเพื่อป้องกันอาการหน่วง
+  // ฟังข้อมูล Logs และตรวจสอบหากครบ 100 ข้อความ จะสั่งลบบน Firebase อัตโนมัติทันที
   void _listenToLogs() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1856,6 +1813,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         final data = event.snapshot.value;
 
         if (!mounted) return;
+
+        // เช็คจำนวน หากสะสมถึง 100 ข้อความ ให้สั่งลบทิ้งจากเซิร์ฟเวอร์อัตโนมัติ
+        if (data != null) {
+          int totalCount = 0;
+          if (data is Map) {
+            totalCount = data.length;
+          } else if (data is List) {
+            totalCount = data.where((e) => e != null).length;
+          }
+
+          if (totalCount >= 100) {
+            _logsRef?.remove(); // ลบข้อมูลบน Firebase ทันที
+            setState(() {
+              _botLogs.clear();
+            });
+            _shareSnapshotToOverlay();
+            return;
+          }
+        }
 
         List<Map<String, dynamic>> tempLogs = [];
 
@@ -1910,25 +1886,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       });
     } catch (e) {
       debugPrint("Logs listen error: $e");
-    }
-  }
-
-  // ฟังก์ชันลบข้อมูล Logs บน Firebase Server และเคลียร์แคชในเครื่อง
-  Future<void> _clearAllLogs() async {
-    try {
-      if (_logsRef != null) {
-        await _logsRef!.remove(); // ลบข้อมูลออกจาก Firebase Server จริงๆ
-      }
-
-      if (mounted) {
-        setState(() {
-          _botLogs.clear(); // เคลียร์รายการในแอปหลัก
-        });
-      }
-
-      _shareSnapshotToOverlay();
-    } catch (e) {
-      debugPrint("Clear all logs error: $e");
     }
   }
 
@@ -2347,6 +2304,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
 
 
 
