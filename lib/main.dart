@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// FULL OVERLAY CONTENT (ลบข้อความหัวข้อออก + คงดีไซน์สแกนเนอร์ & Logs สมบูรณ์)
+// FULL OVERLAY CONTENT (ลบข้อมูลใน Firebase จริง + เอาหัวข้อออก + ดีไซน์สแกนเนอร์สมบูรณ์)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -404,7 +404,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     try {
       if (expanded) {
         await FlutterOverlayWindow.resizeOverlay(
-          300,
+          285,
           180,
           true,
         );
@@ -453,9 +453,12 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
+  // แก้ไขฟังก์ชันนี้ให้ทำการลบข้อมูลจริงบน Firebase Database
   Future<void> _clearAllLogs() async {
     try {
-      await _logsRef?.remove();
+      if (_logsRef != null) {
+        await _logsRef!.remove(); // ลบข้อมูลทั้งหมดในโหนด logs บน Firebase ทิ้งทันที
+      }
 
       if (mounted) {
         setState(() {
@@ -479,7 +482,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         body: Center(
           child: _isExpanded
               ? Container(
-                  width: 300,
+                  width: 285,
                   height: 180,
                   decoration: BoxDecoration(
                     color: _background,
@@ -628,7 +631,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                           padding: const EdgeInsets.only(bottom: 4),
                                           child: isLatest
                                               ? TypewriterText(
-                                                  text: '➔ $message',
+                                                  text: '> $message',
                                                   duration: const Duration(milliseconds: 250), // ปรับความเร็วให้ช้าลงสุดๆ
                                                   style: const TextStyle(
                                                     color: Color(0xFF00E676), // สีเขียวเฉพาะข้อความล่าสุด
