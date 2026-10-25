@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// FULL OVERLAY CONTENT (ฉบับอัปเดตแก้ไขการเชื่อมต่อสมบูรณ์)
+// FULL OVERLAY CONTENT (ดีไซน์ใหม่ + การเชื่อมต่อแบบรวดเร็ว)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -134,10 +134,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   List<Map<String, dynamic>> _botLogs = [];
 
   DatabaseReference? _logsRef;
-  DatabaseReference? _statusRef;
 
   StreamSubscription<DatabaseEvent>? _logsSubscription;
-  StreamSubscription<DatabaseEvent>? _statusSubscription;
   StreamSubscription<DatabaseEvent>? _connectionSubscription;
   StreamSubscription? _overlaySubscription;
 
@@ -147,8 +145,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   static const Color _background = Color(0xFF121212);
   static const Color _green = Color(0xFF00E676);
   static const Color _red = Color(0xFFFF1744);
-
-  static const String _dbUrl = 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/';
 
   late final AnimationController _overlayBounceController =
       AnimationController(
@@ -170,6 +166,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   @override
   void initState() {
     super.initState();
+
     _initFirebaseForOverlay();
 
     _overlaySubscription =
@@ -178,67 +175,110 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
       try {
         dynamic decoded = event;
+
         if (decoded is String) {
           decoded = jsonDecode(decoded);
         }
+
         if (decoded is! Map) return;
 
         final data = Map<String, dynamic>.from(decoded);
+
         final String? newLogin =
             (data['login'] ?? data['currentLogin'])?.toString();
 
+        final dynamic runningValue = data['isRunning'] ??
+            data['running'];
+
+        final dynamic connectedValue = data['isConnected'] ??
+            data['connected'];
+
         setState(() {
-          if (newLogin != null && newLogin.isNotEmpty && newLogin != currentLogin) {
+          if (newLogin != null && newLogin.isNotEmpty) {
             currentLogin = newLogin;
-            _switchAccount(currentLogin);
+          }
+
+          if (runningValue is bool) {
+            isRunning = runningValue;
+          }
+
+          if (connectedValue is bool) {
+            isConnected = connectedValue;
+          }
+
+          final dynamic logsValue = data['logs'];
+
+          if (logsValue is List) {
+            _botLogs = logsValue.map((item) {
+              if (item is Map) {
+                return Map<String, dynamic>.from(item);
+              }
+
+              return <String, dynamic>{
+                'message': item.toString(),
+              };
+            }).toList();
           }
         });
+
+        if (newLogin != null &&
+            newLogin.isNotEmpty &&
+            _logsRef?.key != newLogin) {
+          _watchLogs(newLogin);
+        }
       } catch (e) {
         debugPrint('Overlay data error: $e');
       }
+    });
+
+    FlutterOverlayWindow.shareData({
+      'type': 'command',
+      'command': 'request_snapshot',
     });
   }
 
   Future<void> _initFirebaseForOverlay() async {
     try {
-      final FirebaseApp app = Firebase.apps.isNotEmpty
-          ? Firebase.app()
-          : await Firebase.initializeApp(
-              options: const FirebaseOptions(
-                apiKey: "AIzaSyBnKyMazopUyD1k-kcIXo3bFedWfHXN0JA",
-                appId: "1:155532929563:android:49d8a1e0040dc87ce766be",
-                messagingSenderId: "155532929563",
-                projectId: "liquidity-b8739",
-                storageBucket: "liquidity-b8739.firebasestorage.app",
-                databaseURL: _dbUrl,
-              ),
-            );
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp();
+      }
 
       final database = FirebaseDatabase.instanceFor(
-        app: app,
-        databaseURL: _dbUrl,
+        app: Firebase.app(),
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
 
       await _connectionSubscription?.cancel();
+
       _connectionSubscription = database
           .ref('.info/connected')
           .onValue
           .listen((event) {
         if (!mounted) return;
+
         final bool online = event.snapshot.value == true;
+
         if (isConnected != online) {
           setState(() {
             isConnected = online;
           });
         }
       }, onError: (error) {
-        debugPrint('Overlay connection error: $error');
+        debugPrint('Firebase connection error: $error');
+
+        if (mounted) {
+          setState(() {
+            isConnected = false;
+          });
+        }
       });
 
-      _switchAccount(currentLogin, database: database);
+      _watchLogs(currentLogin, database: database);
     } catch (e, stackTrace) {
       debugPrint('Overlay Firebase initialization error: $e');
       debugPrint('$stackTrace');
+
       if (mounted) {
         setState(() {
           isConnected = false;
@@ -247,86 +287,90 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  void _switchAccount(String login, {FirebaseDatabase? database}) {
+  void _watchLogs(
+    String login, {
+    FirebaseDatabase? database,
+  }) {
     if (login.isEmpty) return;
 
-    final db = database ??
-        FirebaseDatabase.instanceFor(
-          app: Firebase.app(),
-          databaseURL: _dbUrl,
-        );
-
     _logsSubscription?.cancel();
-    _statusSubscription?.cancel();
 
-    _statusRef = db.ref('accounts/$login/status');
-    _statusSubscription = _statusRef!.onValue.listen((event) {
-      if (!mounted) return;
-      final data = event.snapshot.value;
-      if (data is Map) {
-        setState(() {
-          isRunning = data['is_running'] == true;
-        });
-      }
-    });
+    try {
+      final db = database ??
+          FirebaseDatabase.instanceFor(
+            app: Firebase.app(),
+            databaseURL:
+                'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+          );
 
-    _logsRef = db.ref('accounts/$login/logs');
-    _logsSubscription = _logsRef!.onValue.listen((event) {
-      if (!mounted) return;
+      _logsRef = db.ref('accounts/$login/logs');
 
-      final dynamic value = event.snapshot.value;
-      final List<Map<String, dynamic>> parsedLogs = [];
+      _logsSubscription = _logsRef!.onValue.listen((event) {
+        if (!mounted) return;
 
-      if (value is Map) {
-        value.forEach((key, item) {
-          if (item is Map) {
-            final map = Map<String, dynamic>.from(item);
-            final String msg = map['message']?.toString() ??
-                map['text']?.toString() ??
-                map['log']?.toString() ??
-                map['msg']?.toString() ??
-                item.toString();
-            parsedLogs.add({...map, 'message': msg});
-          } else if (item != null) {
-            parsedLogs.add({'message': item.toString()});
-          }
-        });
-      } else if (value is List) {
-        for (final item in value) {
-          if (item != null) {
+        final dynamic value = event.snapshot.value;
+        final List<Map<String, dynamic>> parsedLogs = [];
+
+        if (value is Map) {
+          for (final entry in value.entries) {
+            final dynamic item = entry.value;
+
             if (item is Map) {
               final map = Map<String, dynamic>.from(item);
-              final String msg = map['message']?.toString() ??
-                  map['text']?.toString() ??
-                  map['log']?.toString() ??
-                  map['msg']?.toString() ??
+
+              final dynamic message = map['message'] ??
+                  map['text'] ??
+                  map['log'] ??
+                  map['msg'] ??
                   item.toString();
-              parsedLogs.add({...map, 'message': msg});
+
+              parsedLogs.add({
+                ...map,
+                'message': message.toString(),
+              });
             } else {
-              parsedLogs.add({'message': item.toString()});
+              parsedLogs.add({
+                'message': item.toString(),
+              });
             }
           }
+        } else if (value is List) {
+          for (final item in value) {
+            if (item == null) continue;
+
+            if (item is Map) {
+              final map = Map<String, dynamic>.from(item);
+
+              final dynamic message = map['message'] ??
+                  map['text'] ??
+                  map['log'] ??
+                  map['msg'] ??
+                  item.toString();
+
+              parsedLogs.add({
+                ...map,
+                'message': message.toString(),
+              });
+            } else {
+              parsedLogs.add({
+                'message': item.toString(),
+              });
+            }
+          }
+        } else if (value != null) {
+          parsedLogs.add({
+            'message': value.toString(),
+          });
         }
-      }
 
-      setState(() {
-        _botLogs = parsedLogs;
-      });
-    }, onError: (error) {
-      debugPrint('Firebase LOG error: $error');
-    });
-  }
-
-  Future<void> _clearAllLogs() async {
-    try {
-      await _logsRef?.remove();
-      if (mounted) {
         setState(() {
-          _botLogs.clear();
+          _botLogs = parsedLogs;
         });
-      }
+      }, onError: (error) {
+        debugPrint('Firebase LOG error: $error');
+      });
     } catch (e) {
-      debugPrint('Clear logs error: $e');
+      debugPrint('Watch LOG error: $e');
     }
   }
 
@@ -339,9 +383,17 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
     try {
       if (expanded) {
-        await FlutterOverlayWindow.resizeOverlay(320, 250, true);
+        await FlutterOverlayWindow.resizeOverlay(
+          320,
+          250,
+          true,
+        );
       } else {
-        await FlutterOverlayWindow.resizeOverlay(90, 90, true);
+        await FlutterOverlayWindow.resizeOverlay(
+          90,
+          90,
+          true,
+        );
       }
     } catch (e) {
       debugPrint('Resize overlay error: $e');
@@ -358,6 +410,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
   Future<void> _moveBalloon(DragUpdateDetails details) async {
     if (_isExpanded || _isMoving) return;
+
     _isMoving = true;
 
     try {
@@ -366,6 +419,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
       if (_overlayX < -600) _overlayX = -600;
       if (_overlayX > 600) _overlayX = 600;
+
       if (_overlayY < -1200) _overlayY = -1200;
       if (_overlayY > 1200) _overlayY = 1200;
 
@@ -376,6 +430,20 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       debugPrint('Move overlay error: $e');
     } finally {
       _isMoving = false;
+    }
+  }
+
+  Future<void> _clearAllLogs() async {
+    try {
+      await _logsRef?.remove();
+
+      if (mounted) {
+        setState(() {
+          _botLogs.clear();
+        });
+      }
+    } catch (e) {
+      debugPrint('Clear LOG error: $e');
     }
   }
 
@@ -487,6 +555,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               ),
                             ),
                           ),
+                          // ปุ่มล้าง Logs (ถังขยะ) มุมขวาบน
                           Positioned(
                             right: 42,
                             top: 8,
@@ -509,6 +578,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               ),
                             ),
                           ),
+                          // ปุ่มปิด (X) มุมขวาบน
                           Positioned(
                             right: 8,
                             top: 8,
@@ -553,19 +623,23 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 )
                               : ListView.builder(
                                   controller: _scrollController,
-                                  physics: const AlwaysScrollableScrollPhysics(),
                                   padding: EdgeInsets.zero,
                                   itemCount: _botLogs.length,
                                   itemBuilder: (context, index) {
                                     final item = _botLogs[index];
                                     final String message =
-                                        item['message']?.toString() ?? '';
+                                        (item['message'] ??
+                                                item['text'] ??
+                                                item['log'] ??
+                                                item['msg'] ??
+                                                item.toString())
+                                            .toString();
 
                                     return Padding(
                                       padding: const EdgeInsets.only(bottom: 4),
                                       child: TypewriterText(
                                         text: '> $message',
-                                        duration: const Duration(milliseconds: 35),
+                                        duration: const Duration(milliseconds: 30),
                                         style: const TextStyle(
                                           color: Color(0xFF00E676),
                                           fontSize: 11,
@@ -591,7 +665,10 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                     animation: _overlayBounceAnimation,
                     builder: (context, child) {
                       return Transform.translate(
-                        offset: Offset(0, _overlayBounceAnimation.value),
+                        offset: Offset(
+                          0,
+                          _overlayBounceAnimation.value,
+                        ),
                         child: child,
                       );
                     },
@@ -671,7 +748,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     _scrollController.dispose();
     _overlayBounceController.dispose();
     _logsSubscription?.cancel();
-    _statusSubscription?.cancel();
     _connectionSubscription?.cancel();
     _overlaySubscription?.cancel();
     super.dispose();
