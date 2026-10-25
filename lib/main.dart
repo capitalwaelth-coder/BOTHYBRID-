@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// FULL OVERLAY CONTENT (ฉบับสมบูรณ์: ตัดไอคอนถังขยะออก เหลือเฉพาะปุ่มปิด X)
+// FULL OVERLAY CONTENT (ฉบับสมบูรณ์: เพิ่มกล่องแสดงตัวเลข P/L ตรงกลางแถบเซิร์ฟเวอร์)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -127,6 +127,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
   bool isRunning = false;
   bool isConnected = false;
+  double floatingProfit = 0.0; // ตัวแปรเก็บค่ากำไร/ขาดทุน
 
   double _overlayX = 0;
   double _overlayY = 0;
@@ -226,6 +227,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         final dynamic connectedValue = data['isConnected'] ??
             data['connected'];
 
+        final dynamic profitValue = data['floatingProfit'] ?? data['profit'];
+
         setState(() {
           if (newLogin != null && newLogin.isNotEmpty) {
             currentLogin = newLogin;
@@ -237,6 +240,12 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
           if (connectedValue is bool) {
             isConnected = connectedValue;
+          }
+
+          if (profitValue is num) {
+            floatingProfit = profitValue.toDouble();
+          } else if (profitValue is String) {
+            floatingProfit = double.tryParse(profitValue) ?? floatingProfit;
           }
 
           final dynamic logsValue = data['logs'];
@@ -547,7 +556,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                       ),
 
-                      // แถบสถานะเซิร์ฟเวอร์ + ปุ่มปิด (X)
+                      // แถบสถานะเซิร์ฟเวอร์ + กรอบสีขาวแสดงตัวเลข P/L ตรงกลาง + ปุ่มปิด (X)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         color: kDarkCard,
@@ -581,7 +590,26 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 ),
                               ],
                             ),
-                            // คงเหลือเฉพาะปุ่มปิด (X)
+
+                            // กรอบสีขาวสำหรับแสดงตัวเลข P/L เน้นๆ (ไม่มีเครื่องหมาย + - $)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${floatingProfit.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  color: floatingProfit >= 0 ? _green : _red,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                            ),
+
+                            // ปุ่มปิด (X)
                             GestureDetector(
                               behavior: HitTestBehavior.opaque,
                               onTap: () {
@@ -765,7 +793,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
-
 
 
 
