@@ -576,7 +576,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                           Positioned.fill(
                             child: ClipOval(
                               child: Image.asset(
-                                'assets/images/7.png',
+                                'assets/images/1.jpg',
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) {
                                   return const Icon(
