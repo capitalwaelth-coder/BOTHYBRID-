@@ -19,20 +19,19 @@ const Color kDarkCard = Color(0xFF161616);
 const Color kRedNeon = Color(0xFFFF1744);
 const Color kGreenNeon = Color(0xFF00E676);
 
-
 // ==========================================
 // #0 Widget แสดงข้อความแบบพิมพ์ดีด (Typewriter)
 // ==========================================
 class TypewriterText extends StatefulWidget {
   final String text;
   final TextStyle? style;
-  final Duration duration; // ความเร็วในการพิมพ์แต่ละตัวอักษร
+  final Duration duration;
 
   const TypewriterText({
     super.key,
     required this.text,
     this.style,
-    this.duration = const Duration(milliseconds: 35), // ความเร็วพิมพ์กำลังอ่านสบายตา
+    this.duration = const Duration(milliseconds: 35),
   });
 
   @override
@@ -53,7 +52,6 @@ class _TypewriterTextState extends State<TypewriterText> {
   @override
   void didUpdateWidget(covariant TypewriterText oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // ถ้าข้อความเปลี่ยน ให้เริ่มพิมพ์ใหม่ตั้งแต่ต้น
     if (oldWidget.text != widget.text) {
       _timer?.cancel();
       _currentIndex = 0;
@@ -93,7 +91,7 @@ class _TypewriterTextState extends State<TypewriterText> {
 }
 
 // ==========================================
-// #1.1 โหมดการเชื่อม ระบบ Overlay (แก้ไขแสดง Log และจัดการขนาดถูกต้อง)
+// #1.1 โหมดการเชื่อม ระบบ Overlay
 // ==========================================
 
 @pragma("vm:entry-point")
@@ -109,37 +107,29 @@ void overlayMain() {
   );
 }
 
-
 // ==========================================
 // FULL OVERLAY CONTENT
-// บอลลูน GOLD PRO + จุดสถานะออนไลน์ + เอฟเฟกต์เด้งขึ้นลง
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
   const FullOverlayContent({super.key});
 
   @override
-  State<FullOverlayContent> createState() =>
-      _FullOverlayContentState();
+  State<FullOverlayContent> createState() => _FullOverlayContentState();
 }
 
 class _FullOverlayContentState extends State<FullOverlayContent>
     with SingleTickerProviderStateMixin {
-  // ==========================================
-  // สถานะและข้อมูลเดิม
-  // ==========================================
-
   bool _isExpanded = false;
   bool _isMoving = false;
 
-  // ปรับเลขบัญชีให้ตรงกับใน Firebase (ตามรูปตัวอย่างของคุณคือ 53049695)
   String currentLogin = '53049695';
 
   bool isRunning = false;
   bool isConnected = false;
 
-  double _overlayX = 0; // พิกัดแกน X สำหรับลากชิดขอบซ้าย-ขวา
-  double _overlayY = 0; // พิกัดแกน Y สำหรับลากขึ้น-ลง
+  double _overlayX = 0;
+  double _overlayY = 0;
 
   List<Map<String, dynamic>> _botLogs = [];
 
@@ -149,18 +139,10 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   StreamSubscription<DatabaseEvent>? _connectionSubscription;
   StreamSubscription? _overlaySubscription;
 
-  // ==========================================
-  // สีหลัก
-  // ==========================================
-
   static const Color _gold = Color(0xFFFFD700);
   static const Color _background = Color(0xFF161616);
   static const Color _green = Color(0xFF00E676);
   static const Color _red = Color(0xFFFF1744);
-
-  // ==========================================
-  // เอฟเฟกต์บอลลูนเด้งขึ้นลง
-  // ==========================================
 
   late final AnimationController _overlayBounceController =
       AnimationController(
@@ -179,17 +161,12 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     ),
   );
 
-  // ==========================================
-  // เริ่มต้นระบบบอลลูน
-  // ==========================================
-
   @override
   void initState() {
     super.initState();
 
     _initFirebaseForOverlay();
 
-    // รับข้อมูลจากหน้าหลัก
     _overlaySubscription =
         FlutterOverlayWindow.overlayListener.listen((event) {
       if (!mounted || event == null) return;
@@ -223,7 +200,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
             isRunning = runningValue;
           }
 
-          // รับสถานะการเชื่อมต่อจากหน้าหลักด้วย
           if (connectedValue is bool) {
             isConnected = connectedValue;
           }
@@ -253,16 +229,11 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       }
     });
 
-    // ขอข้อมูลสถานะล่าสุดจากหน้าหลัก
     FlutterOverlayWindow.shareData({
       'type': 'command',
       'command': 'request_snapshot',
     });
   }
-
-  // ==========================================
-  // เชื่อมต่อ Firebase
-  // ==========================================
 
   Future<void> _initFirebaseForOverlay() async {
     try {
@@ -276,7 +247,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
             'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
 
-      // ตรวจสอบการเชื่อมต่อ Firebase โดยตรง
       await _connectionSubscription?.cancel();
 
       _connectionSubscription = database
@@ -302,7 +272,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         }
       });
 
-      // อ่าน LOG ของบัญชีปัจจุบัน
       _watchLogs(currentLogin, database: database);
     } catch (e, stackTrace) {
       debugPrint('Overlay Firebase initialization error: $e');
@@ -315,10 +284,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       }
     }
   }
-
-  // ==========================================
-  // อ่าน LOG จาก Firebase (แก้ไข Path ให้ตรงกับ accounts/$login/logs)
-  // ==========================================
 
   void _watchLogs(
     String login, {
@@ -336,7 +301,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
           );
 
-      // แก้ไข Path ให้ตรงกับโครงสร้างจริงใน Firebase ของคุณ
       _logsRef = db.ref('accounts/$login/logs');
 
       _logsSubscription = _logsRef!.onValue.listen((event) {
@@ -408,10 +372,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // ==========================================
-  // เปิด / ย่อหน้าต่าง LOG
-  // ==========================================
-
   Future<void> _setExpanded(bool expanded) async {
     if (!mounted) return;
 
@@ -423,7 +383,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       if (expanded) {
         await FlutterOverlayWindow.resizeOverlay(
           300,
-          180,
+          220,
           true,
         );
       } else {
@@ -438,10 +398,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // ==========================================
-  // ปิดบอลลูน
-  // ==========================================
-
   Future<void> _hideOverlay() async {
     try {
       await FlutterOverlayWindow.closeOverlay();
@@ -449,10 +405,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       debugPrint('Close overlay error: $e');
     }
   }
-
-  // ==========================================
-  // ลากบอลลูนชิดขอบจอ (รองรับทุกทิศทาง ทั้งแนวตั้งและแนวนอน)
-  // ==========================================
 
   Future<void> _moveBalloon(DragUpdateDetails details) async {
     if (_isExpanded || _isMoving) return;
@@ -479,10 +431,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // ==========================================
-  // ลบ LOG ทั้งหมด
-  // ==========================================
-
   Future<void> _clearAllLogs() async {
     try {
       await _logsRef?.remove();
@@ -496,10 +444,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       debugPrint('Clear LOG error: $e');
     }
   }
-
-  // ==========================================
-  // ปุ่มวงกลม
-  // ==========================================
 
   Widget _circleButton({
     required IconData icon,
@@ -533,23 +477,14 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     );
   }
 
-  // ==========================================
-  // สร้างหน้าจอบอลลูน
-  // ==========================================
-
   @override
   Widget build(BuildContext context) {
-    final bool isServerActive = isConnected && isRunning;
-
     return Material(
       color: Colors.transparent,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Center(
           child: _isExpanded
-              // ==========================================
-              // หน้าต่าง LOG แบบขยาย
-              // ==========================================
               ? Container(
                   width: 300,
                   height: 250,
@@ -597,10 +532,10 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               ),
                             ),
                             const SizedBox(width: 10),
-                            Expanded(
+                            const Expanded(
                               child: Text(
                                 'STATUS & LOG',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: _gold,
                                   fontSize: 17,
                                   fontWeight: FontWeight.bold,
@@ -627,7 +562,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         height: 1,
                       ),
 
-                      // สถานะ บอท
+                      // สถานะ บอท (ลบ LOG: count ออกแล้ว)
                       Container(
                         margin: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -655,7 +590,22 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                       ),
                                     ],
                                   ),
-                                ),                              
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    isConnected
+                                        ? 'FIREBASE ONLINE'
+                                        : 'FIREBASE OFFLINE',
+                                    style: TextStyle(
+                                      color: isConnected ? _green : _red,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                             const SizedBox(height: 8),
                             Row(
                               children: [
@@ -679,20 +629,15 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                     ),
                                   ),
                                 ),
-                                Text(
-                                  'LOG: ${_botLogs.length}',
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 11,
-                                  ),
-                                ),
                               ],
                             ),
                           ],
                         ),
                       ),
+
                       const SizedBox(height: 10),
-                      // รายการ LOG (ใช้ TypewriterText พิมพ์ดีดข้อความ)
+
+                      // รายการ LOG
                       Expanded(
                         child: _botLogs.isEmpty
                             ? const Center(
@@ -770,24 +715,13 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                     ],
                   ),
                 )
-
-              // ==========================================
-              // บอลลูนวงกลมแบบย่อ (ลากชิดขอบจอด้วย onPanUpdate)
-              // ==========================================
               : GestureDetector(
                   behavior: HitTestBehavior.opaque,
-
-                  // แตะหนึ่งครั้ง: เปิด LOG
                   onTap: () => _setExpanded(true),
-
-                  // กดค้าง: ปิดบอลลูน
                   onLongPress: _hideOverlay,
-
-                  // ลากอิสระทุกทิศทางเพื่อชิดขอบจอ
                   onPanUpdate: (details) {
                     _moveBalloon(details);
                   },
-
                   child: AnimatedBuilder(
                     animation: _overlayBounceAnimation,
                     builder: (context, child) {
@@ -818,12 +752,9 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                           ),
                         ],
                       ),
-
-                      // รูปหุ่นยนต์และจุดสถานะ
                       child: Stack(
                         clipBehavior: Clip.none,
                         children: [
-                          // รูปบอลลูน
                           Positioned.fill(
                             child: ClipOval(
                               child: Image.asset(
@@ -839,8 +770,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               ),
                             ),
                           ),
-
-                          // จุดสถานะออนไลน์ / ออฟไลน์
                           Positioned(
                             right: 0,
                             top: 0,
@@ -875,23 +804,15 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     );
   }
 
-  // ==========================================
-  // ปิด Subscription และ Animation
-  // ==========================================
-
   @override
   void dispose() {
     _overlayBounceController.dispose();
-
     _logsSubscription?.cancel();
     _connectionSubscription?.cancel();
     _overlaySubscription?.cancel();
-
     super.dispose();
   }
 }
-
-
 
 
 // ==========================================
