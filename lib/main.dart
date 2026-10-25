@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// FULL OVERLAY CONTENT (ฉบับสมบูรณ์: ย้ายปุ่มลงกรอบขาว + ปรับความเร็ว/สี Log)
+// FULL OVERLAY CONTENT (ลบข้อความหัวข้อออก + คงดีไซน์สแกนเนอร์ & Logs สมบูรณ์)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -404,8 +404,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     try {
       if (expanded) {
         await FlutterOverlayWindow.resizeOverlay(
-          350,
-          480,
+          300,
+          180,
           true,
         );
       } else {
@@ -479,8 +479,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         body: Center(
           child: _isExpanded
               ? Container(
-                  width: 340,
-                  height: 450,
+                  width: 300,
+                  height: 180,
                   decoration: BoxDecoration(
                     color: _background,
                     borderRadius: BorderRadius.circular(16),
@@ -498,107 +498,99 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   ),
                   child: Column(
                     children: [
-                      // ส่วนหัว: ชื่อระบบและสถานะเซิร์ฟเวอร์
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'GOLD PRO ROBOT',
-                              style: TextStyle(
-                                color: _gold,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isServerActive ? _green : _red,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: (isServerActive ? _green : _red).withOpacity(0.8),
-                                        blurRadius: 4,
+                      // ส่วนแสดงภาพสแกนเนอร์ (Scanner Banner + เปลี่ยนรูปภาพอัตโนมัติ) เต็มพื้นที่ด้านบน
+                      SizedBox(
+                        height: 140,
+                        width: double.infinity,
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(15),
+                          ),
+                          child: Container(
+                            color: Colors.black,
+                            child: AnimatedBuilder(
+                              animation: _scannerAnimation,
+                              builder: (context, child) {
+                                final double scanValue = _scannerAnimation.value * 140;
+
+                                return Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 800),
+                                      child: Image.asset(
+                                        currentScanImage,
+                                        key: ValueKey<String>(currentScanImage),
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: 140,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            color: Colors.black,
+                                            child: const Center(
+                                              child: Icon(Icons.smart_toy, color: _gold, size: 40),
+                                            ),
+                                          );
+                                        },
                                       ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  isServerActive ? 'EA SERVER ONLINE & RUNNING' : 'SERVER DISCONNECTED',
-                                  style: TextStyle(
-                                    color: isServerActive ? _green : _red,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
+                                    ),
+                                    // เส้นสแกนเนอร์สีทองเลื่อนผ่าน
+                                    Positioned(
+                                      top: scanValue.clamp(0.0, 137.0),
+                                      left: 0,
+                                      right: 0,
+                                      child: Container(
+                                        height: 3,
+                                        decoration: const BoxDecoration(
+                                          color: _gold,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: _gold,
+                                              blurRadius: 8,
+                                              spreadRadius: 2,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                      const Divider(color: Color(0x33FFD700), height: 1),
 
-                      // ส่วนแสดงภาพสแกนเนอร์ (Scanner Banner + เปลี่ยนรูปภาพอัตโนมัติ)
+                      // สถานะเซิร์ฟเวอร์ย่อย
                       Container(
-                        height: 130,
-                        width: double.infinity,
-                        color: Colors.black,
-                        child: AnimatedBuilder(
-                          animation: _scannerAnimation,
-                          builder: (context, child) {
-                            final double scanValue = _scannerAnimation.value * 130;
-
-                            return Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 800),
-                                  child: Image.asset(
-                                    currentScanImage,
-                                    key: ValueKey<String>(currentScanImage),
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: 130,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        color: Colors.black,
-                                        child: const Center(
-                                          child: Icon(Icons.smart_toy, color: _gold, size: 40),
-                                        ),
-                                      );
-                                    },
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        color: kDarkCard,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isServerActive ? _green : _red,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (isServerActive ? _green : _red).withOpacity(0.8),
+                                    blurRadius: 4,
                                   ),
-                                ),
-                                // เส้นสแกนเนอร์สีทองเลื่อนผ่าน
-                                Positioned(
-                                  top: scanValue.clamp(0.0, 127.0),
-                                  left: 0,
-                                  right: 0,
-                                  child: Container(
-                                    height: 3,
-                                    decoration: const BoxDecoration(
-                                      color: _gold,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: _gold,
-                                          blurRadius: 8,
-                                          spreadRadius: 2,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isServerActive ? 'EA SERVER ONLINE & RUNNING' : 'SERVER DISCONNECTED',
+                              style: TextStyle(
+                                color: isServerActive ? _green : _red,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
 
@@ -636,7 +628,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                           padding: const EdgeInsets.only(bottom: 4),
                                           child: isLatest
                                               ? TypewriterText(
-                                                  text: '> $message',
+                                                  text: '➔ $message',
                                                   duration: const Duration(milliseconds: 250), // ปรับความเร็วให้ช้าลงสุดๆ
                                                   style: const TextStyle(
                                                     color: Color(0xFF00E676), // สีเขียวเฉพาะข้อความล่าสุด
@@ -657,7 +649,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                       },
                                     ),
 
-                              // ย้ายไอคอนทั้ง 2 ตัว (ถังขยะและปุ่มปิด X) มาไว้ในตำแหน่งกรอบสีขาวด้านบนขวาของโซน Log
+                              // ไอคอนทั้ง 2 ตัว (ถังขยะและปุ่มปิด X) อยู่ในตำแหน่งกรอบสีขาวด้านบนขวาของโซน Log
                               Positioned(
                                 right: 4,
                                 top: 0,
@@ -807,6 +799,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
+
 
 
 
