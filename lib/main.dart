@@ -2,15 +2,12 @@
 // #1 โหมดการเชื่อมต่อเซิร์ฟเวอร์ & ธีมสี & ระบบ Overlay
 // ==========================================
 
-import 'dart:async';  
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'dart:async';
+import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
-
 
 const Color kGoldPrimary = Color(0xFFFFD700);
 const Color kGoldAccent = Color(0xFFFFC107);
@@ -21,7 +18,7 @@ const Color kGreenNeon = Color(0xFF00E676);
 
 
 // ==========================================
-// #0 Widget แสดงข้อความแบบพิมพ์ดีด (Typewriter) - ประกาศแค่จุดเดียวตรงนี้
+// #0 Widget แสดงข้อความแบบพิมพ์ดีด (Typewriter) - มีตัวเดียวเท่านั้น
 // ==========================================
 class TypewriterText extends StatefulWidget {
   final String text;
