@@ -34,6 +34,7 @@ void overlayMain() {
   );
 }
 
+
 class FullOverlayContent extends StatefulWidget {
   const FullOverlayContent({super.key});
 
@@ -43,37 +44,78 @@ class FullOverlayContent extends StatefulWidget {
 
 class _FullOverlayContentState extends State<FullOverlayContent> {
   bool _isExpanded = false;
+  bool _isMoving = false;
+
   String currentLogin = "235305975";
   bool isRunning = false;
   bool isConnected = false;
+
+  double _overlayY = 0;
+
   List<Map<String, dynamic>> _botLogs = [];
+
   DatabaseReference? _logsRef;
+  StreamSubscription<DatabaseEvent>? _logsSubscription;
+  StreamSubscription? _overlaySubscription;
+
+  static const Color _gold = Color(0xFFFFD700);
+  static const Color _background = Color(0xFF161616);
+  static const Color _green = Color(0xFF00E676);
+  static const Color _red = Color(0xFFFF1744);
 
   @override
   void initState() {
     super.initState();
+
     _initFirebaseForOverlay();
 
-    FlutterOverlayWindow.overlayListener.listen((event) {
-      if (event is Map) {
-        final data = Map<String, dynamic>.from(event);
-        if (data['type'] == 'snapshot') {
-          setState(() {
-            currentLogin = data['login']?.toString() ?? currentLogin;
-            isRunning = data['running'] ?? isRunning;
-            isConnected = data['connected'] ?? isConnected;
-            if (data['logs'] is List) {
-              _botLogs = List<Map<String, dynamic>>.from(data['logs']);
-            }
-          });
+    _overlaySubscription =
+        FlutterOverlayWindow.overlayListener.listen((event) {
+      if (!mounted || event is! Map) return;
+
+      final data = Map<String, dynamic>.from(event);
+
+      if (data['type'] == 'snapshot') {
+        final newLogin = data['login']?.toString();
+
+        setState(() {
+          if (newLogin != null && newLogin.isNotEmpty) {
+            currentLogin = newLogin;
+          }
+
+          isRunning = data['running'] == true;
+          isConnected = data['connected'] == true;
+
+          if (data['logs'] is List) {
+            _botLogs = (data['logs'] as List)
+                .map((item) {
+                  if (item is Map) {
+                    return Map<String, dynamic>.from(item);
+                  }
+
+                  return <String, dynamic>{
+                    'message': item.toString(),
+                  };
+                })
+                .toList();
+          }
+        });
+
+        if (newLogin != null &&
+            newLogin.isNotEmpty &&
+            newLogin != _logsRef?.parent?.key) {
+          _watchLogs(newLogin);
         }
       }
     });
 
-    FlutterOverlayWindow.shareData({'type': 'command', 'command': 'request_snapshot'});
+    FlutterOverlayWindow.shareData({
+      'type': 'command',
+      'command': 'request_snapshot',
+    });
   }
 
-  void _initFirebaseForOverlay() async {
+  Future<void> _initFirebaseForOverlay() async {
     try {
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp();
@@ -81,41 +123,177 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
 
       final database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
 
-      _logsRef = database.ref('accounts/$currentLogin/logs');
-      _logsRef?.onValue.listen((event) {
-        final data = event.snapshot.value;
-        if (!mounted) return;
-        List<Map<String, dynamic>> tempLogs = [];
-        if (data is Map) {
-          data.forEach((key, value) {
-            if (value != null) {
-              tempLogs.add({'key': key.toString(), 'message': value.toString()});
-            }
-          });
-        }
-        setState(() {
-          _botLogs = tempLogs;
-        });
-      });
+      _watchLogs(currentLogin, database: database);
     } catch (e) {
-      debugPrint("Overlay Firebase init error: $e");
+      debugPrint('Overlay Firebase init error: $e');
     }
   }
 
-  void _clearAllLogs() async {
-    try {
-      if (_logsRef != null) {
-        await _logsRef!.remove();
+  void _watchLogs(
+    String login, {
+    FirebaseDatabase? database,
+  }) {
+    if (_logsRef?.parent?.key == login) return;
+
+    _logsSubscription?.cancel();
+
+    final db = database ??
+        FirebaseDatabase.instanceFor(
+          app: Firebase.app(),
+          databaseURL:
+              'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        );
+
+    _logsRef = db.ref('accounts/$login/logs');
+
+    _logsSubscription = _logsRef!.onValue.listen(
+      (event) {
+        if (!mounted) return;
+
+        final value = event.snapshot.value;
+        final List<Map<String, dynamic>> parsedLogs = [];
+
+        if (value is Map) {
+          value.forEach((key, item) {
+            if (item == null) return;
+
+            String message;
+
+            if (item is Map) {
+              message = (item['message'] ??
+                      item['text'] ??
+                      item['log'] ??
+                      item['msg'] ??
+                      item.toString())
+                  .toString();
+            } else {
+              message = item.toString();
+            }
+
+            parsedLogs.add({
+              'key': key.toString(),
+              'message': message,
+            });
+          });
+        } else if (value is List) {
+          for (int i = 0; i < value.length; i++) {
+            final item = value[i];
+            if (item == null) continue;
+
+            parsedLogs.add({
+              'key': '$i',
+              'message': item is Map
+                  ? (item['message'] ??
+                          item['text'] ??
+                          item['log'] ??
+                          item.toString())
+                      .toString()
+                  : item.toString(),
+            });
+          }
+        } else if (value != null) {
+          parsedLogs.add({'message': value.toString()});
+        }
+
+        if (!mounted) return;
+
         setState(() {
-          _botLogs.clear();
+          _botLogs = parsedLogs;
         });
-      }
+      },
+      onError: (Object error) {
+        debugPrint('Overlay log listener error: $error');
+      },
+    );
+  }
+
+  Future<void> _setExpanded(bool expanded) async {
+    if (!mounted) return;
+
+    setState(() {
+      _isExpanded = expanded;
+    });
+
+    try {
+      // ปรับขนาดหน้าต่าง Overlay ตามสถานะ
+      await FlutterOverlayWindow.resizeOverlay(
+        expanded ? 380 : 90,
+        expanded ? 620 : 90,
+        true,
+      );
     } catch (e) {
-      debugPrint("Overlay clear logs error: $e");
+      debugPrint('Overlay resize error: $e');
     }
+  }
+
+  Future<void> _hideOverlay() async {
+    try {
+      await FlutterOverlayWindow.closeOverlay();
+    } catch (e) {
+      debugPrint('Close overlay error: $e');
+    }
+  }
+
+  Future<void> _moveBalloon(double deltaY) async {
+    if (_isExpanded || _isMoving) return;
+
+    _overlayY += deltaY;
+
+    // จำกัดการเคลื่อนที่ในแนวตั้งเบื้องต้น
+    if (_overlayY < -1200) _overlayY = -1200;
+    if (_overlayY > 1200) _overlayY = 1200;
+
+    try {
+      _isMoving = true;
+      await FlutterOverlayWindow.moveOverlay(
+        OverlayPosition(0, _overlayY.round()),
+      );
+    } catch (e) {
+      debugPrint('Move overlay error: $e');
+    } finally {
+      _isMoving = false;
+    }
+  }
+
+  Future<void> _clearAllLogs() async {
+    try {
+      if (_logsRef == null) return;
+
+      await _logsRef!.remove();
+
+      if (!mounted) return;
+
+      setState(() {
+        _botLogs.clear();
+      });
+    } catch (e) {
+      debugPrint('Overlay clear logs error: $e');
+    }
+  }
+
+  Widget _circleButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.black.withOpacity(0.8),
+      shape: CircleBorder(
+        side: BorderSide(color: color, width: 1.5),
+      ),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(7),
+          child: Icon(icon, color: color, size: 19),
+        ),
+      ),
+    );
   }
 
   @override
@@ -127,159 +305,211 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
       body: Center(
         child: _isExpanded
             ? Container(
-                width: 320,
-                height: 380,
+                width: 360,
+                height: 600,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF161616),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFFFD700), width: 2.0),
+                  color: _background,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: _gold, width: 2),
                   boxShadow: const [
-                    BoxShadow(color: Colors.black87, blurRadius: 15, spreadRadius: 2),
+                    BoxShadow(
+                      color: Colors.black87,
+                      blurRadius: 18,
+                      spreadRadius: 2,
+                    ),
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                   child: Column(
                     children: [
-                      Stack(
-                        children: [
-                          SizedBox(
-                            height: 110,
-                            width: double.infinity,
-                            child: Image.asset(
+                      // ส่วนหัว
+                      SizedBox(
+                        height: 100,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.asset(
                               'assets/images/6.png',
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const ColoredBox(color: Colors.black),
+                              errorBuilder: (_, __, ___) =>
+                                  const ColoredBox(color: _background),
                             ),
-                          ),
-                          Positioned(
-                            top: 6,
-                            right: 36,
-                            child: GestureDetector(
-                              onTap: _clearAllLogs,
-                              child: Container(
-                                padding: const EdgeInsets.all(5),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.7),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: const Color(0xFFFF1744), width: 1.5),
-                                ),
-                                child: const Icon(Icons.delete_sweep, color: Color(0xFFFF1744), size: 16),
+                            Positioned(
+                              top: 8,
+                              right: 48,
+                              child: _circleButton(
+                                icon: Icons.delete_sweep,
+                                color: _red,
+                                onTap: _clearAllLogs,
                               ),
                             ),
-                          ),
-                          Positioned(
-                            top: 6,
-                            right: 6,
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _isExpanded = false;
-                                });
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(5),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.7),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: const Color(0xFFFFD700), width: 1.5),
-                                ),
-                                child: const Icon(Icons.keyboard_arrow_up, color: Color(0xFFFFD700), size: 16),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: _circleButton(
+                                icon: Icons.keyboard_arrow_down,
+                                color: _gold,
+                                onTap: () => _setExpanded(false),
                               ),
                             ),
-                          ),
-                        ],
+                            Positioned(
+                              bottom: 5,
+                              left: 10,
+                              child: Text(
+                                'HYBRID PRO  •  $currentLogin',
+                                style: const TextStyle(
+                                  color: _gold,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black,
+                                      blurRadius: 5,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+
+                      // สถานะเซิร์ฟเวอร์
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                         child: Row(
                           children: [
                             Container(
-                              width: 7,
-                              height: 7,
+                              width: 9,
+                              height: 9,
                               decoration: BoxDecoration(
-                                color: isServerActive ? const Color(0xFF00E676) : const Color(0xFFFF1744),
+                                color: isServerActive ? _green : _red,
                                 shape: BoxShape.circle,
                               ),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                isServerActive
+                                    ? 'SERVER IS ONLINE'
+                                    : 'SERVER IS OFFLINE',
+                                style: const TextStyle(
+                                  color: _gold,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                             Text(
-                              isServerActive ? 'SERVER IS ONLINE' : 'SERVER IS OFFLINE',
+                              '${_botLogs.length} LOGS',
                               style: const TextStyle(
-                                color: Color(0xFFFFD700),
-                                fontWeight: FontWeight.bold,
+                                color: Colors.white70,
                                 fontSize: 11,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const Divider(color: Color(0xFFFFD700), height: 1),
+
+                      const Divider(
+                        color: _gold,
+                        height: 1,
+                        thickness: 1,
+                      ),
+
+                      // รายการ LOG
                       Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: _botLogs.isEmpty
-                              ? const Center(
-                                  child: Text(
-                                    'No log records...',
-                                    style: TextStyle(color: Colors.grey, fontFamily: 'monospace', fontSize: 11),
+                        child: _botLogs.isEmpty
+                            ? const Center(
+                                child: Text(
+                                  'ยังไม่มีข้อความ LOG',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
                                   ),
-                                )
-                              : ListView.builder(
-                                  itemCount: _botLogs.length,
-                                  itemBuilder: (context, index) {
-                                    final log = _botLogs[index];
-                                    return Padding(
-                                      padding: const EdgeInsets.only(bottom: 6.0),
-                                      child: Text(
-                                        "> ${log['message'] ?? ''}",
-                                        style: const TextStyle(
-                                          color: Color(0xFF00E676),
-                                          fontFamily: 'monospace',
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    );
-                                  },
                                 ),
-                        ),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.fromLTRB(
+                                  12, 10, 12, 16,
+                                ),
+                                itemCount: _botLogs.length,
+                                itemBuilder: (context, index) {
+                                  final log = _botLogs[index];
+                                  final message =
+                                      (log['message'] ?? '').toString();
+
+                                  return Container(
+                                    width: double.infinity,
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.04),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Colors.white12,
+                                      ),
+                                    ),
+                                    child: SelectableText(
+                                      '> $message',
+                                      softWrap: true,
+                                      style: const TextStyle(
+                                        color: _green,
+                                        fontFamily: 'monospace',
+                                        fontSize: 13,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                       ),
                     ],
                   ),
                 ),
               )
             : GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isExpanded = true;
-                  });
+                behavior: HitTestBehavior.opaque,
+
+                // แตะหนึ่งครั้งเพื่อเปิดกล่อง LOG
+                onTap: () => _setExpanded(true),
+
+                // กดแช่เพื่อปิด Overlay
+                onLongPress: _hideOverlay,
+
+                // ลากขึ้นลงเพื่อย้ายบอลลูน
+                onVerticalDragUpdate: (details) {
+                  _moveBalloon(details.delta.dy);
                 },
-                onLongPress: () async {
-                  await FlutterOverlayWindow.closeOverlay();
-                },
+
                 child: Container(
-                  width: 58,
-                  height: 58,
+                  width: 64,
+                  height: 64,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF161616),
-                    border: Border.all(color: const Color(0xFFFFD700), width: 2.0),
+                    color: _background,
+                    border: Border.all(color: _gold, width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: (isServerActive ? const Color(0xFF00E676) : const Color(0xFFFF1744)).withOpacity(0.8),
-                        blurRadius: 10,
+                        color: (isServerActive ? _green : _red)
+                            .withOpacity(0.8),
+                        blurRadius: 12,
                         spreadRadius: 2,
                       ),
                     ],
                   ),
                   child: ClipOval(
-                    child: SizedBox.expand(
-                      child: Image.asset(
-                        'assets/images/7.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.smart_toy, color: Color(0xFFFFD700)),
+                    child: Image.asset(
+                      'assets/images/7.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.smart_toy,
+                        color: _gold,
+                        size: 34,
                       ),
                     ),
                   ),
@@ -288,7 +518,15 @@ class _FullOverlayContentState extends State<FullOverlayContent> {
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _logsSubscription?.cancel();
+    _overlaySubscription?.cancel();
+    super.dispose();
+  }
 }
+
 
 // ==========================================
 // #2 โหมดเมนหลักของแอป
