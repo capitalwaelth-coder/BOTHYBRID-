@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// FULL OVERLAY CONTENT (ดีไซน์ใหม่ + การเชื่อมต่อแบบรวดเร็ว)
+// FULL OVERLAY CONTENT (ฉบับรวมสมบูรณ์: ย้ายปุ่มลงกรอบขาว + เชื่อมต่อเร็ว)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -287,7 +287,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-    void _watchLogs(
+  void _watchLogs(
     String login, {
     FirebaseDatabase? database,
   }) {
@@ -303,7 +303,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
           );
 
-      // ลองเชื่อมต่อตรงไปที่โหนด logs ของบัญชีปัจจุบัน
       _logsRef = db.ref('accounts/$login/logs');
 
       _logsSubscription = _logsRef!.onValue.listen((event) {
@@ -313,7 +312,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         final List<Map<String, dynamic>> parsedLogs = [];
 
         if (value is Map) {
-          // เรียงลำดับ Key หรือแปลงข้อมูล Map ให้เป็น List ของ Logs
           value.forEach((key, item) {
             if (item != null) {
               if (item is Map) {
@@ -359,7 +357,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       debugPrint('Watch LOG error: $e');
     }
   }
-
 
   Future<void> _setExpanded(bool expanded) async {
     if (!mounted) return;
@@ -542,48 +539,47 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               ),
                             ),
                           ),
-                          // ปุ่มล้าง Logs (ถังขยะ) มุมขวาบน
+                          // ย้ายปุ่มถังขยะและปุ่มปิดลงมาอยู่ในตำแหน่งกรอบสีขาวด้านล่าง
                           Positioned(
-                            right: 42,
-                            top: 8,
+                            right: 48,
+                            top: 138,
                             child: GestureDetector(
                               onTap: _clearAllLogs,
                               child: Container(
-                                padding: const EdgeInsets.all(6),
+                                padding: const EdgeInsets.all(5),
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Colors.black.withOpacity(0.6),
+                                  color: Colors.black.withOpacity(0.7),
                                   border: Border.all(
-                                    color: _gold.withOpacity(0.5),
+                                    color: _gold.withOpacity(0.6),
                                   ),
                                 ),
                                 child: const Icon(
                                   Icons.delete_sweep,
                                   color: _gold,
-                                  size: 16,
+                                  size: 14,
                                 ),
                               ),
                             ),
                           ),
-                          // ปุ่มปิด (X) มุมขวาบน
                           Positioned(
-                            right: 8,
-                            top: 8,
+                            right: 12,
+                            top: 138,
                             child: GestureDetector(
                               onTap: () => _setExpanded(false),
                               child: Container(
-                                padding: const EdgeInsets.all(6),
+                                padding: const EdgeInsets.all(5),
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Colors.black.withOpacity(0.6),
+                                  color: Colors.black.withOpacity(0.7),
                                   border: Border.all(
-                                    color: _gold.withOpacity(0.5),
+                                    color: _gold.withOpacity(0.6),
                                   ),
                                 ),
                                 child: const Icon(
                                   Icons.close,
                                   color: Colors.white,
-                                  size: 16,
+                                  size: 14,
                                 ),
                               ),
                             ),
@@ -740,6 +736,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
+
 
 
 
