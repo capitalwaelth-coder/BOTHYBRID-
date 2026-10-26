@@ -106,7 +106,7 @@ void overlayMain() {
 }
 
 // ==========================================
-// #1.2 FULL OVERLAY CONTENT (แก้ไขให้รับข้อมูลจากแอปหลัก + คำนวณ P/L ทันที)
+// #1.2 FULL OVERLAY CONTENT
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -199,7 +199,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       }
     });
 
-    // ฟังข้อมูลที่ส่งตรงมาจากหน้าจอหลักของแอป
     _overlaySubscription =
         FlutterOverlayWindow.overlayListener.listen((event) {
       if (!mounted || event == null) return;
@@ -261,7 +260,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       }
     });
 
-    // ขอ Snapshot ข้อมูลล่าสุดจากแอปหลักทันทีที่เปิด Overlay
     FlutterOverlayWindow.shareData({
       'type': 'command',
       'command': 'request_snapshot',
@@ -361,7 +359,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     _watchLogs(login, database: db);
   }
 
-  // คำนวณกำไร/ขาดทุนแบบเรียลไทม์ทันทีในเครื่อง
   void _calculateLocalProfit() {
     if (activeOrders.isEmpty) {
       if (floatingProfit != 0.0 && mounted) {
@@ -747,12 +744,11 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                       shape: BoxShape.circle,
                       color: _background,
                       border: Border.all(color: _gold, width: 2),
-                      boxShadow: [
+                      boxShadow: const [
                         BoxShadow(
-                          color: (isConnected ? _green : _red)
-                              .withOpacity(0.8),
-                          blurRadius: 12,
-                          spreadRadius: 2,
+                          color: Colors.black54,
+                          blurRadius: 6,
+                          spreadRadius: 1,
                         ),
                       ],
                     ),
@@ -1565,7 +1561,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   List<Map<String, dynamic>> _botLogs = [];
 
   Offset _robotBubbleOffset = const Offset(20, 120);
-  bool _isRobotBubblePressed = false;
 
   late final AnimationController _bounceController =
       AnimationController(duration: const Duration(milliseconds: 1200), vsync: this)
@@ -1587,7 +1582,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       _listenToAlertsCount();
     });
 
-    // รับคำสั่งและซิงค์ข้อมูลจากหน้าต่าง Overlay
     FlutterOverlayWindow.overlayListener.listen((event) {
       if (event == null) return;
       try {
@@ -1905,52 +1899,69 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   });
                 },
                 onTap: _launchExternalOverlay,
-                child: Container(
-                  width: 58,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: kDarkCard,
-                    border: Border.all(color: kGoldPrimary, width: 2.0),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (isConnected ? kGreenNeon : kRedNeon)
-                            .withOpacity(0.6),
-                        blurRadius: 10,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.center,
-                    children: [
-                      ClipOval(
-                        child: Opacity(
-                          opacity: 0.9,
-                          child: Image.asset(
-                            'assets/images/7.png',
-                            fit: BoxFit.cover,
-                            width: 54,
-                            height: 54,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        right: 2,
-                        top: 2,
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: isConnected ? kGreenNeon : kRedNeon,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.black, width: 2),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                child: _buildRobotBubbleWidget(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRobotBubbleWidget() {
+    final bool isServerActive = isConnected && isRunning;
+
+    return Container(
+      width: 58,
+      height: 58,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: kDarkCard,
+        border: Border.all(
+          color: kGoldPrimary,
+          width: 2.0,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black54,
+            blurRadius: 6,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          ClipOval(
+            child: Opacity(
+              opacity: 0.9,
+              child: Image.asset(
+                'assets/images/7.png',
+                fit: BoxFit.cover,
+                width: 54,
+                height: 54,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(
+                    Icons.smart_toy,
+                    color: kGoldPrimary,
+                  );
+                },
+              ),
+            ),
+          ),
+          Positioned(
+            right: 2,
+            top: 2,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: isServerActive ? kGreenNeon : kRedNeon,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.black,
+                  width: 2,
                 ),
               ),
             ),
@@ -2024,6 +2035,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
+// ==========================================
+// #7 - #12 หน้าจอ Home, Orders, History, Alerts, Settings (สมบูรณ์ตามระบบเดิม)
+// ==========================================
 
 // ==========================================
 // #7 HomeScreen
