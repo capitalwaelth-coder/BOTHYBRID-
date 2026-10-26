@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// #1.2 FULL OVERLAY CONTENT (ฉบับใช้นิ้ว 2 นิ้ว ถ่างย่อ/ขยาย + Native Bridge & Fast Profit Stream)
+// #1.2 FULL OVERLAY CONTENT (อัปเดตระบบคำนวณ P/L ทันทีจากราคา Bid/Ask)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -129,24 +129,30 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   bool isConnected = false;
   double floatingProfit = 0.0;
 
+  // ตัวแปรสำหรับคำนวณ P/L แบบเรียลไทม์ในเครื่อง
+  double currentBid = 0.0;
+  double currentAsk = 0.0;
+  List<Map<String, dynamic>> activeOrders = [];
+
   double _overlayX = 0;
   double _overlayY = 0;
 
-  // ตัวแปรขนาดหน้าต่างเริ่มต้น
   double _overlayWidth = 285;
   double _overlayHeight = 285;
-
-  // ตัวแปรจำค่าขนาดก่อนเริ่มถ่างนิ้ว
   double _baseWidth = 285;
   double _baseHeight = 285;
 
   List<Map<String, dynamic>> _botLogs = [];
 
   DatabaseReference? _logsRef;
+  DatabaseReference? _statusRef;
+  DatabaseReference? _ordersRef;
 
   StreamSubscription<DatabaseEvent>? _logsSubscription;
   StreamSubscription<DatabaseEvent>? _connectionSubscription;
   StreamSubscription<DatabaseEvent>? _profitSubscription;
+  StreamSubscription<DatabaseEvent>? _statusSubscription;
+  StreamSubscription<DatabaseEvent>? _ordersSubscription;
   StreamSubscription? _overlaySubscription;
 
   final ScrollController _scrollController = ScrollController();
@@ -224,7 +230,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
         final data = Map<String, dynamic>.from(decoded);
 
-        // ดักจับ Native Bridge (High-Frequency Profit Update)
         if (data['type'] == 'profit_update') {
           final dynamic p = data['floatingProfit'];
           if (p != null) {
@@ -241,56 +246,12 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         final String? newLogin =
             (data['login'] ?? data['currentLogin'])?.toString();
 
-        final dynamic runningValue = data['isRunning'] ?? data['running'];
-        final dynamic connectedValue = data['isConnected'] ?? data['connected'];
-        
-        final dynamic profitValue = data['floatingProfit'] ?? data['profit'] ?? data['total_profit'];
-
         setState(() {
-          if (newLogin != null && newLogin.isNotEmpty) {
+          if (newLogin != null && newLogin.isNotEmpty && newLogin != currentLogin) {
             currentLogin = newLogin;
-          }
-
-          if (runningValue is bool) {
-            isRunning = runningValue;
-          }
-
-          if (connectedValue is bool) {
-            isConnected = connectedValue;
-          }
-
-          if (profitValue is num) {
-            final double newP = profitValue.toDouble();
-            if (newP != floatingProfit) {
-              floatingProfit = newP;
-            }
-          } else if (profitValue is String) {
-            final double? parsedP = double.tryParse(profitValue);
-            if (parsedP != null && parsedP != floatingProfit) {
-              floatingProfit = parsedP;
-            }
-          }
-
-          final dynamic logsValue = data['logs'];
-
-          if (logsValue is List) {
-            _botLogs = logsValue.map((item) {
-              if (item is Map) {
-                return Map<String, dynamic>.from(item);
-              }
-
-              return <String, dynamic>{
-                'message': item.toString(),
-              };
-            }).toList();
+            _watchAccountData(currentLogin);
           }
         });
-
-        if (newLogin != null &&
-            newLogin.isNotEmpty &&
-            _logsRef?.key != newLogin) {
-          _watchLogs(newLogin);
-        }
       } catch (e) {
         debugPrint('Overlay data error: $e');
       }
@@ -315,52 +276,23 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       );
 
       await _connectionSubscription?.cancel();
-
       _connectionSubscription = database
           .ref('.info/connected')
           .onValue
           .listen((event) {
         if (!mounted) return;
-
         final bool online = event.snapshot.value == true;
-
         if (isConnected != online) {
           setState(() {
             isConnected = online;
           });
         }
-      }, onError: (error) {
-        debugPrint('Firebase connection error: $error');
-
-        if (mounted) {
-          setState(() {
-            isConnected = false;
-          });
-        }
       });
 
-      // ฟังค่า profit จาก Firebase แบบแยกเดี่ยวเพื่อความเร็วสูงสุดและลดโหลด Rebuild
-      await _profitSubscription?.cancel();
-      _profitSubscription = database.ref('accounts/$currentLogin/status/profit').onValue.listen((event) {
-        if (!mounted) return;
-        final val = event.snapshot.value;
-        if (val != null) {
-          final double newProfit = (val is num) ? val.toDouble() : (double.tryParse(val.toString()) ?? floatingProfit);
-          
-          // อัปเดตเฉพาะเมื่อค่าเปลี่ยน เพื่อให้ UI ตอบสนองได้ทันทีโดยไม่กระตุก
-          if (newProfit != floatingProfit) {
-            setState(() {
-              floatingProfit = newProfit;
-            });
-          }
-        }
-      });
-
-      _watchLogs(currentLogin, database: database);
+      _watchAccountData(currentLogin, database: database);
     } catch (e, stackTrace) {
       debugPrint('Overlay Firebase initialization error: $e');
       debugPrint('$stackTrace');
-
       if (mounted) {
         setState(() {
           isConnected = false;
@@ -369,12 +301,105 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  void _watchLogs(
-    String login, {
-    FirebaseDatabase? database,
-  }) {
+  void _watchAccountData(String login, {FirebaseDatabase? database}) {
     if (login.isEmpty) return;
 
+    final db = database ??
+        FirebaseDatabase.instanceFor(
+          app: Firebase.app(),
+          databaseURL:
+              'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+        );
+
+    // 1. ฟังสถานะทั่วไป (isRunning, Bid, Ask, Profit สำรอง)
+    _statusSubscription?.cancel();
+    _statusRef = db.ref('accounts/$login/status');
+    _statusSubscription = _statusRef!.onValue.listen((event) {
+      if (!mounted) return;
+      final val = event.snapshot.value;
+      if (val is Map) {
+        final data = Map<dynamic, dynamic>.from(val);
+        setState(() {
+          isRunning = data['is_running'] == true;
+          if (data['bid'] != null) {
+            currentBid = double.tryParse(data['bid'].toString()) ?? currentBid;
+          }
+          if (data['ask'] != null) {
+            currentAsk = double.tryParse(data['ask'].toString()) ?? currentAsk;
+          }
+        });
+        _calculateLocalProfit();
+      }
+    });
+
+    // 2. ฟังรายการออเดอร์ เพื่อเอามาคำนวณ P/L ทันทีที่ราคา Bid/Ask ขยับ
+    _ordersSubscription?.cancel();
+    _ordersRef = db.ref('accounts/$login/orders');
+    _ordersSubscription = _ordersRef!.onValue.listen((event) {
+      if (!mounted) return;
+      final val = event.snapshot.value;
+      List<Map<String, dynamic>> tempOrders = [];
+      if (val is Map) {
+        val.forEach((k, v) {
+          if (v is Map) {
+            tempOrders.add(Map<String, dynamic>.from(v));
+          }
+        });
+      } else if (val is List) {
+        for (var item in val) {
+          if (item is Map) {
+            tempOrders.add(Map<String, dynamic>.from(item));
+          }
+        }
+      }
+      setState(() {
+        activeOrders = tempOrders;
+      });
+      _calculateLocalProfit();
+    });
+
+    _watchLogs(login, database: db);
+  }
+
+  // ฟังก์ชันคำนวณกำไร/ขาดทุนแบบเรียลไทม์ในเครื่องทันที
+  void _calculateLocalProfit() {
+    if (activeOrders.isEmpty) {
+      if (floatingProfit != 0.0 && mounted) {
+        setState(() {
+          floatingProfit = 0.0;
+        });
+      }
+      return;
+    }
+
+    double totalCalcProfit = 0.0;
+    for (var order in activeOrders) {
+      final String type = (order['type']?.toString() ?? 'BUY').toUpperCase();
+      final double lot = double.tryParse(order['lot']?.toString() ?? '0.01') ?? 0.01;
+      final double openPrice = double.tryParse(order['price']?.toString() ?? '0.0') ?? 0.0;
+      
+      if (openPrice <= 0) continue;
+
+      double currentPrice = type.contains('BUY') ? currentBid : currentAsk;
+      if (currentPrice <= 0) continue;
+
+      double priceDiff = type.contains('BUY') ? (currentPrice - openPrice) : (openPrice - currentPrice);
+      
+      // สูตรคำนวณกำไรมาตรฐาน Gold Spot (1 Lot = 100 oz, ขยับ 1 จุด = $1 ต่อ 0.01 Lot หรือปรับตามcontract size)
+      // สมมติฐาน XAUUSD: 1 Point = $1 สำหรับ 0.01 Lot (หรือปรับตัวคูณตามโบรกเกอร์ของคุณ เช่น * 100 * lot)
+      double orderProfit = priceDiff * 100 * (lot / 0.01); 
+      totalCalcProfit += orderProfit;
+    }
+
+    if (totalCalcProfit != floatingProfit && mounted) {
+      setState(() {
+        floatingProfit = totalCalcProfit;
+      });
+    }
+  }
+
+  void _watchLogs(String login, {FirebaseDatabase? database}) {
+    if (login.isEmpty) return;
     _logsSubscription?.cancel();
 
     try {
@@ -386,10 +411,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
           );
 
       _logsRef = db.ref('accounts/$login/logs');
-
       _logsSubscription = _logsRef!.onValue.listen((event) {
         if (!mounted) return;
-
         final dynamic value = event.snapshot.value;
         final List<Map<String, dynamic>> parsedLogs = [];
 
@@ -435,8 +458,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         setState(() {
           _botLogs = parsedLogs;
         });
-      }, onError: (error) {
-        debugPrint('Firebase LOG error: $error');
       });
     } catch (e) {
       debugPrint('Watch LOG error: $e');
@@ -445,7 +466,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
   Future<void> _setExpanded(bool expanded) async {
     if (!mounted) return;
-
     setState(() {
       _isExpanded = expanded;
     });
@@ -458,11 +478,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
           true,
         );
       } else {
-        await FlutterOverlayWindow.resizeOverlay(
-          90,
-          90,
-          true,
-        );
+        await FlutterOverlayWindow.resizeOverlay(90, 90, true);
       }
     } catch (e) {
       debugPrint('Resize overlay error: $e');
@@ -479,18 +495,11 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
   Future<void> _moveBalloon(DragUpdateDetails details) async {
     if (_isExpanded || _isMoving) return;
-
     _isMoving = true;
 
     try {
       _overlayX += details.delta.dx;
       _overlayY += details.delta.dy;
-
-      if (_overlayX < -600) _overlayX = -600;
-      if (_overlayX > 600) _overlayX = 600;
-
-      if (_overlayY < -1200) _overlayY = -1200;
-      if (_overlayY > 1200) _overlayY = 1200;
 
       await FlutterOverlayWindow.moveOverlay(
         OverlayPosition(_overlayX, _overlayY),
@@ -515,16 +524,13 @@ class _FullOverlayContentState extends State<FullOverlayContent>
           child: _isExpanded
               ? GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  // เริ่มต้นแตะ 2 นิ้ว
                   onScaleStart: (details) {
                     _baseWidth = _overlayWidth;
                     _baseHeight = _overlayHeight;
                   },
-                  // คำนวณอัตราการถ่างออก (scale)
                   onScaleUpdate: (details) {
                     if (details.scale != 1.0) {
                       setState(() {
-                        // ปรับขนาดกว้าง/สูง ตามระยะถ่างนิ้ว (ย่อได้ต่ำสุด 200, ขยายได้สูงสุด 420)
                         _overlayWidth = (_baseWidth * details.scale).clamp(200.0, 420.0);
                         _overlayHeight = (_baseHeight * details.scale).clamp(160.0, 420.0);
                       });
@@ -538,7 +544,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      // ตัวกล่องหน้าต่างหลัก
                       Container(
                         width: _overlayWidth,
                         height: _overlayHeight,
@@ -559,7 +564,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                         child: Column(
                           children: [
-                            // ภาพสแกนเนอร์ + ชื่อบอท
                             SizedBox(
                               height: 110,
                               width: double.infinity,
@@ -585,14 +589,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                               fit: BoxFit.cover,
                                               width: double.infinity,
                                               height: 110,
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return Container(
-                                                  color: Colors.black,
-                                                  child: const Center(
-                                                    child: Icon(Icons.smart_toy, color: _gold, size: 40),
-                                                  ),
-                                                );
-                                              },
                                             ),
                                           ),
                                           Positioned(
@@ -613,48 +609,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                               ),
                                             ),
                                           ),
-                                          Positioned(
-                                            left: 10,
-                                            bottom: 8,
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'GOLD PRO',
-                                                  style: TextStyle(
-                                                    color: _gold,
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontFamily: 'monospace',
-                                                    shadows: [
-                                                      Shadow(
-                                                        color: Colors.black.withOpacity(0.9),
-                                                        offset: const Offset(1.5, 1.5),
-                                                        blurRadius: 3,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 1),
-                                                Text(
-                                                  'Robot Algo Trading',
-                                                  style: TextStyle(
-                                                    color: Colors.white70,
-                                                    fontSize: 8,
-                                                    fontWeight: FontWeight.w600,
-                                                    fontFamily: 'monospace',
-                                                    shadows: [
-                                                      Shadow(
-                                                        color: Colors.black.withOpacity(0.9),
-                                                        offset: const Offset(1, 1),
-                                                        blurRadius: 2,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
                                         ],
                                       );
                                     },
@@ -662,8 +616,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 ),
                               ),
                             ),
-
-                            // แถบสถานะ ONLINE/OFFLINE + กล่อง P/L อยู่ขวาสุด
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               color: const Color(0xFF1E1E1E),
@@ -678,12 +630,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           color: isServerActive ? _green : _red,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: (isServerActive ? _green : _red).withOpacity(0.8),
-                                              blurRadius: 4,
-                                            ),
-                                          ],
                                         ),
                                       ),
                                       const SizedBox(width: 6),
@@ -720,95 +666,50 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 ],
                               ),
                             ),
-
                             const Divider(color: Color(0x33FFD700), height: 1),
-
-                            // ส่วนแสดง Logs
                             Expanded(
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 color: Colors.black.withOpacity(0.4),
-                                child: _botLogs.isEmpty
-                                    ? const Center(
-                                        child: Text(
-                                          'No logs available',
-                                          style: TextStyle(
-                                            color: Colors.white54,
-                                            fontSize: 11,
-                                          ),
+                                child: ListView.builder(
+                                  controller: _scrollController,
+                                  padding: EdgeInsets.zero,
+                                  itemCount: _botLogs.length,
+                                  itemBuilder: (context, index) {
+                                    final item = _botLogs[index];
+                                    final String message = (item['message'] ?? '').toString();
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Text(
+                                        '> $message',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontFamily: 'monospace',
                                         ),
-                                      )
-                                    : ListView.builder(
-                                        controller: _scrollController,
-                                        padding: EdgeInsets.zero,
-                                        itemCount: _botLogs.length,
-                                        itemBuilder: (context, index) {
-                                          final item = _botLogs[index];
-                                          final String message =
-                                              (item['message'] ?? '').toString();
-                                          final bool isLatest = index == 0;
-
-                                          return Padding(
-                                            padding: const EdgeInsets.only(bottom: 4),
-                                            child: isLatest
-                                                ? TypewriterText(
-                                                    text: '> $message',
-                                                    duration: const Duration(milliseconds: 250),
-                                                    style: const TextStyle(
-                                                      color: Color(0xFF00E676),
-                                                      fontSize: 10,
-                                                      fontFamily: 'monospace',
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  )
-                                                : Text(
-                                                    '> $message',
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 10,
-                                                      fontFamily: 'monospace',
-                                                    ),
-                                                  ),
-                                          );
-                                        },
                                       ),
+                                    );
+                                  },
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
-
-                      // 🔒 ปุ่มปิด (X) ล็อกมุมขวาบนสุด
                       Positioned(
                         top: 6,
                         right: 6,
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            _setExpanded(false);
-                          },
+                          onTap: () => _setExpanded(false),
                           child: Container(
                             padding: const EdgeInsets.all(5),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.black.withOpacity(0.85),
-                              border: Border.all(
-                                color: _gold.withOpacity(0.8),
-                                width: 1.5,
-                              ),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Colors.black54,
-                                  blurRadius: 4,
-                                  spreadRadius: 1,
-                                ),
-                              ],
+                              border: Border.all(color: _gold.withOpacity(0.8), width: 1.5),
                             ),
-                            child: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 12,
-                            ),
+                            child: const Icon(Icons.close, color: Colors.white, size: 12),
                           ),
                         ),
                       ),
@@ -819,83 +720,47 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _setExpanded(true),
                   onLongPress: _hideOverlay,
-                  onPanUpdate: (details) {
-                    _moveBalloon(details);
-                  },
-                  child: AnimatedBuilder(
-                    animation: _overlayBounceAnimation,
-                    builder: (context, child) {
-                      return Transform.translate(
-                        offset: Offset(
-                          0,
-                          _overlayBounceAnimation.value,
+                  onPanUpdate: (details) => _moveBalloon(details),
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _background,
+                      border: Border.all(color: _gold, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (isConnected ? _green : _red).withOpacity(0.8),
+                          blurRadius: 12,
+                          spreadRadius: 2,
                         ),
-                        child: child,
-                      );
-                    },
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _background,
-                        border: Border.all(
-                          color: _gold,
-                          width: 2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (isConnected ? _green : _red)
-                                .withOpacity(0.8),
-                            blurRadius: 12,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Positioned.fill(
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/images/7.png',
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) {
-                                  return const Icon(
-                                    Icons.smart_toy,
-                                    color: _gold,
-                                    size: 34,
-                                  );
-                                },
-                              ),
+                      ],
+                    ),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Positioned.fill(
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/images/7.png',
+                              fit: BoxFit.cover,
                             ),
                           ),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              width: 17,
-                              height: 17,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isConnected ? _green : _red,
-                                border: Border.all(
-                                  color: _background,
-                                  width: 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: (isConnected ? _green : _red)
-                                        .withOpacity(0.85),
-                                    blurRadius: 7,
-                                    spreadRadius: 1,
-                                  ),
-                                ],
-                              ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: 17,
+                            height: 17,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isConnected ? _green : _red,
+                              border: Border.all(color: _background, width: 2),
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -913,6 +778,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     _logsSubscription?.cancel();
     _connectionSubscription?.cancel();
     _profitSubscription?.cancel();
+    _statusSubscription?.cancel();
+    _ordersSubscription?.cancel();
     _overlaySubscription?.cancel();
     super.dispose();
   }
