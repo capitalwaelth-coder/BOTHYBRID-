@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-//#1.2 FULL OVERLAY CONTENT (ฉบับแก้ไข: กล่องเว้าดำเข้มตามธีม + อัปเดต P/L เรียลไทม์)
+// #1.2 FULL OVERLAY CONTENT (ฉบับเพิ่มชื่อบอท GOLD PRO บนภาพสแกนเนอร์)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -507,7 +507,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   ),
                   child: Column(
                     children: [
-                      // ส่วนแสดงภาพสแกนเนอร์
+                      // ส่วนแสดงภาพสแกนเนอร์ พร้อมชื่อบอท GOLD PRO / Robot Algo Trading
                       SizedBox(
                         height: 130,
                         width: double.infinity,
@@ -559,6 +559,49 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                             ),
                                           ],
                                         ),
+                                      ),
+                                    ),
+                                    // เพิ่มชื่อบอท GOLD PRO และ Robot Algo Trading (ตัวหนังสือสีทอง เงาดำ)
+                                    Positioned(
+                                      left: 10,
+                                      bottom: 10,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'GOLD PRO',
+                                            style: TextStyle(
+                                              color: _gold,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              fontFamily: 'monospace',
+                                              shadows: [
+                                                Shadow(
+                                                  color: Colors.black.withOpacity(0.9),
+                                                  offset: const Offset(1.5, 1.5),
+                                                  blurRadius: 3,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 1),
+                                          Text(
+                                            'Robot Algo Trading',
+                                            style: TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w600,
+                                              fontFamily: 'monospace',
+                                              shadows: [
+                                                Shadow(
+                                                  color: Colors.black.withOpacity(0.9),
+                                                  offset: const Offset(1, 1),
+                                                  blurRadius: 2,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -817,7 +860,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
-
 
 
 
