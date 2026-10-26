@@ -18,7 +18,7 @@ const Color kRedNeon = Color(0xFFFF1744);
 const Color kGreenNeon = Color(0xFF00E676);
 
 // ==========================================
-// #0 Widget แสดงข้อความแบบพิมพ์ดีด (Typewriter)
+// #0 Widget แสดงข้อความแบบพิมพ์ดีด (Typewriter) - ประกาศแค่ชุดเดียวตรงนี้เท่านั้น
 // ==========================================
 class TypewriterText extends StatefulWidget {
   final String text;
@@ -89,7 +89,7 @@ class _TypewriterTextState extends State<TypewriterText> {
 }
 
 // ==========================================
-// #1.1 โหมดการเชื่อม ระบบ Overlay Entry
+// #1.1 โหมดการเชื่อม ระบบ Overlay
 // ==========================================
 
 @pragma("vm:entry-point")
@@ -105,8 +105,10 @@ void overlayMain() {
   );
 }
 
+
+
 // ==========================================
-// #1.2 FULL OVERLAY CONTENT (แก้ไขให้รับข้อมูลจากแอปหลัก + คำนวณ P/L ทันที)
+// #1.2 FULL OVERLAY CONTENT (ฉบับใช้นิ้ว 2 นิ้ว ถ่างย่อ/ขยาย + ไม่เคลื่อนหนีมือ)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -127,28 +129,23 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   bool isConnected = false;
   double floatingProfit = 0.0;
 
-  double currentBid = 0.0;
-  double currentAsk = 0.0;
-  List<Map<String, dynamic>> activeOrders = [];
-
   double _overlayX = 0;
   double _overlayY = 0;
 
+  // ตัวแปรขนาดหน้าต่างเริ่มต้น
   double _overlayWidth = 285;
   double _overlayHeight = 285;
+
+  // ตัวแปรจำค่าขนาดก่อนเริ่มถ่างนิ้ว
   double _baseWidth = 285;
   double _baseHeight = 285;
 
   List<Map<String, dynamic>> _botLogs = [];
 
   DatabaseReference? _logsRef;
-  DatabaseReference? _statusRef;
-  DatabaseReference? _ordersRef;
 
   StreamSubscription<DatabaseEvent>? _logsSubscription;
   StreamSubscription<DatabaseEvent>? _connectionSubscription;
-  StreamSubscription<DatabaseEvent>? _statusSubscription;
-  StreamSubscription<DatabaseEvent>? _ordersSubscription;
   StreamSubscription? _overlaySubscription;
 
   final ScrollController _scrollController = ScrollController();
@@ -173,22 +170,34 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   )..repeat(reverse: true);
 
   late final Animation<double> _overlayBounceAnimation =
-      Tween<double>(begin: -7.0, end: 7.0).animate(
-    CurvedAnimation(parent: _overlayBounceController, curve: Curves.easeInOut),
+      Tween<double>(
+    begin: -7.0,
+    end: 7.0,
+  ).animate(
+    CurvedAnimation(
+      parent: _overlayBounceController,
+      curve: Curves.easeInOut,
+    ),
   );
 
   late final AnimationController _scannerController =
-      AnimationController(duration: const Duration(seconds: 3), vsync: this)
-        ..repeat(reverse: true);
+      AnimationController(
+    duration: const Duration(seconds: 3),
+    vsync: this,
+  )..repeat(reverse: true);
 
   late final Animation<double> _scannerAnimation =
       Tween<double>(begin: 0.0, end: 1.0).animate(
-    CurvedAnimation(parent: _scannerController, curve: Curves.easeInOut),
+    CurvedAnimation(
+      parent: _scannerController,
+      curve: Curves.easeInOut,
+    ),
   );
 
   @override
   void initState() {
     super.initState();
+
     _initFirebaseForOverlay();
 
     _imageTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
@@ -199,69 +208,73 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       }
     });
 
-    // ฟังข้อมูลที่ส่งตรงมาจากหน้าจอหลักของแอป
     _overlaySubscription =
         FlutterOverlayWindow.overlayListener.listen((event) {
       if (!mounted || event == null) return;
 
       try {
         dynamic decoded = event;
+
         if (decoded is String) {
           decoded = jsonDecode(decoded);
         }
+
         if (decoded is! Map) return;
 
         final data = Map<String, dynamic>.from(decoded);
 
-        if (data['type'] == 'profit_update') {
-          final dynamic p = data['floatingProfit'];
-          if (p != null) {
-            final double newProfit = (p is num)
-                ? p.toDouble()
-                : (double.tryParse(p.toString()) ?? floatingProfit);
-            if (newProfit != floatingProfit) {
-              setState(() {
-                floatingProfit = newProfit;
-              });
-            }
-          }
-          return;
-        }
-
         final String? newLogin =
             (data['login'] ?? data['currentLogin'])?.toString();
+
         final dynamic runningValue = data['isRunning'] ?? data['running'];
         final dynamic connectedValue = data['isConnected'] ?? data['connected'];
-        final dynamic logsValue = data['logs'];
+        
+        final dynamic profitValue = data['floatingProfit'] ?? data['profit'] ?? data['total_profit'];
 
         setState(() {
           if (newLogin != null && newLogin.isNotEmpty) {
-            if (currentLogin != newLogin) {
-              currentLogin = newLogin;
-              _watchAccountData(currentLogin);
-            }
+            currentLogin = newLogin;
           }
+
           if (runningValue is bool) {
             isRunning = runningValue;
           }
+
           if (connectedValue is bool) {
             isConnected = connectedValue;
           }
+
+          if (profitValue is num) {
+            floatingProfit = profitValue.toDouble();
+          } else if (profitValue is String) {
+            floatingProfit = double.tryParse(profitValue) ?? floatingProfit;
+          }
+
+          final dynamic logsValue = data['logs'];
+
           if (logsValue is List) {
             _botLogs = logsValue.map((item) {
               if (item is Map) {
                 return Map<String, dynamic>.from(item);
               }
-              return <String, dynamic>{'message': item.toString()};
+
+              return <String, dynamic>{
+                'message': item.toString(),
+              };
             }).toList();
           }
         });
+
+        if (newLogin != null &&
+            newLogin.isNotEmpty &&
+            _logsRef?.key != newLogin) {
+          _watchLogs(newLogin);
+        }
       } catch (e) {
-        debugPrint('Overlay listener error: $e');
+        debugPrint('Overlay data error: $e');
       }
     });
 
-    // ขอ Snapshot ข้อมูลล่าสุดจากแอปหลักทันทีที่เปิด Overlay
     FlutterOverlayWindow.shareData({
       'type': 'command',
       'command': 'request_snapshot',
@@ -281,20 +294,53 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       );
 
       await _connectionSubscription?.cancel();
-      _connectionSubscription =
-          database.ref('.info/connected').onValue.listen((event) {
+
+      _connectionSubscription = database
+          .ref('.info/connected')
+          .onValue
+          .listen((event) {
         if (!mounted) return;
+
         final bool online = event.snapshot.value == true;
+
         if (isConnected != online) {
           setState(() {
             isConnected = online;
           });
         }
+      }, onError: (error) {
+        debugPrint('Firebase connection error: $error');
+
+        if (mounted) {
+          setState(() {
+            isConnected = false;
+          });
+        }
       });
 
-      _watchAccountData(currentLogin, database: database);
-    } catch (e) {
-      debugPrint('Overlay Firebase init error: $e');
+      database.ref('accounts/$currentLogin/status').onValue.listen((event) {
+        if (!mounted) return;
+        final rawData = event.snapshot.value;
+        if (rawData is Map) {
+          final data = Map<dynamic, dynamic>.from(rawData);
+          final dynamic p = data['profit'] ?? data['open_profit'];
+          if (p != null) {
+            setState(() {
+              if (p is num) {
+                floatingProfit = p.toDouble();
+              } else if (p is String) {
+                floatingProfit = double.tryParse(p) ?? floatingProfit;
+              }
+            });
+          }
+        }
+      });
+
+      _watchLogs(currentLogin, database: database);
+    } catch (e, stackTrace) {
+      debugPrint('Overlay Firebase initialization error: $e');
+      debugPrint('$stackTrace');
+
       if (mounted) {
         setState(() {
           isConnected = false;
@@ -303,104 +349,12 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  void _watchAccountData(String login, {FirebaseDatabase? database}) {
+  void _watchLogs(
+    String login, {
+    FirebaseDatabase? database,
+  }) {
     if (login.isEmpty) return;
 
-    final db = database ??
-        FirebaseDatabase.instanceFor(
-          app: Firebase.app(),
-          databaseURL:
-              'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-        );
-
-    _statusSubscription?.cancel();
-    _statusRef = db.ref('accounts/$login/status');
-    _statusSubscription = _statusRef!.onValue.listen((event) {
-      if (!mounted) return;
-      final val = event.snapshot.value;
-      if (val is Map) {
-        final data = Map<dynamic, dynamic>.from(val);
-        setState(() {
-          isRunning = data['is_running'] == true;
-          if (data['bid'] != null) {
-            currentBid = double.tryParse(data['bid'].toString()) ?? currentBid;
-          }
-          if (data['ask'] != null) {
-            currentAsk = double.tryParse(data['ask'].toString()) ?? currentAsk;
-          }
-        });
-        _calculateLocalProfit();
-      }
-    });
-
-    _ordersSubscription?.cancel();
-    _ordersRef = db.ref('accounts/$login/orders');
-    _ordersSubscription = _ordersRef!.onValue.listen((event) {
-      if (!mounted) return;
-      final val = event.snapshot.value;
-      List<Map<String, dynamic>> tempOrders = [];
-      if (val is Map) {
-        val.forEach((k, v) {
-          if (v is Map) {
-            tempOrders.add(Map<String, dynamic>.from(v));
-          }
-        });
-      } else if (val is List) {
-        for (var item in val) {
-          if (item is Map) {
-            tempOrders.add(Map<String, dynamic>.from(item));
-          }
-        }
-      }
-      setState(() {
-        activeOrders = tempOrders;
-      });
-      _calculateLocalProfit();
-    });
-
-    _watchLogs(login, database: db);
-  }
-
-  // คำนวณกำไร/ขาดทุนแบบเรียลไทม์ทันทีในเครื่อง
-  void _calculateLocalProfit() {
-    if (activeOrders.isEmpty) {
-      if (floatingProfit != 0.0 && mounted) {
-        setState(() {
-          floatingProfit = 0.0;
-        });
-      }
-      return;
-    }
-
-    double totalCalcProfit = 0.0;
-    for (var order in activeOrders) {
-      final String type = (order['type']?.toString() ?? 'BUY').toUpperCase();
-      final double lot =
-          double.tryParse(order['lot']?.toString() ?? '0.01') ?? 0.01;
-      final double openPrice =
-          double.tryParse(order['price']?.toString() ?? '0.0') ?? 0.0;
-
-      if (openPrice <= 0) continue;
-
-      double currentPrice = type.contains('BUY') ? currentBid : currentAsk;
-      if (currentPrice <= 0) continue;
-
-      double priceDiff = type.contains('BUY')
-          ? (currentPrice - openPrice)
-          : (openPrice - currentPrice);
-      double orderProfit = priceDiff * 100 * (lot / 0.01);
-      totalCalcProfit += orderProfit;
-    }
-
-    if (totalCalcProfit != floatingProfit && mounted) {
-      setState(() {
-        floatingProfit = totalCalcProfit;
-      });
-    }
-  }
-
-  void _watchLogs(String login, {FirebaseDatabase? database}) {
-    if (login.isEmpty) return;
     _logsSubscription?.cancel();
 
     try {
@@ -412,8 +366,10 @@ class _FullOverlayContentState extends State<FullOverlayContent>
           );
 
       _logsRef = db.ref('accounts/$login/logs');
+
       _logsSubscription = _logsRef!.onValue.listen((event) {
         if (!mounted) return;
+
         final dynamic value = event.snapshot.value;
         final List<Map<String, dynamic>> parsedLogs = [];
 
@@ -433,8 +389,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                     item.toString();
                 parsedLogs.add({'key': entry.key.toString(), 'message': message});
               } else {
-                parsedLogs.add(
-                    {'key': entry.key.toString(), 'message': item.toString()});
+                parsedLogs.add({'key': entry.key.toString(), 'message': item.toString()});
               }
             }
           }
@@ -460,6 +415,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         setState(() {
           _botLogs = parsedLogs;
         });
+      }, onError: (error) {
+        debugPrint('Firebase LOG error: $error');
       });
     } catch (e) {
       debugPrint('Watch LOG error: $e');
@@ -468,6 +425,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
   Future<void> _setExpanded(bool expanded) async {
     if (!mounted) return;
+
     setState(() {
       _isExpanded = expanded;
     });
@@ -480,7 +438,11 @@ class _FullOverlayContentState extends State<FullOverlayContent>
           true,
         );
       } else {
-        await FlutterOverlayWindow.resizeOverlay(90, 90, true);
+        await FlutterOverlayWindow.resizeOverlay(
+          90,
+          90,
+          true,
+        );
       }
     } catch (e) {
       debugPrint('Resize overlay error: $e');
@@ -497,11 +459,19 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
   Future<void> _moveBalloon(DragUpdateDetails details) async {
     if (_isExpanded || _isMoving) return;
+
     _isMoving = true;
 
     try {
       _overlayX += details.delta.dx;
       _overlayY += details.delta.dy;
+
+      if (_overlayX < -600) _overlayX = -600;
+      if (_overlayX > 600) _overlayX = 600;
+
+      if (_overlayY < -1200) _overlayY = -1200;
+      if (_overlayY > 1200) _overlayY = 1200;
+
       await FlutterOverlayWindow.moveOverlay(
         OverlayPosition(_overlayX, _overlayY),
       );
@@ -525,17 +495,18 @@ class _FullOverlayContentState extends State<FullOverlayContent>
           child: _isExpanded
               ? GestureDetector(
                   behavior: HitTestBehavior.opaque,
+                  // เริ่มต้นแตะ 2 นิ้ว
                   onScaleStart: (details) {
                     _baseWidth = _overlayWidth;
                     _baseHeight = _overlayHeight;
                   },
+                  // คำนวณอัตราการถ่างออก (scale)
                   onScaleUpdate: (details) {
                     if (details.scale != 1.0) {
                       setState(() {
-                        _overlayWidth =
-                            (_baseWidth * details.scale).clamp(200.0, 420.0);
-                        _overlayHeight =
-                            (_baseHeight * details.scale).clamp(160.0, 420.0);
+                        // ปรับขนาดกว้าง/สูง ตามระยะถ่างนิ้ว (ย่อได้ต่ำสุด 200, ขยายได้สูงสุด 420)
+                        _overlayWidth = (_baseWidth * details.scale).clamp(200.0, 420.0);
+                        _overlayHeight = (_baseHeight * details.scale).clamp(160.0, 420.0);
                       });
                       FlutterOverlayWindow.resizeOverlay(
                         _overlayWidth.toInt(),
@@ -547,6 +518,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
+                      // ตัวกล่องหน้าต่างหลัก
                       Container(
                         width: _overlayWidth,
                         height: _overlayHeight,
@@ -567,6 +539,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                         child: Column(
                           children: [
+                            // ภาพสแกนเนอร์ + ชื่อบอท
                             SizedBox(
                               height: 110,
                               width: double.infinity,
@@ -579,22 +552,27 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                   child: AnimatedBuilder(
                                     animation: _scannerAnimation,
                                     builder: (context, child) {
-                                      final double scanValue =
-                                          _scannerAnimation.value * 110;
+                                      final double scanValue = _scannerAnimation.value * 110;
 
                                       return Stack(
                                         fit: StackFit.expand,
                                         children: [
                                           AnimatedSwitcher(
-                                            duration: const Duration(
-                                                milliseconds: 800),
+                                            duration: const Duration(milliseconds: 800),
                                             child: Image.asset(
                                               currentScanImage,
-                                              key: ValueKey<String>(
-                                                  currentScanImage),
+                                              key: ValueKey<String>(currentScanImage),
                                               fit: BoxFit.cover,
                                               width: double.infinity,
                                               height: 110,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return Container(
+                                                  color: Colors.black,
+                                                  child: const Center(
+                                                    child: Icon(Icons.smart_toy, color: _gold, size: 40),
+                                                  ),
+                                                );
+                                              },
                                             ),
                                           ),
                                           Positioned(
@@ -615,6 +593,48 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                               ),
                                             ),
                                           ),
+                                          Positioned(
+                                            left: 10,
+                                            bottom: 8,
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'GOLD PRO',
+                                                  style: TextStyle(
+                                                    color: _gold,
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontFamily: 'monospace',
+                                                    shadows: [
+                                                      Shadow(
+                                                        color: Colors.black.withOpacity(0.9),
+                                                        offset: const Offset(1.5, 1.5),
+                                                        blurRadius: 3,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 1),
+                                                Text(
+                                                  'Robot Algo Trading',
+                                                  style: TextStyle(
+                                                    color: Colors.white70,
+                                                    fontSize: 8,
+                                                    fontWeight: FontWeight.w600,
+                                                    fontFamily: 'monospace',
+                                                    shadows: [
+                                                      Shadow(
+                                                        color: Colors.black.withOpacity(0.9),
+                                                        offset: const Offset(1, 1),
+                                                        blurRadius: 2,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ],
                                       );
                                     },
@@ -622,13 +642,13 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 ),
                               ),
                             ),
+
+                            // แถบสถานะ ONLINE/OFFLINE + กล่อง P/L อยู่ขวาสุด
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 5),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               color: const Color(0xFF1E1E1E),
                               child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Row(
                                     children: [
@@ -637,18 +657,20 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                         height: 8,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: isServerActive
-                                              ? _green
-                                              : _red,
+                                          color: isServerActive ? _green : _red,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: (isServerActive ? _green : _red).withOpacity(0.8),
+                                              blurRadius: 4,
+                                            ),
+                                          ],
                                         ),
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
                                         isServerActive ? 'ONLINE' : 'OFFLINE',
                                         style: TextStyle(
-                                          color: isServerActive
-                                              ? _green
-                                              : _red,
+                                          color: isServerActive ? _green : _red,
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -656,8 +678,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                     ],
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: Colors.black,
                                       borderRadius: BorderRadius.circular(8),
@@ -669,9 +690,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                     child: Text(
                                       floatingProfit.toStringAsFixed(2),
                                       style: TextStyle(
-                                        color: floatingProfit >= 0
-                                            ? _green
-                                            : _red,
+                                        color: floatingProfit >= 0 ? _green : _red,
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
                                         fontFamily: 'monospace',
@@ -681,54 +700,95 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                 ],
                               ),
                             ),
+
                             const Divider(color: Color(0x33FFD700), height: 1),
+
+                            // ส่วนแสดง Logs
                             Expanded(
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 color: Colors.black.withOpacity(0.4),
-                                child: ListView.builder(
-                                  controller: _scrollController,
-                                  padding: EdgeInsets.zero,
-                                  itemCount: _botLogs.length,
-                                  itemBuilder: (context, index) {
-                                    final item = _botLogs[index];
-                                    final String message =
-                                        (item['message'] ?? '').toString();
-                                    return Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 4),
-                                      child: Text(
-                                        '> $message',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontFamily: 'monospace',
+                                child: _botLogs.isEmpty
+                                    ? const Center(
+                                        child: Text(
+                                          'No logs available',
+                                          style: TextStyle(
+                                            color: Colors.white54,
+                                            fontSize: 11,
+                                          ),
                                         ),
+                                      )
+                                    : ListView.builder(
+                                        controller: _scrollController,
+                                        padding: EdgeInsets.zero,
+                                        itemCount: _botLogs.length,
+                                        itemBuilder: (context, index) {
+                                          final item = _botLogs[index];
+                                          final String message =
+                                              (item['message'] ?? '').toString();
+                                          final bool isLatest = index == 0;
+
+                                          return Padding(
+                                            padding: const EdgeInsets.only(bottom: 4),
+                                            child: isLatest
+                                                ? TypewriterText(
+                                                    text: '> $message',
+                                                    duration: const Duration(milliseconds: 250),
+                                                    style: const TextStyle(
+                                                      color: Color(0xFF00E676),
+                                                      fontSize: 10,
+                                                      fontFamily: 'monospace',
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  )
+                                                : Text(
+                                                    '> $message',
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 10,
+                                                      fontFamily: 'monospace',
+                                                    ),
+                                                  ),
+                                          );
+                                        },
                                       ),
-                                    );
-                                  },
-                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
+
+                      // 🔒 ปุ่มปิด (X) ล็อกมุมขวาบนสุด
                       Positioned(
                         top: 6,
                         right: 6,
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: () => _setExpanded(false),
+                          onTap: () {
+                            _setExpanded(false);
+                          },
                           child: Container(
                             padding: const EdgeInsets.all(5),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.black.withOpacity(0.85),
                               border: Border.all(
-                                  color: _gold.withOpacity(0.8), width: 1.5),
+                                color: _gold.withOpacity(0.8),
+                                width: 1.5,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black54,
+                                  blurRadius: 4,
+                                  spreadRadius: 1,
+                                ),
+                              ],
                             ),
-                            child: const Icon(Icons.close,
-                                color: Colors.white, size: 12),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 12,
+                            ),
                           ),
                         ),
                       ),
@@ -739,49 +799,83 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _setExpanded(true),
                   onLongPress: _hideOverlay,
-                  onPanUpdate: (details) => _moveBalloon(details),
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _background,
-                      border: Border.all(color: _gold, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (isConnected ? _green : _red)
-                              .withOpacity(0.8),
-                          blurRadius: 12,
-                          spreadRadius: 2,
+                  onPanUpdate: (details) {
+                    _moveBalloon(details);
+                  },
+                  child: AnimatedBuilder(
+                    animation: _overlayBounceAnimation,
+                    builder: (context, child) {
+                      return Transform.translate(
+                        offset: Offset(
+                          0,
+                          _overlayBounceAnimation.value,
                         ),
-                      ],
-                    ),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Positioned.fill(
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/images/7.png',
-                              fit: BoxFit.cover,
+                        child: child,
+                      );
+                    },
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _background,
+                        border: Border.all(
+                          color: _gold,
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (isConnected ? _green : _red)
+                                .withOpacity(0.8),
+                            blurRadius: 12,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Positioned.fill(
+                            child: ClipOval(
+                              child: Image.asset(
+                                'assets/images/7.png',
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) {
+                                  return const Icon(
+                                    Icons.smart_toy,
+                                    color: _gold,
+                                    size: 34,
+                                  );
+                                },
+                              ),
                             ),
                           ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            width: 17,
-                            height: 17,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isConnected ? _green : _red,
-                              border:
-                                  Border.all(color: _background, width: 2),
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              width: 17,
+                              height: 17,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isConnected ? _green : _red,
+                                border: Border.all(
+                                  color: _background,
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (isConnected ? _green : _red)
+                                        .withOpacity(0.85),
+                                    blurRadius: 7,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -798,13 +892,14 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     _overlayBounceController.dispose();
     _logsSubscription?.cancel();
     _connectionSubscription?.cancel();
-    _profitSubscription?.cancel();
-    _statusSubscription?.cancel();
-    _ordersSubscription?.cancel();
     _overlaySubscription?.cancel();
     super.dispose();
   }
 }
+
+
+
+
 
 // ==========================================
 // #2 โหมดเมนหลักของแอป
@@ -812,6 +907,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
   try {
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(
@@ -821,14 +917,14 @@ void main() async {
           messagingSenderId: "155532929563",
           projectId: "liquidity-b8739",
           storageBucket: "liquidity-b8739.firebasestorage.app",
-          databaseURL:
-              "https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app",
+          databaseURL: "https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app",
         ),
       );
     }
   } catch (e) {
     debugPrint("Firebase init error: $e");
   }
+
   runApp(const LiquiditySweepApp());
 }
 
@@ -872,13 +968,17 @@ class LiquiditySweepApp extends StatelessWidget {
             return const Scaffold(
               backgroundColor: kDarkBg,
               body: Center(
-                child: CircularProgressIndicator(color: kGoldPrimary),
+                child: CircularProgressIndicator(
+                  color: kGoldPrimary,
+                ),
               ),
             );
           }
+
           if (snapshot.data == true) {
             return const PinAuthWrapper();
           }
+
           return const MT5LoginWrapper();
         },
       ),
@@ -900,7 +1000,8 @@ class MT5LoginWrapper extends StatefulWidget {
 class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
   final TextEditingController _loginController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _serverController = TextEditingController();
+  final TextEditingController _serverController = TextEditingController(); 
+  
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -914,11 +1015,10 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
 
   void _submitMT5Login() async {
     ScaffoldMessenger.of(context).clearSnackBars();
+
     String login = _loginController.text.trim();
     String password = _passwordController.text.trim();
-    String server = _serverController.text.trim().isEmpty
-        ? 'ICMarketsSC-Demo'
-        : _serverController.text.trim();
+    String server = _serverController.text.trim().isEmpty ? 'ICMarketsSC-Demo' : _serverController.text.trim();
 
     if (login.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -945,8 +1045,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
             messagingSenderId: "155532929563",
             projectId: "liquidity-b8739",
             storageBucket: "liquidity-b8739.firebasestorage.app",
-            databaseURL:
-                "https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app",
+            databaseURL: "https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app",
           ),
         );
       } else {
@@ -955,8 +1054,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
 
       final database = FirebaseDatabase.instanceFor(
         app: app,
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app',
+        databaseURL: 'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app',
       );
 
       final accountRef = database.ref('accounts/$login');
@@ -969,6 +1067,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
         await prefs.setString('mt5_server', server);
 
         if (!mounted) return;
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const PinAuthWrapper()),
@@ -1012,8 +1111,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
             'assets/images/5.png',
             fit: BoxFit.cover,
             opacity: const AlwaysStoppedAnimation(0.25),
-            errorBuilder: (context, error, stackTrace) =>
-                Container(color: kDarkBg),
+            errorBuilder: (context, error, stackTrace) => Container(color: kDarkBg),
           ),
           Container(
             decoration: BoxDecoration(
@@ -1029,8 +1127,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
           ),
           SafeArea(
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
               child: Center(
                 child: SingleChildScrollView(
                   child: Column(
@@ -1057,8 +1154,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                             child: Image.asset(
                               'assets/images/5.png',
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(color: Colors.black),
+                              errorBuilder: (context, error, stackTrace) => Container(color: Colors.black),
                             ),
                           ),
                         ),
@@ -1092,21 +1188,10 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           hintText: 'Account Login (เช่น 53049695)',
-                          hintStyle: TextStyle(
-                              color: Colors.white.withOpacity(0.5),
-                              fontStyle: FontStyle.italic,
-                              fontSize: 13),
-                          enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide(
-                                  color: kGoldPrimary.withOpacity(0.6),
-                                  width: 1.5)),
-                          focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(
-                                  color: kGoldPrimary, width: 2.0)),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 18, vertical: 18),
+                          hintStyle: TextStyle(color: Colors.white.withOpacity(0.5), fontStyle: FontStyle.italic, fontSize: 13),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: kGoldPrimary.withOpacity(0.6), width: 1.5)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: kGoldPrimary, width: 2.0)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
                           filled: true,
                           fillColor: kDarkCard.withOpacity(0.75),
                         ),
@@ -1118,28 +1203,15 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           hintText: 'Investor Password',
-                          hintStyle: TextStyle(
-                              color: Colors.white.withOpacity(0.5),
-                              fontStyle: FontStyle.italic,
-                              fontSize: 13),
-                          enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide(
-                                  color: kGoldPrimary.withOpacity(0.6),
-                                  width: 1.5)),
-                          focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(
-                                  color: kGoldPrimary, width: 2.0)),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 18, vertical: 18),
+                          hintStyle: TextStyle(color: Colors.white.withOpacity(0.5), fontStyle: FontStyle.italic, fontSize: 13),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: kGoldPrimary.withOpacity(0.6), width: 1.5)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: kGoldPrimary, width: 2.0)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
                           filled: true,
                           fillColor: kDarkCard.withOpacity(0.75),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
+                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
                               color: kGoldPrimary,
                             ),
                             onPressed: () {
@@ -1179,9 +1251,8 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            child: _isLoading
-                                ? const CircularProgressIndicator(
-                                    color: Colors.black)
+                            child: _isLoading 
+                                ? const CircularProgressIndicator(color: Colors.black)
                                 : const Text(
                                     'VERIFY & CONNECT',
                                     style: TextStyle(
@@ -1197,10 +1268,7 @@ class _MT5LoginWrapperState extends State<MT5LoginWrapper> {
                       const SizedBox(height: 20),
                       const Text(
                         'Powered By Algohost',
-                        style: TextStyle(
-                            color: kGoldPrimary,
-                            fontSize: 11,
-                            fontStyle: FontStyle.italic),
+                        style: TextStyle(color: kGoldPrimary, fontSize: 11, fontStyle: FontStyle.italic),
                       ),
                     ],
                   ),
@@ -1245,7 +1313,9 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
     try {
       final prefs = await SharedPreferences.getInstance();
       if (!mounted) return;
+
       final pin = prefs.getString('saved_user_pin');
+
       setState(() {
         hasStoredPin = pin != null && pin.isNotEmpty;
         isLoading = false;
@@ -1253,9 +1323,17 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
     } catch (e) {
       debugPrint('Check PIN error: $e');
       if (!mounted) return;
+
       setState(() {
         isLoading = false;
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('อ่านข้อมูล PIN ไม่สำเร็จ กรุณาปิดแล้วเปิดแอปใหม่'),
+          backgroundColor: kRedNeon,
+        ),
+      );
     }
   }
 
@@ -1274,7 +1352,9 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final storedPin = prefs.getString('saved_user_pin');
+
       if (!mounted) return;
+
       if (storedPin == pin && storedPin != null) {
         setState(() {
           isAuthorized = true;
@@ -1284,6 +1364,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
         setState(() {
           currentPinInput = '';
         });
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง'),
@@ -1294,26 +1375,41 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
     } catch (e) {
       debugPrint('Verify PIN error: $e');
       if (!mounted) return;
+
       setState(() {
         currentPinInput = '';
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ตรวจสอบ PIN ไม่สำเร็จ กรุณาลองใหม่'),
+          backgroundColor: kRedNeon,
+        ),
+      );
     }
   }
 
   Future<void> _onNumberTap(String number) async {
-    if (isLoading || _isProcessing || currentPinInput.length >= 6) return;
+    if (isLoading || _isProcessing || currentPinInput.length >= 6) {
+      return;
+    }
+
     setState(() {
       currentPinInput += number;
     });
+
     if (currentPinInput.length != 6) return;
 
     _isProcessing = true;
+
     try {
       final enteredPin = currentPinInput;
+
       if (hasStoredPin) {
         await _verifyPin(enteredPin);
         return;
       }
+
       if (!isConfirming) {
         setState(() {
           firstEnteredPin = enteredPin;
@@ -1322,12 +1418,14 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
         });
         return;
       }
+
       if (firstEnteredPin != enteredPin) {
         setState(() {
           currentPinInput = '';
           firstEnteredPin = '';
           isConfirming = false;
         });
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('รหัส PIN ไม่ตรงกัน กรุณาตั้งค่าใหม่อีกครั้ง'),
@@ -1336,8 +1434,11 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
         );
         return;
       }
+
       final saved = await _saveNewPin(enteredPin);
+
       if (!mounted) return;
+
       if (saved) {
         setState(() {
           hasStoredPin = true;
@@ -1346,6 +1447,26 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
           firstEnteredPin = '';
           isConfirming = false;
         });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('บันทึก PIN สำเร็จ'),
+            backgroundColor: kGreenNeon,
+          ),
+        );
+      } else {
+        setState(() {
+          currentPinInput = '';
+          firstEnteredPin = '';
+          isConfirming = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('บันทึก PIN ไม่สำเร็จ กรุณาตั้งค่าใหม่'),
+            backgroundColor: kRedNeon,
+          ),
+        );
       }
     } finally {
       _isProcessing = false;
@@ -1354,6 +1475,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 
   void _onDeleteTap() {
     if (isLoading || _isProcessing || currentPinInput.isEmpty) return;
+
     setState(() {
       currentPinInput = currentPinInput.substring(0, currentPinInput.length - 1);
     });
@@ -1364,14 +1486,20 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
     if (isLoading) {
       return const Scaffold(
         backgroundColor: kDarkBg,
-        body: Center(child: CircularProgressIndicator(color: kGoldPrimary)),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: kGoldPrimary,
+          ),
+        ),
       );
     }
+
     if (isAuthorized) {
       return const MainNavigationScreen();
     }
 
     String titleText = 'กรุณากรอก PIN เพื่อเข้าใช้งานระบบ';
+
     if (!hasStoredPin) {
       titleText = isConfirming
           ? 'ยืนยันรหัส PIN 6 หลักอีกครั้ง'
@@ -1387,6 +1515,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
             'assets/images/1.jpg',
             fit: BoxFit.cover,
             opacity: const AlwaysStoppedAnimation(0.25),
+            errorBuilder: (ctx, err, stack) => Container(color: kDarkBg),
           ),
           Container(
             decoration: BoxDecoration(
@@ -1411,6 +1540,12 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: kGoldPrimary, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: kGoldPrimary.withOpacity(0.3),
+                            blurRadius: 12,
+                          ),
+                        ],
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(14),
@@ -1421,6 +1556,11 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                             width: 120,
                             height: 120,
                             fit: BoxFit.cover,
+                            errorBuilder: (ctx, err, stack) => const Icon(
+                              Icons.smart_toy,
+                              color: kGoldPrimary,
+                              size: 80,
+                            ),
                           ),
                         ),
                       ),
@@ -1436,14 +1576,24 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                         letterSpacing: 2,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'ROBOT ALGO TRADING',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white70,
+                        letterSpacing: 4,
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     Text(
                       titleText,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold),
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -1457,7 +1607,10 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: filled ? kGoldPrimary : Colors.transparent,
-                            border: Border.all(color: kGoldPrimary, width: 2),
+                            border: Border.all(
+                              color: kGoldPrimary,
+                              width: 2,
+                            ),
                           ),
                         );
                       }),
@@ -1486,6 +1639,15 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Powered By Algohost',
+                      style: TextStyle(
+                        color: kGoldPrimary,
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1504,7 +1666,16 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: kDarkCard.withOpacity(0.75),
-        border: Border.all(color: kGoldPrimary, width: 1.5),
+        border: Border.all(
+          color: kGoldPrimary,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kGoldPrimary.withOpacity(0.15),
+            blurRadius: 6,
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -1519,14 +1690,18 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
           customBorder: const CircleBorder(),
           child: Center(
             child: val == 'del'
-                ? const Icon(Icons.backspace_outlined,
-                    color: kGoldPrimary, size: 20)
+                ? const Icon(
+                    Icons.backspace_outlined,
+                    color: kGoldPrimary,
+                    size: 20,
+                  )
                 : Text(
                     val,
                     style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
           ),
         ),
@@ -1765,7 +1940,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ฟังข้อมูล Logs และตรวจสอบหากครบ 50 ข้อความ จะสั่งลบบน Firebase อัตโนมัติทันที
+  // ฟังข้อมูล Logs และตรวจสอบหากครบ 100 ข้อความ จะสั่งลบบน Firebase อัตโนมัติทันที
   void _listenToLogs() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1789,7 +1964,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             totalCount = data.where((e) => e != null).length;
           }
 
-          if (totalCount >= 50) {
+          if (totalCount >= 100) {
             _logsRef?.remove(); // ลบข้อมูลบน Firebase ทันที
             setState(() {
               _botLogs.clear();
@@ -2271,6 +2446,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+
 
 
 
