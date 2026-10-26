@@ -106,7 +106,7 @@ void overlayMain() {
 }
 
 // ==========================================
-// #1.2 FULL OVERLAY CONTENT
+// #1.2 FULL OVERLAY CONTENT (แก้ไขให้รับข้อมูลจากแอปหลัก + คำนวณ P/L ทันที)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -199,6 +199,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       }
     });
 
+    // ฟังข้อมูลที่ส่งตรงมาจากหน้าจอหลักของแอป
     _overlaySubscription =
         FlutterOverlayWindow.overlayListener.listen((event) {
       if (!mounted || event == null) return;
@@ -260,6 +261,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       }
     });
 
+    // ขอ Snapshot ข้อมูลล่าสุดจากแอปหลักทันทีที่เปิด Overlay
     FlutterOverlayWindow.shareData({
       'type': 'command',
       'command': 'request_snapshot',
@@ -359,6 +361,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     _watchLogs(login, database: db);
   }
 
+  // คำนวณกำไร/ขาดทุนแบบเรียลไทม์ทันทีในเครื่อง
   void _calculateLocalProfit() {
     if (activeOrders.isEmpty) {
       if (floatingProfit != 0.0 && mounted) {
@@ -744,11 +747,12 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                       shape: BoxShape.circle,
                       color: _background,
                       border: Border.all(color: _gold, width: 2),
-                      boxShadow: const [
+                      boxShadow: [
                         BoxShadow(
-                          color: Colors.black54,
-                          blurRadius: 6,
-                          spreadRadius: 1,
+                          color: (isConnected ? _green : _red)
+                              .withOpacity(0.8),
+                          blurRadius: 12,
+                          spreadRadius: 2,
                         ),
                       ],
                     ),
@@ -794,6 +798,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     _overlayBounceController.dispose();
     _logsSubscription?.cancel();
     _connectionSubscription?.cancel();
+    _profitSubscription?.cancel();
     _statusSubscription?.cancel();
     _ordersSubscription?.cancel();
     _overlaySubscription?.cancel();
@@ -1760,7 +1765,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ฟังข้อมูล Logs และตรวจสอบหากครบ 100 ข้อความ จะสั่งลบบน Firebase อัตโนมัติทันที
+  // ฟังข้อมูล Logs และตรวจสอบหากครบ 50 ข้อความ จะสั่งลบบน Firebase อัตโนมัติทันที
   void _listenToLogs() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1784,7 +1789,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             totalCount = data.where((e) => e != null).length;
           }
 
-          if (totalCount >= 100) {
+          if (totalCount >= 50) {
             _logsRef?.remove(); // ลบข้อมูลบน Firebase ทันที
             setState(() {
               _botLogs.clear();
