@@ -1940,7 +1940,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
-  // ฟังข้อมูล Logs และตรวจสอบหากครบ 100 ข้อความ จะสั่งลบบน Firebase อัตโนมัติทันที
+
+
+ // ==========================================
+// #5.2 LISTEN TO LOGS (ฟังข้อมูล Logs และตรวจสอบวันที่จากข้อความ หากเปลี่ยนวันใหม่ จะลบข้อมูลบน Firebase ทันที)
+// ==========================================
   void _listenToLogs() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1951,26 +1955,55 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
       _logsRef = database.ref('accounts/$currentLogin/logs');
 
-      _logsRef?.onValue.listen((DatabaseEvent event) {
+      _logsRef?.onValue.listen((DatabaseEvent event) async {
         final data = event.snapshot.value;
 
         if (!mounted) return;
 
         if (data != null) {
-          int totalCount = 0;
+          String? latestLogDate;
+
+          // ค้นหาวันที่จากข้อความล่าสุดใน Log (รูปแบบ [DD.MM.YYYY ...)
           if (data is Map) {
-            totalCount = data.length;
+            final sortedEntries = data.entries.toList()
+              ..sort((a, b) => b.key.toString().compareTo(a.key.toString()));
+            if (sortedEntries.isNotEmpty) {
+              final valStr = sortedEntries.first.value.toString();
+              final match = RegExp(r'\[(\d{2}\.\d{2}\.\d{4})').firstMatch(valStr);
+              if (match != null) {
+                latestLogDate = match.group(1); // ได้ค่าเช่น "26.10.2026"
+              }
+            }
           } else if (data is List) {
-            totalCount = data.where((e) => e != null).length;
+            final validItems = data.where((e) => e != null).toList();
+            if (validItems.isNotEmpty) {
+              final valStr = validItems.last.toString();
+              final match = RegExp(r'\[(\d{2}\.\d{2}\.\d{4})').firstMatch(valStr);
+              if (match != null) {
+                latestLogDate = match.group(1);
+              }
+            }
           }
 
-          if (totalCount >= 100) {
-            _logsRef?.remove(); // ลบข้อมูลบน Firebase ทันที
-            setState(() {
-              _botLogs.clear();
-            });
-            _shareSnapshotToOverlay();
-            return;
+          if (latestLogDate != null) {
+            final prefs = await SharedPreferences.getInstance();
+            final String lastClearedDate = prefs.getString('last_cleared_date_$currentLogin') ?? '';
+
+            // ถ้าวันที่ใน Log ล่าสุด ไม่ตรงกับวันที่เคยเคลียร์ล่าสุด (ขึ้นวันใหม่ของเซิร์ฟเวอร์แล้ว)
+            if (lastClearedDate != latestLogDate && lastClearedDate.isNotEmpty) {
+              await _logsRef?.remove(); // ลบข้อมูลบน Firebase ทันที
+              await prefs.setString('last_cleared_date_$currentLogin', latestLogDate);
+              
+              if (!mounted) return;
+              setState(() {
+                _botLogs.clear();
+              });
+              _shareSnapshotToOverlay();
+              return;
+            } else if (lastClearedDate.isEmpty) {
+              // บันทึกค่าเริ่มต้นไว้ก่อนรอบแรก
+              await prefs.setString('last_cleared_date_$currentLogin', latestLogDate);
+            }
           }
         }
 
@@ -2029,6 +2062,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       debugPrint("Logs listen error: $e");
     }
   }
+
+ 
 
   // ส่งข้อมูล Snapshot รวมถึง floatingProfit ไปยัง Overlay
   void _shareSnapshotToOverlay() {
