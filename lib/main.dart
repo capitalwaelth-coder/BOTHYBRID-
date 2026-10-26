@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// #1.2 FULL OVERLAY CONTENT (ฉบับใช้นิ้ว 2 นิ้ว ถ่างย่อ/ขยาย + ไม่เคลื่อนหนีมือ)
+// #1.2 FULL OVERLAY CONTENT (ฉบับใช้นิ้ว 2 นิ้ว ถ่างย่อ/ขยาย + Native Bridge & Fast Profit Stream)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -146,6 +146,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
   StreamSubscription<DatabaseEvent>? _logsSubscription;
   StreamSubscription<DatabaseEvent>? _connectionSubscription;
+  StreamSubscription<DatabaseEvent>? _profitSubscription;
   StreamSubscription? _overlaySubscription;
 
   final ScrollController _scrollController = ScrollController();
@@ -223,6 +224,20 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
         final data = Map<String, dynamic>.from(decoded);
 
+        // ดักจับ Native Bridge (High-Frequency Profit Update)
+        if (data['type'] == 'profit_update') {
+          final dynamic p = data['floatingProfit'];
+          if (p != null) {
+            final double newProfit = (p is num) ? p.toDouble() : (double.tryParse(p.toString()) ?? floatingProfit);
+            if (newProfit != floatingProfit) {
+              setState(() {
+                floatingProfit = newProfit;
+              });
+            }
+          }
+          return;
+        }
+
         final String? newLogin =
             (data['login'] ?? data['currentLogin'])?.toString();
 
@@ -245,9 +260,15 @@ class _FullOverlayContentState extends State<FullOverlayContent>
           }
 
           if (profitValue is num) {
-            floatingProfit = profitValue.toDouble();
+            final double newP = profitValue.toDouble();
+            if (newP != floatingProfit) {
+              floatingProfit = newP;
+            }
           } else if (profitValue is String) {
-            floatingProfit = double.tryParse(profitValue) ?? floatingProfit;
+            final double? parsedP = double.tryParse(profitValue);
+            if (parsedP != null && parsedP != floatingProfit) {
+              floatingProfit = parsedP;
+            }
           }
 
           final dynamic logsValue = data['logs'];
@@ -318,19 +339,18 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         }
       });
 
-      database.ref('accounts/$currentLogin/status').onValue.listen((event) {
+      // ฟังค่า profit จาก Firebase แบบแยกเดี่ยวเพื่อความเร็วสูงสุดและลดโหลด Rebuild
+      await _profitSubscription?.cancel();
+      _profitSubscription = database.ref('accounts/$currentLogin/status/profit').onValue.listen((event) {
         if (!mounted) return;
-        final rawData = event.snapshot.value;
-        if (rawData is Map) {
-          final data = Map<dynamic, dynamic>.from(rawData);
-          final dynamic p = data['profit'] ?? data['open_profit'];
-          if (p != null) {
+        final val = event.snapshot.value;
+        if (val != null) {
+          final double newProfit = (val is num) ? val.toDouble() : (double.tryParse(val.toString()) ?? floatingProfit);
+          
+          // อัปเดตเฉพาะเมื่อค่าเปลี่ยน เพื่อให้ UI ตอบสนองได้ทันทีโดยไม่กระตุก
+          if (newProfit != floatingProfit) {
             setState(() {
-              if (p is num) {
-                floatingProfit = p.toDouble();
-              } else if (p is String) {
-                floatingProfit = double.tryParse(p) ?? floatingProfit;
-              }
+              floatingProfit = newProfit;
             });
           }
         }
@@ -892,6 +912,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     _overlayBounceController.dispose();
     _logsSubscription?.cancel();
     _connectionSubscription?.cancel();
+    _profitSubscription?.cancel();
     _overlaySubscription?.cancel();
     super.dispose();
   }
@@ -1711,7 +1732,7 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 // ==========================================
-// #6 MainNavigationScreen (ฉบับรวมสมบูรณ์: ดึง profit ตรงเป๊ะ + ลบ Logs อัตโนมัติ)
+// #6 MainNavigationScreen (ฉบับรวมสมบูรณ์: Native Bridge High-Frequency P/L Update)
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
@@ -1909,10 +1930,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           });
           
           _shareSnapshotToOverlay();
+          
+          // ส่งข้อมูล Profit เข้า Overlay ทันทีแบบ High-Frequency ผ่าน Native Bridge
+          updateOverlayProfit(floatingProfit);
         }
       });
     } catch (e) {
       debugPrint("Database listen error: $e");
+    }
+  }
+
+  // ส่ง Profit เข้า Overlay ทันทีแบบ High-Frequency ผ่าน Native Bridge
+  void updateOverlayProfit(double profit) {
+    try {
+      FlutterOverlayWindow.shareData({
+        'type': 'profit_update',
+        'floatingProfit': profit,
+      });
+    } catch (e) {
+      debugPrint('Update overlay profit error: $e');
     }
   }
 
