@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// #1.2 FULL OVERLAY CONTENT (ฉบับถ่างนิ้วสมูทๆ + ลากสุดขอบจอ + กำไรเรียลไทม์)
+// #1.2 FULL OVERLAY CONTENT (ฉบับสมบูรณ์ แก้ Error `BoxShape` แล้ว)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -132,11 +132,9 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   double _overlayX = 0;
   double _overlayY = 0;
 
-  // ตัวแปรขนาดหน้าต่างเริ่มต้น
   double _overlayWidth = 285;
   double _overlayHeight = 285;
 
-  // ตัวแปรจำค่าขนาดก่อนเริ่มถ่างนิ้ว
   double _baseWidth = 285;
   double _baseHeight = 285;
 
@@ -497,12 +495,10 @@ class _FullOverlayContentState extends State<FullOverlayContent>
           child: _isExpanded
               ? GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  // 1️⃣ บันทึกฐานขนาดเดิมเมื่อเริ่มแตะ 2 นิ้ว
                   onScaleStart: (details) {
                     _baseWidth = _overlayWidth;
                     _baseHeight = _overlayHeight;
                   },
-                  // 2️⃣ คำนวณความสมูทขณะถ่างนิ้ว (Smooth Scaling)
                   onScaleUpdate: (details) {
                     if (details.scale != 1.0) {
                       setState(() {
@@ -510,7 +506,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         _overlayHeight = (_baseHeight * details.scale).clamp(160.0, 420.0);
                       });
                       
-                      // เรียกขนาดหน้าต่างให้อัปเดตตามแบบเรียลไทม์สมูทๆ
                       FlutterOverlayWindow.resizeOverlay(
                         _overlayWidth.toInt(),
                         _overlayHeight.toInt(),
@@ -521,9 +516,8 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      // 3️⃣ ใช้ AnimatedContainer หรือ Container ที่เปลี่ยนขนาดตามตัวแปรอย่างไร้รอยต่อ
                       AnimatedContainer(
-                        duration: const Duration(milliseconds: 50), // เพิ่มความสมูทเวลาขนาดเปลี่ยน
+                        duration: const Duration(milliseconds: 50),
                         width: _overlayWidth,
                         height: _overlayHeight,
                         decoration: BoxDecoration(
@@ -658,7 +652,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                         width: 8,
                                         height: 8,
                                         decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
+                                          shape: BoxShape.circle, // 🛠️ แก้จาก BoxSpace เป็น BoxShape เรียบร้อย
                                           color: isServerActive ? _green : _red,
                                           boxShadow: [
                                             BoxShadow(
@@ -770,7 +764,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                           child: Container(
                             padding: const EdgeInsets.all(5),
                             decoration: BoxDecoration(
-                              shape: BoxSpace.circle,
+                              shape: BoxShape.circle, // 🛠️ แก้จาก BoxSpace เป็น BoxShape เรียบร้อย
                               color: Colors.black.withOpacity(0.85),
                               border: Border.all(
                                 color: _gold.withOpacity(0.8),
@@ -817,7 +811,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                        shape: BoxShape.circle, // 🛠️ แก้จาก BoxSpace เป็น BoxShape เรียบร้อย
                         color: _background,
                         border: Border.all(
                           color: _gold,
@@ -857,7 +851,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               width: 17,
                               height: 17,
                               decoration: BoxDecoration(
-                                shape: BoxShape.circle,
+                                shape: BoxShape.circle, // 🛠️ แก้จาก BoxSpace เป็น BoxShape เรียบร้อย
                                 color: isConnected ? _green : _red,
                                 border: Border.all(
                                   color: _background,
