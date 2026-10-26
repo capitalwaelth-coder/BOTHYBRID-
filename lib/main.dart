@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// #1.2 FULL OVERLAY CONTENT (ฉบับสมบูรณ์: มีระบบลากย่อขยาย + ปุ่ม X มุมขวาบน + P/L แถบล่าง)
+// #1.2 FULL OVERLAY CONTENT (ฉบับใช้นิ้ว 2 นิ้ว ถ่างย่อ/ขยาย + ไม่เคลื่อนหนีมือ)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -132,9 +132,13 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   double _overlayX = 0;
   double _overlayY = 0;
 
-  // ตัวแปรควบคุมขนาดหน้าต่างสำหรับการย่อ/ขยาย
+  // ตัวแปรขนาดหน้าต่างเริ่มต้น
   double _overlayWidth = 285;
   double _overlayHeight = 285;
+
+  // ตัวแปรจำค่าขนาดก่อนเริ่มถ่างนิ้ว
+  double _baseWidth = 285;
+  double _baseHeight = 285;
 
   List<Map<String, dynamic>> _botLogs = [];
 
@@ -478,19 +482,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // ฟังก์ชันคำนวณการย่อ/ขยายขนาดหน้าต่างเมื่อใช้นิ้วลากที่มุม
-  void _resizeOverlay(DragUpdateDetails details) {
-    setState(() {
-      _overlayWidth = (_overlayWidth + details.delta.dx).clamp(220.0, 450.0);
-      _overlayHeight = (_overlayHeight + details.delta.dy).clamp(220.0, 450.0);
-    });
-    FlutterOverlayWindow.resizeOverlay(
-      _overlayWidth.toInt(),
-      _overlayHeight.toInt(),
-      true,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final String currentScanImage = _images[_imageIndex];
@@ -502,343 +493,307 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         backgroundColor: Colors.transparent,
         body: Center(
           child: _isExpanded
-              ? Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // ตัวกล่องหน้าต่างหลัก (ปรับขนาดตามตัวแปร _overlayWidth และ _overlayHeight)
-                    Container(
-                      width: _overlayWidth,
-                      height: _overlayHeight,
-                      decoration: BoxDecoration(
-                        color: _background,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: _gold.withOpacity(0.6),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _gold.withOpacity(0.2),
-                            blurRadius: 20,
-                            spreadRadius: 2,
+              ? GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  // เริ่มต้นแตะ 2 นิ้ว
+                  onScaleStart: (details) {
+                    _baseWidth = _overlayWidth;
+                    _baseHeight = _overlayHeight;
+                  },
+                  // คำนวณอัตราการถ่างออก (scale)
+                  onScaleUpdate: (details) {
+                    if (details.scale != 1.0) {
+                      setState(() {
+                        // ปรับขนาดกว้าง/สูง ตามระยะถ่างนิ้ว (ย่อได้ต่ำสุด 200, ขยายได้สูงสุด 420)
+                        _overlayWidth = (_baseWidth * details.scale).clamp(200.0, 420.0);
+                        _overlayHeight = (_baseHeight * details.scale).clamp(160.0, 420.0);
+                      });
+                      FlutterOverlayWindow.resizeOverlay(
+                        _overlayWidth.toInt(),
+                        _overlayHeight.toInt(),
+                        true,
+                      );
+                    }
+                  },
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // ตัวกล่องหน้าต่างหลัก
+                      Container(
+                        width: _overlayWidth,
+                        height: _overlayHeight,
+                        decoration: BoxDecoration(
+                          color: _background,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: _gold.withOpacity(0.6),
+                            width: 1.5,
                           ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          // ภาพสแกนเนอร์ + ชื่อบอท
-                          SizedBox(
-                            height: 110,
-                            width: double.infinity,
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(15),
-                              ),
-                              child: Container(
-                                color: Colors.black,
-                                child: AnimatedBuilder(
-                                  animation: _scannerAnimation,
-                                  builder: (context, child) {
-                                    final double scanValue = _scannerAnimation.value * 110;
+                          boxShadow: [
+                            BoxShadow(
+                              color: _gold.withOpacity(0.2),
+                              blurRadius: 20,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            // ภาพสแกนเนอร์ + ชื่อบอท
+                            SizedBox(
+                              height: 110,
+                              width: double.infinity,
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(15),
+                                ),
+                                child: Container(
+                                  color: Colors.black,
+                                  child: AnimatedBuilder(
+                                    animation: _scannerAnimation,
+                                    builder: (context, child) {
+                                      final double scanValue = _scannerAnimation.value * 110;
 
-                                    return Stack(
-                                      fit: StackFit.expand,
-                                      children: [
-                                        AnimatedSwitcher(
-                                          duration: const Duration(milliseconds: 800),
-                                          child: Image.asset(
-                                            currentScanImage,
-                                            key: ValueKey<String>(currentScanImage),
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: 110,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return Container(
-                                                color: Colors.black,
-                                                child: const Center(
-                                                  child: Icon(Icons.smart_toy, color: _gold, size: 40),
-                                                ),
-                                              );
-                                            },
+                                      return Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          AnimatedSwitcher(
+                                            duration: const Duration(milliseconds: 800),
+                                            child: Image.asset(
+                                              currentScanImage,
+                                              key: ValueKey<String>(currentScanImage),
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              height: 110,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return Container(
+                                                  color: Colors.black,
+                                                  child: const Center(
+                                                    child: Icon(Icons.smart_toy, color: _gold, size: 40),
+                                                  ),
+                                                );
+                                              },
+                                            ),
                                           ),
-                                        ),
-                                        Positioned(
-                                          top: scanValue.clamp(0.0, 107.0),
-                                          left: 0,
-                                          right: 0,
-                                          child: Container(
-                                            height: 3,
-                                            decoration: const BoxDecoration(
-                                              color: _gold,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: _gold,
-                                                  blurRadius: 8,
-                                                  spreadRadius: 2,
+                                          Positioned(
+                                            top: scanValue.clamp(0.0, 107.0),
+                                            left: 0,
+                                            right: 0,
+                                            child: Container(
+                                              height: 3,
+                                              decoration: const BoxDecoration(
+                                                color: _gold,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: _gold,
+                                                    blurRadius: 8,
+                                                    spreadRadius: 2,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            left: 10,
+                                            bottom: 8,
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'GOLD PRO',
+                                                  style: TextStyle(
+                                                    color: _gold,
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontFamily: 'monospace',
+                                                    shadows: [
+                                                      Shadow(
+                                                        color: Colors.black.withOpacity(0.9),
+                                                        offset: const Offset(1.5, 1.5),
+                                                        blurRadius: 3,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 1),
+                                                Text(
+                                                  'Robot Algo Trading',
+                                                  style: TextStyle(
+                                                    color: Colors.white70,
+                                                    fontSize: 8,
+                                                    fontWeight: FontWeight.w600,
+                                                    fontFamily: 'monospace',
+                                                    shadows: [
+                                                      Shadow(
+                                                        color: Colors.black.withOpacity(0.9),
+                                                        offset: const Offset(1, 1),
+                                                        blurRadius: 2,
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ],
                                             ),
                                           ),
-                                        ),
-                                        Positioned(
-                                          left: 10,
-                                          bottom: 8,
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'GOLD PRO',
-                                                style: TextStyle(
-                                                  color: _gold,
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontFamily: 'monospace',
-                                                  shadows: [
-                                                    Shadow(
-                                                      color: Colors.black.withOpacity(0.9),
-                                                      offset: const Offset(1.5, 1.5),
-                                                      blurRadius: 3,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              const SizedBox(height: 1),
-                                              Text(
-                                                'Robot Algo Trading',
-                                                style: TextStyle(
-                                                  color: Colors.white70,
-                                                  fontSize: 8,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontFamily: 'monospace',
-                                                  shadows: [
-                                                    Shadow(
-                                                      color: Colors.black.withOpacity(0.9),
-                                                      offset: const Offset(1, 1),
-                                                      blurRadius: 2,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
+                                        ],
+                                      );
+                                    },
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
 
-                          // แถบสถานะ ONLINE/OFFLINE + กล่อง P/L อยู่ขวาสุดในแถวเดียวกัน
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            color: const Color(0xFF1E1E1E),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: isServerActive ? _green : _red,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: (isServerActive ? _green : _red).withOpacity(0.8),
-                                            blurRadius: 4,
-                                          ),
-                                        ],
+                            // แถบสถานะ ONLINE/OFFLINE + กล่อง P/L อยู่ขวาสุด
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              color: const Color(0xFF1E1E1E),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: isServerActive ? _green : _red,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: (isServerActive ? _green : _red).withOpacity(0.8),
+                                              blurRadius: 4,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        isServerActive ? 'ONLINE' : 'OFFLINE',
+                                        style: TextStyle(
+                                          color: isServerActive ? _green : _red,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: _gold.withOpacity(0.4),
+                                        width: 1,
                                       ),
                                     ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      isServerActive ? 'ONLINE' : 'OFFLINE',
+                                    child: Text(
+                                      floatingProfit.toStringAsFixed(2),
                                       style: TextStyle(
-                                        color: isServerActive ? _green : _red,
+                                        color: floatingProfit >= 0 ? _green : _red,
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
+                                        fontFamily: 'monospace',
                                       ),
                                     ),
-                                  ],
-                                ),
-                                // กล่องกำไรขาดทุน (P/L) อยู่แทนที่ตำแหน่งเดิมในแถวเดียวกับ ONLINE
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: _gold.withOpacity(0.4),
-                                      width: 1,
-                                    ),
                                   ),
-                                  child: Text(
-                                    floatingProfit.toStringAsFixed(2),
-                                    style: TextStyle(
-                                      color: floatingProfit >= 0 ? _green : _red,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'monospace',
-                                    ),
-                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const Divider(color: Color(0x33FFD700), height: 1),
+
+                            // ส่วนแสดง Logs
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                color: Colors.black.withOpacity(0.4),
+                                child: _botLogs.isEmpty
+                                    ? const Center(
+                                        child: Text(
+                                          'No logs available',
+                                          style: TextStyle(
+                                            color: Colors.white54,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      )
+                                    : ListView.builder(
+                                        controller: _scrollController,
+                                        padding: EdgeInsets.zero,
+                                        itemCount: _botLogs.length,
+                                        itemBuilder: (context, index) {
+                                          final item = _botLogs[index];
+                                          final String message =
+                                              (item['message'] ?? '').toString();
+                                          final bool isLatest = index == 0;
+
+                                          return Padding(
+                                            padding: const EdgeInsets.only(bottom: 4),
+                                            child: isLatest
+                                                ? TypewriterText(
+                                                    text: '> $message',
+                                                    duration: const Duration(milliseconds: 250),
+                                                    style: const TextStyle(
+                                                      color: Color(0xFF00E676),
+                                                      fontSize: 10,
+                                                      fontFamily: 'monospace',
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  )
+                                                : Text(
+                                                    '> $message',
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 10,
+                                                      fontFamily: 'monospace',
+                                                    ),
+                                                  ),
+                                          );
+                                        },
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // 🔒 ปุ่มปิด (X) ล็อกมุมขวาบนสุด
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            _setExpanded(false);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.black.withOpacity(0.85),
+                              border: Border.all(
+                                color: _gold.withOpacity(0.8),
+                                width: 1.5,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black54,
+                                  blurRadius: 4,
+                                  spreadRadius: 1,
                                 ),
                               ],
                             ),
-                          ),
-
-                          const Divider(color: Color(0x33FFD700), height: 1),
-
-                          // ส่วนแสดง Logs
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              color: Colors.black.withOpacity(0.4),
-                              child: _botLogs.isEmpty
-                                  ? const Center(
-                                      child: Text(
-                                        'No logs available',
-                                        style: TextStyle(
-                                          color: Colors.white54,
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    )
-                                  : ListView.builder(
-                                      controller: _scrollController,
-                                      padding: EdgeInsets.zero,
-                                      itemCount: _botLogs.length,
-                                      itemBuilder: (context, index) {
-                                        final item = _botLogs[index];
-                                        final String message =
-                                            (item['message'] ?? '').toString();
-                                        final bool isLatest = index == 0;
-
-                                        return Padding(
-                                          padding: const EdgeInsets.only(bottom: 4),
-                                          child: isLatest
-                                              ? TypewriterText(
-                                                  text: '> $message',
-                                                  duration: const Duration(milliseconds: 250),
-                                                  style: const TextStyle(
-                                                    color: Color(0xFF00E676),
-                                                    fontSize: 10,
-                                                    fontFamily: 'monospace',
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                )
-                                              : Text(
-                                                  '> $message',
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 10,
-                                                    fontFamily: 'monospace',
-                                                  ),
-                                                ),
-                                        );
-                                      },
-                                    ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // 🔒 ล็อกตำแหน่งปุ่มปิด (X) ไว้ที่มุมขวาบนสุดเสมอ
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          _setExpanded(false);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(5),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.black.withOpacity(0.85),
-                            border: Border.all(
-                              color: _gold.withOpacity(0.8),
-                              width: 1.5,
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black54,
-                                blurRadius: 4,
-                                spreadRadius: 1,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.close,
-                            color: Colors.white,
-                            size: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // 🔲 ปุ่มจับการลากย่อ/ขยาย (มุมซ้ายล่าง)
-                    Positioned(
-                      left: 0,
-                      bottom: 0,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onPanUpdate: _resizeOverlay,
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          alignment: Alignment.bottomLeft,
-                          padding: const EdgeInsets.all(6),
-                          child: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: const BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(color: _gold, width: 2.5),
-                                left: BorderSide(color: _gold, width: 2.5),
-                              ),
-                              borderRadius: BorderRadius.only(
-                                bottomLeft: Radius.circular(4),
-                              ),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 12,
                             ),
                           ),
                         ),
                       ),
-                    ),
-
-                    // 🔲 ปุ่มจับการลากย่อ/ขยาย (มุมขวาล่าง)
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onPanUpdate: _resizeOverlay,
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          alignment: Alignment.bottomRight,
-                          padding: const EdgeInsets.all(6),
-                          child: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: const BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(color: _gold, width: 2.5),
-                                right: BorderSide(color: _gold, width: 2.5),
-                              ),
-                              borderRadius: BorderRadius.only(
-                                bottomRight: Radius.circular(4),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 )
               : GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -941,6 +896,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
+
 
 
 
