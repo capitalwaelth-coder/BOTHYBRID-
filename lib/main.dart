@@ -794,7 +794,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     _overlayBounceController.dispose();
     _logsSubscription?.cancel();
     _connectionSubscription?.cancel();
-    _profitSubscription?.cancel();
     _statusSubscription?.cancel();
     _ordersSubscription?.cancel();
     _overlaySubscription?.cancel();
@@ -2039,6 +2038,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 // ==========================================
 // #7 - #12 หน้าจอ Home, Orders, History, Alerts, Settings (สมบูรณ์ตามระบบเดิม)
 // ==========================================
+=========================================
 
 // ==========================================
 // #7 HomeScreen
