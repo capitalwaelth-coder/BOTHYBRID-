@@ -1531,24 +1531,25 @@ class _PinAuthWrapperState extends State<PinAuthWrapper> {
 }
 
 // ==========================================
-// #6 MainNavigationScreen (เชื่อมต่อสตรีมข้อมูลสมบูรณ์)
+// #6 MainNavigationScreen (ฉบับรวมสมบูรณ์: ดึง profit ตรงเป๊ะ + ลบ Logs อัตโนมัติ)
 // ==========================================
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  State<MainNavigationScreen> createState() =>
+      _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen>
     with TickerProviderStateMixin {
   int _currentIndex = 2;
-  String currentLogin = "53049695";
+  String currentLogin = "235305975";
 
   bool isRunning = false;
   bool isConnected = false;
-  double floatingProfit = 0.0;
+  double floatingProfit = 0.0; // ตัวแปรเก็บค่ากำไร/ขาดทุนเรียลไทม์
   int unreadAlertsCount = 0;
 
   bool _isLaunchingOverlay = false;
@@ -1560,41 +1561,56 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   List<Map<String, dynamic>> _botLogs = [];
 
   Offset _robotBubbleOffset = const Offset(20, 120);
+  bool _isRobotBubblePressed = false;
 
   late final AnimationController _bounceController =
-      AnimationController(duration: const Duration(milliseconds: 1200), vsync: this)
-        ..repeat(reverse: true);
+      AnimationController(
+    duration: const Duration(milliseconds: 1200),
+    vsync: this,
+  )..repeat(reverse: true);
 
   late final Animation<double> _bounceAnimation =
-      Tween<double>(begin: 0, end: 5).animate(
-    CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut),
+      Tween<double>(
+    begin: 0,
+    end: 5,
+  ).animate(
+    CurvedAnimation(
+      parent: _bounceController,
+      curve: Curves.easeInOut,
+    ),
   );
 
   @override
   void initState() {
     super.initState();
+
     _loadSavedLogin().then((_) {
       if (!mounted) return;
+
+      _listenToActiveAccount();
+      _listenToAlertsCount();
       _initFirebaseAndListen();
       _listenToConnectionStatus();
       _listenToLogs();
-      _listenToAlertsCount();
     });
 
+    // รับคำสั่งและซิงค์ข้อมูลจากหน้าต่าง Overlay ภายนอก
     FlutterOverlayWindow.overlayListener.listen((event) {
       if (event == null) return;
+
       try {
         dynamic decoded = event;
         if (decoded is String) {
           decoded = jsonDecode(decoded);
         }
+
         if (decoded is Map) {
           if (decoded['command'] == 'request_snapshot') {
             _shareSnapshotToOverlay();
           }
         }
       } catch (e) {
-        debugPrint('Main overlay listener error: $e');
+        debugPrint('Overlay listener error: $e');
       }
     });
   }
@@ -1608,10 +1624,40 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   Future<void> _loadSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('mt5_login');
+
     if (saved != null && saved.isNotEmpty && mounted) {
       setState(() {
         currentLogin = saved;
       });
+    }
+  }
+
+  void _listenToActiveAccount() {
+    try {
+      final database = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+      );
+
+      database.ref('status/login').onValue.listen((event) {
+        final val = event.snapshot.value?.toString();
+
+        if (val != null &&
+            val.isNotEmpty &&
+            mounted &&
+            val != currentLogin) {
+          setState(() {
+            currentLogin = val;
+          });
+
+          _listenToAlertsCount();
+          _initFirebaseAndListen();
+          _listenToLogs();
+        }
+      });
+    } catch (e) {
+      debugPrint("Account listen error: $e");
     }
   }
 
@@ -1622,13 +1668,29 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         databaseURL:
             'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
+
       _alertsRef = database.ref('accounts/$currentLogin/alerts');
-      _alertsRef?.onValue.listen((event) {
+
+      _alertsRef?.onValue.listen((DatabaseEvent event) {
         final data = event.snapshot.value;
+
         if (data != null && mounted) {
-          int total = data is Map ? data.length : (data is List ? data.length : 0);
+          int total = 0;
+
+          if (data is Map) {
+            total = data.length;
+          } else if (data is List) {
+            total = data.where((e) => e != null).length;
+          }
+
           setState(() {
-            if (_currentIndex != 4) unreadAlertsCount = total;
+            if (_currentIndex != 4) {
+              unreadAlertsCount = total;
+            }
+          });
+        } else if (data == null && mounted) {
+          setState(() {
+            unreadAlertsCount = 0;
           });
         }
       });
@@ -1644,13 +1706,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         databaseURL:
             'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
+
       _dbRef = database.ref('accounts/$currentLogin/status');
+
+      // ดึงค่าจากโหนด status โดยเจาะจงฟิลด์ profit และ is_running
       _dbRef?.onValue.listen((DatabaseEvent event) {
         final rawData = event.snapshot.value;
+
         if (rawData is Map && mounted) {
           final data = Map<dynamic, dynamic>.from(rawData);
+
           setState(() {
             isRunning = data['is_running'] == true;
+            
+            // ดึงค่าจากฟิลด์ profit โดยตรงให้ตรงกับหน้า Orders
             final dynamic p = data['profit'];
             if (p is num) {
               floatingProfit = p.toDouble();
@@ -1658,23 +1727,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               floatingProfit = double.tryParse(p) ?? 0.0;
             }
           });
+          
           _shareSnapshotToOverlay();
-          updateOverlayProfit(floatingProfit);
         }
       });
     } catch (e) {
       debugPrint("Database listen error: $e");
-    }
-  }
-
-  void updateOverlayProfit(double profit) {
-    try {
-      FlutterOverlayWindow.shareData({
-        'type': 'profit_update',
-        'floatingProfit': profit,
-      });
-    } catch (e) {
-      debugPrint('Update overlay profit error: $e');
     }
   }
 
@@ -1685,12 +1743,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         databaseURL:
             'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
+
       database.ref('.info/connected').onValue.listen((event) {
         final connected = event.snapshot.value as bool? ?? false;
+
         if (mounted) {
           setState(() {
             isConnected = connected;
           });
+          
           _shareSnapshotToOverlay();
         }
       });
@@ -1699,6 +1760,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
+  // ฟังข้อมูล Logs และตรวจสอบหากครบ 100 ข้อความ จะสั่งลบบน Firebase อัตโนมัติทันที
   void _listenToLogs() {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -1706,30 +1768,73 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         databaseURL:
             'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
       );
+
       _logsRef = database.ref('accounts/$currentLogin/logs');
+
       _logsRef?.onValue.listen((DatabaseEvent event) {
         final data = event.snapshot.value;
+
         if (!mounted) return;
 
+        if (data != null) {
+          int totalCount = 0;
+          if (data is Map) {
+            totalCount = data.length;
+          } else if (data is List) {
+            totalCount = data.where((e) => e != null).length;
+          }
+
+          if (totalCount >= 100) {
+            _logsRef?.remove(); // ลบข้อมูลบน Firebase ทันที
+            setState(() {
+              _botLogs.clear();
+            });
+            _shareSnapshotToOverlay();
+            return;
+          }
+        }
+
         List<Map<String, dynamic>> tempLogs = [];
+
         if (data is Map) {
           final sortedEntries = data.entries.toList()
-            ..sort((a, b) => b.key.toString().compareTo(a.key.toString()));
+            ..sort(
+              (a, b) => b.key.toString().compareTo(
+                    a.key.toString(),
+                  ),
+            );
+
+          int count = 0;
           for (final entry in sortedEntries) {
-            if (entry.value != null) {
+            if (entry.value != null && count < 100) {
+              final rawMsg = entry.value.toString();
+              final cleanMsg = rawMsg.replaceAll(
+                RegExp(r'command\s*', caseSensitive: false),
+                '',
+              );
+
               tempLogs.add({
                 'key': entry.key.toString(),
-                'message': entry.value.toString(),
+                'message': cleanMsg,
               });
+              count++;
             }
           }
         } else if (data is List) {
-          for (int i = data.length - 1; i >= 0; i--) {
+          int count = 0;
+          for (int i = data.length - 1; i >= 0 && count < 100; i--) {
             if (data[i] != null) {
+              final rawMsg = data[i].toString();
+              final cleanMsg = rawMsg.replaceAll(
+                RegExp(r'command\s*', caseSensitive: false),
+                '',
+              );
+
               tempLogs.add({
                 'key': i.toString(),
-                'message': data[i].toString(),
+                'message': cleanMsg,
               });
+              count++;
             }
           }
         }
@@ -1737,6 +1842,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         setState(() {
           _botLogs = tempLogs;
         });
+
         _shareSnapshotToOverlay();
       });
     } catch (e) {
@@ -1744,6 +1850,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 
+  // ส่งข้อมูล Snapshot รวมถึง floatingProfit ไปยัง Overlay
   void _shareSnapshotToOverlay() {
     try {
       FlutterOverlayWindow.shareData({
@@ -1753,7 +1860,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         'isRunning': isRunning,
         'isConnected': isConnected,
         'connected': isConnected,
-        'floatingProfit': floatingProfit,
+        'floatingProfit': floatingProfit, // ส่งค่า Profit ที่ถูกต้องไปซิงค์
         'logs': _botLogs,
       });
     } catch (e) {
@@ -1763,16 +1870,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   Future<void> _launchExternalOverlay() async {
     if (_isLaunchingOverlay || !mounted) return;
+
     _isLaunchingOverlay = true;
 
     try {
-      bool granted = await FlutterOverlayWindow.isPermissionGranted() ?? false;
+      bool granted =
+          await FlutterOverlayWindow.isPermissionGranted() ?? false;
+
       if (!granted) {
-        final result = await FlutterOverlayWindow.requestPermission();
-        if (result != true) return;
+        final result =
+            await FlutterOverlayWindow.requestPermission();
+
+        if (result != true) {
+          debugPrint('Overlay permission not granted');
+          return;
+        }
       }
 
       if (!mounted) return;
+
       await FlutterOverlayWindow.showOverlay(
         height: 620,
         width: 380,
@@ -1785,14 +1901,35 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         positionGravity: PositionGravity.none,
       );
 
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future.delayed(
+        const Duration(milliseconds: 1000),
+      );
+
       if (!mounted) return;
+
       _shareSnapshotToOverlay();
-    } catch (e) {
+
+      await FlutterOverlayWindow.shareData({
+        'type': 'command',
+        'command': 'request_snapshot',
+      });
+    } catch (e, stackTrace) {
       debugPrint('Error launching external overlay: $e');
+      debugPrint('$stackTrace');
     } finally {
       _isLaunchingOverlay = false;
     }
+  }
+
+  Future<bool> _handleBackButton() async {
+    if (_currentIndex != 2) {
+      setState(() {
+        _currentIndex = 2;
+      });
+      return false;
+    }
+
+    return true;
   }
 
   @override
@@ -1806,6 +1943,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         accountLogin: currentLogin,
         onAlertsRead: () {
           if (!mounted) return;
+
           setState(() {
             unreadAlertsCount = 0;
           });
@@ -1815,94 +1953,146 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
     final screenSize = MediaQuery.of(context).size;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            'assets/images/8.png',
-            fit: BoxFit.cover,
-            opacity: const AlwaysStoppedAnimation(0.25),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withOpacity(0.35),
-                  Colors.black.withOpacity(0.75),
-                ],
-              ),
+    return WillPopScope(
+      onWillPop: _handleBackButton,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/images/8.png',
+              fit: BoxFit.cover,
+              opacity: const AlwaysStoppedAnimation(0.25),
+              errorBuilder: (context, error, stackTrace) {
+                return Container(color: kDarkBg);
+              },
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 65.0),
-            child: IndexedStack(
-              index: _currentIndex,
-              children: pages,
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SafeArea(
-              top: false,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: kDarkCard.withOpacity(0.8),
-                  border: Border(
-                    top: BorderSide(
-                        color: kGoldPrimary.withOpacity(0.5), width: 1.5),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildCustomNavItem(0, Icons.tune, 'Settings'),
-                    _buildCustomNavItem(1, Icons.list_alt, 'Orders'),
-                    _buildCustomNavItem(2, Icons.home_filled, 'Home'),
-                    _buildCustomNavItem(3, Icons.history, 'History'),
-                    _buildCustomNavItem(4, Icons.notifications_active, 'Alerts',
-                        badgeCount: unreadAlertsCount),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.35),
+                    Colors.black.withOpacity(0.75),
                   ],
                 ),
               ),
             ),
-          ),
-          Positioned(
-            left: _robotBubbleOffset.dx,
-            top: _robotBubbleOffset.dy,
-            child: AnimatedBuilder(
-              animation: _bounceAnimation,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Offset(0, _bounceAnimation.value),
-                  child: child,
-                );
-              },
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onPanUpdate: (details) {
-                  setState(() {
-                    _robotBubbleOffset = Offset(
-                      (_robotBubbleOffset.dx + details.delta.dx)
-                          .clamp(0.0, screenSize.width - 60),
-                      (_robotBubbleOffset.dy + details.delta.dy)
-                          .clamp(0.0, screenSize.height - 60),
-                    );
-                  });
-                },
-                onTap: _launchExternalOverlay,
-                child: _buildRobotBubbleWidget(),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 65.0),
+              child: IndexedStack(
+                index: _currentIndex,
+                children: pages,
               ),
             ),
-          ),
-        ],
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: kDarkCard.withOpacity(0.8),
+                    border: Border(
+                      top: BorderSide(
+                        color: kGoldPrimary.withOpacity(0.5),
+                        width: 1.5,
+                      ),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.8),
+                        blurRadius: 10,
+                        offset: const Offset(0, -5),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildCustomNavItem(0, Icons.tune, 'Settings'),
+                      _buildCustomNavItem(1, Icons.list_alt, 'Orders'),
+                      _buildCustomNavItem(2, Icons.home_filled, 'Home'),
+                      _buildCustomNavItem(3, Icons.history, 'History'),
+                      _buildCustomNavItem(
+                        4,
+                        Icons.notifications_active,
+                        'Alerts',
+                        badgeCount: unreadAlertsCount,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: _robotBubbleOffset.dx,
+              top: _robotBubbleOffset.dy,
+              child: AnimatedBuilder(
+                animation: _bounceAnimation,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Offset(
+                      0,
+                      _bounceAnimation.value,
+                    ),
+                    child: child,
+                  );
+                },
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onPanUpdate: (details) {
+                    setState(() {
+                      _robotBubbleOffset = Offset(
+                        (_robotBubbleOffset.dx +
+                                details.delta.dx)
+                            .clamp(
+                              0.0,
+                              screenSize.width - 60,
+                            ),
+                        (_robotBubbleOffset.dy +
+                                details.delta.dy)
+                            .clamp(
+                              0.0,
+                              screenSize.height - 60,
+                            ),
+                      );
+                    });
+                  },
+                  onTapDown: (_) {
+                    setState(() {
+                      _isRobotBubblePressed = true;
+                    });
+                  },
+                  onTapCancel: () {
+                    setState(() {
+                      _isRobotBubblePressed = false;
+                    });
+                  },
+                  onTap: () {
+                    setState(() {
+                      _isRobotBubblePressed = false;
+                    });
+
+                    _launchExternalOverlay();
+                  },
+                  child: AnimatedScale(
+                    scale: _isRobotBubblePressed ? 0.85 : 1.0,
+                    duration: const Duration(milliseconds: 100),
+                    child: _buildRobotBubbleWidget(),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1920,11 +2110,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           color: kGoldPrimary,
           width: 2.0,
         ),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Colors.black54,
-            blurRadius: 6,
-            spreadRadius: 1,
+            color: (isServerActive ? kGreenNeon : kRedNeon)
+                .withOpacity(0.6),
+            blurRadius: 10,
+            spreadRadius: 2,
           ),
         ],
       ),
@@ -1970,25 +2161,50 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 
-  Widget _buildCustomNavItem(int index, IconData icon, String label,
-      {int badgeCount = 0}) {
+  Widget _buildCustomNavItem(
+    int index,
+    IconData icon,
+    String label, {
+    int badgeCount = 0,
+  }) {
     final bool isSelected = _currentIndex == index;
+
     return GestureDetector(
       onTap: () {
         setState(() {
           _currentIndex = index;
-          if (index == 4) unreadAlertsCount = 0;
+
+          if (index == 4) {
+            unreadAlertsCount = 0;
+          }
         });
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 8,
+        ),
         decoration: BoxDecoration(
-          color: isSelected ? kDarkCard.withOpacity(0.85) : Colors.transparent,
+          color: isSelected
+              ? kDarkCard.withOpacity(0.85)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-              color: isSelected ? kGoldPrimary : Colors.transparent,
-              width: isSelected ? 1.5 : 0),
+            color: isSelected
+                ? kGoldPrimary
+                : Colors.transparent,
+            width: isSelected ? 1.5 : 0,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: kGoldPrimary.withOpacity(0.2),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : [],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1996,8 +2212,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(icon,
-                    color: isSelected ? kGoldPrimary : Colors.white70, size: 22),
+                Icon(
+                  icon,
+                  color: isSelected
+                      ? kGoldPrimary
+                      : Colors.white70,
+                  size: 22,
+                ),
                 if (badgeCount > 0)
                   Positioned(
                     right: -6,
@@ -2008,32 +2229,44 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                         color: kGoldPrimary,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      constraints:
-                          const BoxConstraints(minWidth: 16, minHeight: 16),
-                      child: Text('$badgeCount',
-                          style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$badgeCount',
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
               ],
             ),
             const SizedBox(height: 2),
-            Text(label,
-                style: TextStyle(
-                    color: isSelected ? kGoldPrimary : Colors.white70,
-                    fontSize: 10,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
-                    fontFamily: 'monospace')),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected
+                    ? kGoldPrimary
+                    : Colors.white70,
+                fontSize: 10,
+                fontWeight: isSelected
+                    ? FontWeight.bold
+                    : FontWeight.normal,
+                fontFamily: 'monospace',
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+
 
 
 // ==========================================
