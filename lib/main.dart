@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// #1.2 FULL OVERLAY CONTENT (ฉบับสมบูรณ์ แก้ Error `BoxShape` แล้ว)
+// #1.2 FULL OVERLAY CONTENT (เพิ่มปุ่มทางลัด Close, Start/Stop และล็อกขนาดไม่ให้ทับซ้อน)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -132,11 +132,9 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   double _overlayX = 0;
   double _overlayY = 0;
 
-  double _overlayWidth = 285;
-  double _overlayHeight = 285;
-
-  double _baseWidth = 285;
-  double _baseHeight = 285;
+  // ล็อกขนาดกล่องให้คงที่ ป้องกันการขยายแล้วทับซ้อนกัน
+  final double _overlayWidth = 285;
+  final double _overlayHeight = 310;
 
   List<Map<String, dynamic>> _botLogs = [];
 
@@ -324,6 +322,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         if (rawData is Map) {
           final data = Map<dynamic, dynamic>.from(rawData);
           final dynamic p = data['profit'] ?? data['open_profit'] ?? data['floatingProfit'];
+          final dynamic run = data['is_running'] ?? data['running'];
           if (p != null) {
             setState(() {
               if (p is num) {
@@ -331,6 +330,11 @@ class _FullOverlayContentState extends State<FullOverlayContent>
               } else if (p is String) {
                 floatingProfit = double.tryParse(p) ?? floatingProfit;
               }
+            });
+          }
+          if (run is bool) {
+            setState(() {
+              isRunning = run;
             });
           }
         }
@@ -457,6 +461,42 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
+  // ฟังก์ชันสั่งปิดออเดอร์ทั้งหมด (Close)
+  Future<void> _closeAllPositions() async {
+    try {
+      final database = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+      );
+      await database.ref('accounts/$currentLogin/status').update({
+        'close_all': true,
+      });
+    } catch (e) {
+      debugPrint('Close all positions error: $e');
+    }
+  }
+
+  // ฟังก์ชันสลับสถานะ Start / Stop บอท
+  Future<void> _toggleBotRunning() async {
+    try {
+      final bool newStatus = !isRunning;
+      final database = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL:
+            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
+      );
+      await database.ref('accounts/$currentLogin/status').update({
+        'is_running': newStatus,
+      });
+      setState(() {
+        isRunning = newStatus;
+      });
+    } catch (e) {
+      debugPrint('Toggle bot running error: $e');
+    }
+  }
+
   Future<void> _moveBalloon(DragUpdateDetails details) async {
     if (_isExpanded || _isMoving) return;
 
@@ -493,31 +533,13 @@ class _FullOverlayContentState extends State<FullOverlayContent>
         backgroundColor: Colors.transparent,
         body: Center(
           child: _isExpanded
-              ? GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onScaleStart: (details) {
-                    _baseWidth = _overlayWidth;
-                    _baseHeight = _overlayHeight;
-                  },
-                  onScaleUpdate: (details) {
-                    if (details.scale != 1.0) {
-                      setState(() {
-                        _overlayWidth = (_baseWidth * details.scale).clamp(200.0, 420.0);
-                        _overlayHeight = (_baseHeight * details.scale).clamp(160.0, 420.0);
-                      });
-                      
-                      FlutterOverlayWindow.resizeOverlay(
-                        _overlayWidth.toInt(),
-                        _overlayHeight.toInt(),
-                        true,
-                      );
-                    }
-                  },
+              ? SizedBox(
+                  width: _overlayWidth,
+                  height: _overlayHeight,
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 50),
+                      Container(
                         width: _overlayWidth,
                         height: _overlayHeight,
                         decoration: BoxDecoration(
@@ -537,6 +559,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                         child: Column(
                           children: [
+                            // ส่วนหัวรูปภาพและสแกนเนอร์ พร้อมปุ่มทางลัดขนาดเล็กมุมซ้ายบน
                             SizedBox(
                               height: 110,
                               width: double.infinity,
@@ -588,6 +611,56 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                                   ),
                                                 ],
                                               ),
+                                            ),
+                                          ),
+                                          // ปุ่มทางลัด (Shortcut Buttons) มุมซ้ายบน: Close และ Start/Stop
+                                          Positioned(
+                                            top: 6,
+                                            left: 6,
+                                            child: Row(
+                                              children: [
+                                                // ปุ่ม CLOSE (ถังขยะ)
+                                                GestureDetector(
+                                                  behavior: HitTestBehavior.opaque,
+                                                  onTap: _closeAllPositions,
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.black.withOpacity(0.75),
+                                                      borderRadius: BorderRadius.circular(6),
+                                                      border: Border.all(color: _gold.withOpacity(0.6), width: 1),
+                                                    ),
+                                                    child: const Row(
+                                                      children: [
+                                                        Icon(Icons.delete_outline, color: _gold, size: 10),
+                                                        SizedBox(width: 3),
+                                                        Text('CLOSE', style: TextStyle(color: _gold, fontSize: 8, fontWeight: FontWeight.bold)),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                // ปุ่ม START / STOP
+                                                GestureDetector(
+                                                  behavior: HitTestBehavior.opaque,
+                                                  onTap: _toggleBotRunning,
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                                    decoration: BoxDecoration(
+                                                      color: (isRunning ? _red : _green).withOpacity(0.85),
+                                                      borderRadius: BorderRadius.circular(6),
+                                                      border: Border.all(color: Colors.white70, width: 1),
+                                                    ),
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(isRunning ? Icons.stop : Icons.play_arrow, color: Colors.white, size: 10),
+                                                        const SizedBox(width: 2),
+                                                        Text(isRunning ? 'STOP' : 'START', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                           Positioned(
@@ -652,7 +725,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                         width: 8,
                                         height: 8,
                                         decoration: BoxDecoration(
-                                          shape: BoxShape.circle, // 🛠️ แก้จาก BoxSpace เป็น BoxShape เรียบร้อย
+                                          shape: BoxShape.circle,
                                           color: isServerActive ? _green : _red,
                                           boxShadow: [
                                             BoxShadow(
@@ -753,6 +826,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                       ),
 
+                      // ปุ่ม Close (X) มุมขวาบน
                       Positioned(
                         top: 6,
                         right: 6,
@@ -764,7 +838,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                           child: Container(
                             padding: const EdgeInsets.all(5),
                             decoration: BoxDecoration(
-                              shape: BoxShape.circle, // 🛠️ แก้จาก BoxSpace เป็น BoxShape เรียบร้อย
+                              shape: BoxShape.circle,
                               color: Colors.black.withOpacity(0.85),
                               border: Border.all(
                                 color: _gold.withOpacity(0.8),
@@ -811,7 +885,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle, // 🛠️ แก้จาก BoxSpace เป็น BoxShape เรียบร้อย
+                        shape: BoxShape.circle,
                         color: _background,
                         border: Border.all(
                           color: _gold,
@@ -851,7 +925,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                               width: 17,
                               height: 17,
                               decoration: BoxDecoration(
-                                shape: BoxShape.circle, // 🛠️ แก้จาก BoxSpace เป็น BoxShape เรียบร้อย
+                                shape: BoxShape.circle,
                                 color: isConnected ? _green : _red,
                                 border: Border.all(
                                   color: _background,
@@ -891,6 +965,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
+
 
 
 // ==========================================
