@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// #1.2 FULL OVERLAY CONTENT (เพิ่มปุ่มทางลัด Close, Start/Stop และล็อกขนาดไม่ให้ทับซ้อน)
+// #1.2 FULL OVERLAY CONTENT (ฉบับแก้ปัญหาเปิดบอลลูนใหม่แล้วกล่อง Log ไม่แสดง)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -120,7 +120,7 @@ class FullOverlayContent extends StatefulWidget {
 
 class _FullOverlayContentState extends State<FullOverlayContent>
     with TickerProviderStateMixin {
-  bool _isExpanded = false;
+  bool _isExpanded = false; // เริ่มต้นเป็น false เสมอเมื่อเปิดบอลลูนใหม่
   bool _isMoving = false;
 
   String currentLogin = '53049695';
@@ -132,7 +132,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   double _overlayX = 0;
   double _overlayY = 0;
 
-  // ล็อกขนาดกล่องให้คงที่ ป้องกันการขยายแล้วทับซ้อนกัน
+  // ล็อกขนาดกล่องให้คงที่
   final double _overlayWidth = 285;
   final double _overlayHeight = 310;
 
@@ -194,6 +194,10 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   @override
   void initState() {
     super.initState();
+
+    // บังคับให้เริ่มมาเป็นบอลลูนกลมเล็กเสมอทุกครั้งที่เปิดขึ้นมาใหม่
+    _isExpanded = false;
+    _resizeToDefault();
 
     _initFirebaseForOverlay();
 
@@ -276,6 +280,14 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       'type': 'command',
       'command': 'request_snapshot',
     });
+  }
+
+  Future<void> _resizeToDefault() async {
+    try {
+      await FlutterOverlayWindow.resizeOverlay(90, 90, true);
+    } catch (e) {
+      debugPrint('Reset overlay size error: $e');
+    }
   }
 
   Future<void> _initFirebaseForOverlay() async {
@@ -371,60 +383,77 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
       _logsRef = db.ref('accounts/$login/logs');
 
+      // ดึงข้อมูล Log ทันทีเมื่อเปิดบอลลูน เพื่อให้กล่องมีข้อมูลพร้อมแสดงผล
+      _logsRef!.get().then((snapshot) {
+        if (!mounted) return;
+        final dynamic value = snapshot.value;
+        if (value != null) {
+          _parseAndSetLogs(value);
+        }
+      }).catchError((error) {
+        debugPrint('Firebase get logs once error: $error');
+      });
+
       _logsSubscription = _logsRef!.onValue.listen((event) {
         if (!mounted) return;
 
         final dynamic value = event.snapshot.value;
-        final List<Map<String, dynamic>> parsedLogs = [];
-
-        if (value is Map) {
-          final sortedEntries = value.entries.toList()
-            ..sort((a, b) => b.key.toString().compareTo(a.key.toString()));
-
-          for (final entry in sortedEntries) {
-            final item = entry.value;
-            if (item != null) {
-              if (item is Map) {
-                final map = Map<String, dynamic>.from(item);
-                final String message = map['message']?.toString() ??
-                    map['text']?.toString() ??
-                    map['log']?.toString() ??
-                    map['msg']?.toString() ??
-                    item.toString();
-                parsedLogs.add({'key': entry.key.toString(), 'message': message});
-              } else {
-                parsedLogs.add({'key': entry.key.toString(), 'message': item.toString()});
-              }
-            }
-          }
-        } else if (value is List) {
-          for (int i = value.length - 1; i >= 0; i--) {
-            final item = value[i];
-            if (item != null) {
-              if (item is Map) {
-                final map = Map<String, dynamic>.from(item);
-                final String message = map['message']?.toString() ??
-                    map['text']?.toString() ??
-                    map['log']?.toString() ??
-                    map['msg']?.toString() ??
-                    item.toString();
-                parsedLogs.add({'key': i.toString(), 'message': message});
-              } else {
-                parsedLogs.add({'key': i.toString(), 'message': item.toString()});
-              }
-            }
-          }
+        if (value != null) {
+          _parseAndSetLogs(value);
         }
-
-        setState(() {
-          _botLogs = parsedLogs;
-        });
       }, onError: (error) {
         debugPrint('Firebase LOG error: $error');
       });
     } catch (e) {
       debugPrint('Watch LOG error: $e');
     }
+  }
+
+  void _parseAndSetLogs(dynamic value) {
+    final List<Map<String, dynamic>> parsedLogs = [];
+
+    if (value is Map) {
+      final sortedEntries = value.entries.toList()
+        ..sort((a, b) => b.key.toString().compareTo(a.key.toString()));
+
+      for (final entry in sortedEntries) {
+        final item = entry.value;
+        if (item != null) {
+          if (item is Map) {
+            final map = Map<String, dynamic>.from(item);
+            final String message = map['message']?.toString() ??
+                map['text']?.toString() ??
+                map['log']?.toString() ??
+                map['msg']?.toString() ??
+                item.toString();
+            parsedLogs.add({'key': entry.key.toString(), 'message': message});
+          } else {
+            parsedLogs.add({'key': entry.key.toString(), 'message': item.toString()});
+          }
+        }
+      }
+    } else if (value is List) {
+      for (int i = value.length - 1; i >= 0; i--) {
+        final item = value[i];
+        if (item != null) {
+          if (item is Map) {
+            final map = Map<String, dynamic>.from(item);
+            final String message = map['message']?.toString() ??
+                map['text']?.toString() ??
+                map['log']?.toString() ??
+                map['msg']?.toString() ??
+                item.toString();
+            parsedLogs.add({'key': i.toString(), 'message': message});
+          } else {
+            parsedLogs.add({'key': i.toString(), 'message': item.toString()});
+          }
+        }
+      }
+    }
+
+    setState(() {
+      _botLogs = parsedLogs;
+    });
   }
 
   Future<void> _setExpanded(bool expanded) async {
@@ -461,7 +490,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // ฟังก์ชันสั่งปิดออเดอร์ทั้งหมด (Close)
   Future<void> _closeAllPositions() async {
     try {
       final database = FirebaseDatabase.instanceFor(
@@ -477,7 +505,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     }
   }
 
-  // ฟังก์ชันสลับสถานะ Start / Stop บอท
   Future<void> _toggleBotRunning() async {
     try {
       final bool newStatus = !isRunning;
@@ -559,7 +586,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                         child: Column(
                           children: [
-                            // ส่วนหัวรูปภาพและสแกนเนอร์ พร้อมปุ่มทางลัดขนาดเล็กมุมซ้ายบน
                             SizedBox(
                               height: 110,
                               width: double.infinity,
@@ -613,13 +639,12 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                               ),
                                             ),
                                           ),
-                                          // ปุ่มทางลัด (Shortcut Buttons) มุมซ้ายบน: Close และ Start/Stop
+                                          // ปุ่มทางลัด CLOSE และ START/STOP อยู่มุมซ้ายบน
                                           Positioned(
                                             top: 6,
                                             left: 6,
                                             child: Row(
                                               children: [
-                                                // ปุ่ม CLOSE (ถังขยะ)
                                                 GestureDetector(
                                                   behavior: HitTestBehavior.opaque,
                                                   onTap: _closeAllPositions,
@@ -640,7 +665,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                                   ),
                                                 ),
                                                 const SizedBox(width: 4),
-                                                // ปุ่ม START / STOP
                                                 GestureDetector(
                                                   behavior: HitTestBehavior.opaque,
                                                   onTap: _toggleBotRunning,
@@ -826,7 +850,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                         ),
                       ),
 
-                      // ปุ่ม Close (X) มุมขวาบน
                       Positioned(
                         top: 6,
                         right: 6,
@@ -965,6 +988,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
     super.dispose();
   }
 }
+
 
 
 
