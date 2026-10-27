@@ -108,7 +108,7 @@ void overlayMain() {
 
 
 // ==========================================
-// #1.2 FULL OVERLAY CONTENT (ฉบับแก้ปัญหาเปิดบอลลูนใหม่แล้วกล่อง Log ไม่แสดง)
+// #1.2 FULL OVERLAY CONTENT (นำปุ่มทางลัดมุมซ้ายบนออกแล้ว)
 // ==========================================
 
 class FullOverlayContent extends StatefulWidget {
@@ -120,7 +120,7 @@ class FullOverlayContent extends StatefulWidget {
 
 class _FullOverlayContentState extends State<FullOverlayContent>
     with TickerProviderStateMixin {
-  bool _isExpanded = false; // เริ่มต้นเป็น false เสมอเมื่อเปิดบอลลูนใหม่
+  bool _isExpanded = false;
   bool _isMoving = false;
 
   String currentLogin = '53049695';
@@ -132,7 +132,7 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   double _overlayX = 0;
   double _overlayY = 0;
 
-  // ล็อกขนาดกล่องให้คงที่
+  // ล็อกขนาดกล่องให้คงที่ ป้องกันการขยายแล้วทับซ้อนกัน
   final double _overlayWidth = 285;
   final double _overlayHeight = 310;
 
@@ -195,7 +195,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
   void initState() {
     super.initState();
 
-    // บังคับให้เริ่มมาเป็นบอลลูนกลมเล็กเสมอทุกครั้งที่เปิดขึ้นมาใหม่
     _isExpanded = false;
     _resizeToDefault();
 
@@ -383,7 +382,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
 
       _logsRef = db.ref('accounts/$login/logs');
 
-      // ดึงข้อมูล Log ทันทีเมื่อเปิดบอลลูน เพื่อให้กล่องมีข้อมูลพร้อมแสดงผล
       _logsRef!.get().then((snapshot) {
         if (!mounted) return;
         final dynamic value = snapshot.value;
@@ -487,40 +485,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
       await FlutterOverlayWindow.closeOverlay();
     } catch (e) {
       debugPrint('Close overlay error: $e');
-    }
-  }
-
-  Future<void> _closeAllPositions() async {
-    try {
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-      );
-      await database.ref('accounts/$currentLogin/status').update({
-        'close_all': true,
-      });
-    } catch (e) {
-      debugPrint('Close all positions error: $e');
-    }
-  }
-
-  Future<void> _toggleBotRunning() async {
-    try {
-      final bool newStatus = !isRunning;
-      final database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL:
-            'https://liquidity-b8739-default-rtdb.asia-southeast1.firebasedatabase.app/',
-      );
-      await database.ref('accounts/$currentLogin/status').update({
-        'is_running': newStatus,
-      });
-      setState(() {
-        isRunning = newStatus;
-      });
-    } catch (e) {
-      debugPrint('Toggle bot running error: $e');
     }
   }
 
@@ -637,54 +601,6 @@ class _FullOverlayContentState extends State<FullOverlayContent>
                                                   ),
                                                 ],
                                               ),
-                                            ),
-                                          ),
-                                          // ปุ่มทางลัด CLOSE และ START/STOP อยู่มุมซ้ายบน
-                                          Positioned(
-                                            top: 6,
-                                            left: 6,
-                                            child: Row(
-                                              children: [
-                                                GestureDetector(
-                                                  behavior: HitTestBehavior.opaque,
-                                                  onTap: _closeAllPositions,
-                                                  child: Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.black.withOpacity(0.75),
-                                                      borderRadius: BorderRadius.circular(6),
-                                                      border: Border.all(color: _gold.withOpacity(0.6), width: 1),
-                                                    ),
-                                                    child: const Row(
-                                                      children: [
-                                                        Icon(Icons.delete_outline, color: _gold, size: 10),
-                                                        SizedBox(width: 3),
-                                                        Text('CLOSE', style: TextStyle(color: _gold, fontSize: 8, fontWeight: FontWeight.bold)),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                GestureDetector(
-                                                  behavior: HitTestBehavior.opaque,
-                                                  onTap: _toggleBotRunning,
-                                                  child: Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                                    decoration: BoxDecoration(
-                                                      color: (isRunning ? _red : _green).withOpacity(0.85),
-                                                      borderRadius: BorderRadius.circular(6),
-                                                      border: Border.all(color: Colors.white70, width: 1),
-                                                    ),
-                                                    child: Row(
-                                                      children: [
-                                                        Icon(isRunning ? Icons.stop : Icons.play_arrow, color: Colors.white, size: 10),
-                                                        const SizedBox(width: 2),
-                                                        Text(isRunning ? 'STOP' : 'START', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
                                             ),
                                           ),
                                           Positioned(
